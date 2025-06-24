@@ -53,53 +53,87 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return AuthFormContainer(
-      title: "Reset Password",
-      subtitle: "Enter your email to receive a password reset link",
-      child: Consumer<AuthProvider>(
-        builder: (context, authProvider, child) {
-          return Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                CustomTextField(
-                  label: "Email",
-                  hint: "Enter your email address",
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  validator: Validators.validateEmail,
-                  prefixIcon: const Icon(Icons.email_outlined),
+    return Scaffold(
+      body: Stack(
+        children: [
+          // Background Image Layer
+          Image.asset(
+            'assets/images/background.jpg',
+            width: double.infinity,
+            height: double.infinity,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              debugPrint('Background image error: $error');
+              return Container(
+                width: double.infinity,
+                height: double.infinity,
+                color: Colors.grey,
+                child: const Center(
+                  child: Text(
+                    'Failed to load background image',
+                    style: TextStyle(color: Colors.white, fontSize: 16),
+                  ),
                 ),
-                const SizedBox(height: 24),
-                CustomButton(
-                  text: "Send Reset Link",
-                  onPressed: _handleResetPassword,
-                  isLoading: authProvider.isLoading,
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      "Remember your password? ",
-                      style: TextStyle(color: Colors.grey.shade600),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                      child: const Text(
-                        "Sign In",
-                        style: TextStyle(fontWeight: FontWeight.w600),
+              );
+            },
+          ),
+          // Semi-transparent overlay
+          Container(
+            width: double.infinity,
+            height: double.infinity,
+            color: Colors.black.withOpacity(0.3),
+          ),
+          // Content Layer
+          AuthFormContainer(
+            title: "Reset Password",
+            subtitle: "Enter your email to receive a password reset link",
+            child: Consumer<AuthProvider>(
+              builder: (context, authProvider, child) {
+                return Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      CustomTextField(
+                        label: "Email",
+                        hint: "Enter your email address",
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        validator: Validators.validateEmail,
+                        prefixIcon: const Icon(Icons.email_outlined),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                      const SizedBox(height: 24),
+                      CustomButton(
+                        text: "Send Reset Link",
+                        onPressed: _handleResetPassword,
+                        isLoading: authProvider.isLoading,
+                      ),
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            "Remember your password? ",
+                            style: TextStyle(color: Colors.grey.shade600),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                            },
+                            child: const Text(
+                              "Sign In",
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }
