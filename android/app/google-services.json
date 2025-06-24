@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "705100681997",
+    "project_id": "kennedy-cf610",
+    "storage_bucket": "kennedy-cf610.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:705100681997:android:871d44fc69253de2ae5644",
+        "android_client_info": {
+          "package_name": "com.example.event_locator_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCb--C8pmBLZvbZR544dvIW4v_IHVJquIk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
