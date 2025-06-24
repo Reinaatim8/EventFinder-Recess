@@ -1,14 +1,8 @@
-# EventFinder-Recess
+# eventfinderapp
 
-Recess Group Project
+A new Flutter project.
 
-## Overview
-
-This is a Flutter-based event locator app created as part of a group project. It helps users discover nearby events and manage attendance.
-
----
-
-### Project Setup
+## Getting Started
 
 This project is a starting point for a Flutter application.
 
