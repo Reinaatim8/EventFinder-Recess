@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/utils/validators.dart';
 import '../../../providers/auth_provider.dart';
-import '../../../widgets/common/auth/auth_form_container.dart';
 import '../../../widgets/common/custom_buttom.dart';
 import '../../../widgets/common/custom_text_field.dart';
 
@@ -54,86 +53,140 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          // Background Image Layer
-          Image.asset(
-            'assets/images/background.jpg',
-            width: double.infinity,
-            height: double.infinity,
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/images/background3.jpg'),
             fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              debugPrint('Background image error: $error');
-              return Container(
-                width: double.infinity,
-                height: double.infinity,
-                color: Colors.grey,
-                child: const Center(
-                  child: Text(
-                    'Failed to load background image',
-                    style: TextStyle(color: Colors.white, fontSize: 16),
-                  ),
+          ),
+        ),
+        child: Stack(
+          children: [
+            // Semi-transparent overlay for better text readability
+            Container(
+              width: double.infinity,
+              height: double.infinity,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.3),
+                    Colors.black.withOpacity(0.5),
+                  ],
                 ),
-              );
-            },
-          ),
-          // Semi-transparent overlay
-          Container(
-            width: double.infinity,
-            height: double.infinity,
-            color: Colors.black.withOpacity(0.3),
-          ),
-          // Content Layer
-          AuthFormContainer(
-            title: "Reset Password",
-            subtitle: "Enter your email to receive a password reset link",
-            child: Consumer<AuthProvider>(
-              builder: (context, authProvider, child) {
-                return Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      CustomTextField(
-                        label: "Email",
-                        hint: "Enter your email address",
-                        controller: _emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        validator: Validators.validateEmail,
-                        prefixIcon: const Icon(Icons.email_outlined),
-                      ),
-                      const SizedBox(height: 24),
-                      CustomButton(
-                        text: "Send Reset Link",
-                        onPressed: _handleResetPassword,
-                        isLoading: authProvider.isLoading,
-                      ),
-                      const SizedBox(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+              ),
+            ),
+            // Content with floating form card
+            SafeArea(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Card(
+                    elevation: 12,
+                    color: Colors.white.withOpacity(0.95),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(32.0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Text(
-                            "Remember your password? ",
-                            style: TextStyle(color: Colors.grey.shade600),
+                          // Header Section
+                          Column(
+                            children: [
+                              Icon(
+                                Icons.lock_reset_outlined,
+                                size: 64,
+                                color: Theme.of(context).primaryColor,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                "Reset Password",
+                                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey.shade800,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                "Enter your email to receive a password reset link",
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: Colors.grey.shade600,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
                           ),
-                          TextButton(
-                            onPressed: () {
-                              Navigator.pop(context);
+                          const SizedBox(height: 32),
+                          
+                          // Form Section
+                          Consumer<AuthProvider>(
+                            builder: (context, authProvider, child) {
+                              return Form(
+                                key: _formKey,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    CustomTextField(
+                                      label: "Email",
+                                      hint: "Enter your email address",
+                                      controller: _emailController,
+                                      keyboardType: TextInputType.emailAddress,
+                                      validator: Validators.validateEmail,
+                                      prefixIcon: const Icon(Icons.email_outlined),
+                                    ),
+                                    const SizedBox(height: 24),
+                                    CustomButton(
+                                      text: "Send Reset Link",
+                                      onPressed: _handleResetPassword,
+                                      isLoading: authProvider.isLoading,
+                                    ),
+                                    const SizedBox(height: 24),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          "Remember your password? ",
+                                          style: TextStyle(
+                                            color: Colors.grey.shade600,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                        TextButton(
+                                          onPressed: () {
+                                            Navigator.pop(context);
+                                          },
+                                          child: Text(
+                                            "Sign In",
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              color: Theme.of(context).primaryColor,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              );
                             },
-                            child: const Text(
-                              "Sign In",
-                              style: TextStyle(fontWeight: FontWeight.w600),
-                            ),
                           ),
                         ],
                       ),
-                    ],
+                    ),
                   ),
-                );
-              },
+                ),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

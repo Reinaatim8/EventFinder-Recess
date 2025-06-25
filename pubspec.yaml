@@ -28,4 +28,5 @@ flutter:
   uses-material-design: true
   # Add assets configuration
   assets:
-    - assets/images/background.jpg  # Includes all files in assets/images/
+    - assets/images/
+     # Includes all files in assets/images/
