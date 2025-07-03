@@ -940,11 +940,14 @@ class _BookingsTabState extends State<BookingsTab> {
                         MaterialPageRoute(
                           builder: (_) => CheckoutScreen(
                             total: booking['total'],
-                            onPaymentSuccess: () {
-                              setState(() {
-                                bookings[index]['paid'] = true;
-                              });
-                            },
+                            //onPaymentSuccess: () {
+                              // Mark this booking as paid
+                             // setState(() {
+                               // bookings[index]['paid'] = true;
+                             // });
+                         // );
+                          
+                            //},
                           ),
                         ),
                       );

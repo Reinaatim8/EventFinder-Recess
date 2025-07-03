@@ -62,4 +62,9 @@ dependency_overrides:
 flutter:
   uses-material-design: true
   assets:
-    - assets/images/
+    - assets/images/background.jpg  # Includes all files in assets/images/
+    - assets/images/paid.jpg
+    - assets/images/mobile.jpg
+    - assets/images/card.jpeg
+    - assets/images/mtn.jpg
+    - assets/images/airtel.png
