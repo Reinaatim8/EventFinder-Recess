@@ -9,39 +9,20 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  firebase_core: ^2.24.2
+  firebase_auth: ^4.15.3
+  cloud_firestore: ^4.13.6
+  provider: ^6.1.1
+  fluttertoast: ^8.2.4
+  email_validator: ^2.1.17
+  js: 0.7.2
+  firebase_auth_platform_interface: ^7.0.0
+  image_picker: ^0.8.7
+  firebase_storage: ^11.0.2
+  flutterwave_standard: ^1.0.7
+  equatable: ^2.0.3
+  qr_flutter: ^4.0.0
   
-  # Firebase
-  firebase_core: ^3.15.0
-  firebase_auth: ^5.6.1
-  cloud_firestore: ^5.6.10
-  firebase_storage: ^12.4.8
-  
-  # HTTP & Networking
-  http: ^1.4.0
-  
-  # Utilities
-  intl: ^0.20.2
-  provider: ^6.1.5
-  fluttertoast: ^8.2.12
-  email_validator: ^3.0.0
-  equatable: ^2.0.7
-  
-  # Image Handling
-  image_picker: ^1.1.2
-  
-  # Payment
-  flutterwave_standard: ^1.1.0
-  
-  # Webview
-  flutter_inappwebview: ^6.1.5
-  webview_flutter: ^4.13.0
-  webview_flutter_android: ^4.7.0
-  webview_flutter_wkwebview: ^3.22.0
-  webview_flutter_platform_interface: ^2.13.1
-  
-  
-  # Web compatibility
-  web: ^1.1.1
 
 dev_dependencies:
   flutter_test:

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final double total;
@@ -110,7 +111,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           _buildNetworkCard(
             value: PaymentNetwork.mtn,
             title: "MTN Mobile Money",
-            image: "assets/images/mtn.jpg", // Replace with actual MTN logo
+            image: "assets/images/mtn.jpg",
             bgColor: Colors.yellow.shade100,
             borderColor: Colors.orange,
           ),
@@ -119,7 +120,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           _buildNetworkCard(
             value: PaymentNetwork.airtel,
             title: "Airtel Money",
-            image: "assets/images/airtel.png", 
+            image: "assets/images/airtel.png",
             bgColor: Colors.red.shade50,
             borderColor: Colors.redAccent,
           ),
@@ -187,44 +188,65 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   void _openMobileMoneyDialog(PaymentNetwork network) {
     String phone = '';
     String provider = network == PaymentNetwork.mtn ? 'MTN' : 'Airtel';
+    String qrData = _generateQRData();
+    print("QR Data: $qrData");
 
-    _showInputDialog(
-      title: "Pay with $provider Money",
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextFormField(
-            decoration: const InputDecoration(labelText: "Phone Number"),
-            onChanged: (val) => phone = val,
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) {
+        return StatefulBuilder(
+          builder: (context, setState) => AlertDialog(
+            title: Text("Pay with $provider Money"),
+            content: SingleChildScrollView(
+              child: Column(
+                children: [
+                  TextFormField(
+                    decoration: const InputDecoration(labelText: "Phone Number"),
+                    onChanged: (val) => phone = val,
+                  ),
+                  const SizedBox(height: 20),
+                  if(qrData.isNotEmpty)
+                  QrImageView(
+                    data: qrData,
+                    version: QrVersions.auto,
+                    size: 150.0,
+                    gapless: true, 
+                  )
+                  else
+                    const Text("Generating QR code..."),
+                  const SizedBox(height: 10),
+                  const Text("Scan this QR code to complete your payment."),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  // Regenerate the QR code
+                  setState(() {
+                    qrData = _generateQRData();
+                  });
+                },
+                child: const Text("Cancel & Regenerate"),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _showSuccessDialog();
+                },
+                child: const Text("Confirm Payment"),
+              ),
+            ],
           ),
-        ],
-      ),
-      onConfirm: () {
-        // ✅ TODO: Integrate Flutterwave or Airtel API here.
-        _showSuccessDialog();
+        );
       },
     );
   }
 
-  void _showInputDialog({
-    required String title,
-    required Widget content,
-    required VoidCallback onConfirm,
-  }) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text(title),
-        content: SingleChildScrollView(child: content),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
-          ElevatedButton(onPressed: () {
-            Navigator.pop(context);
-            onConfirm();
-          }, child: const Text("Pay Now")),
-        ],
-      ),
-    );
+  String _generateQRData() {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    return "${firstName}_${lastName}_${email}_${widget.total}_$now";
   }
 
   void _showSuccessDialog() {
@@ -243,6 +265,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 }
+
 
 
 
