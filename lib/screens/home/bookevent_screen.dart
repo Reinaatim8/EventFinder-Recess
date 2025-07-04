@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:qr_flutter/qr_flutter.dart';
 
 class CheckoutScreen extends StatefulWidget {
@@ -20,6 +22,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   bool subscribeUpdates = true;
   PaymentNetwork? _selectedNetwork;
 
+  
+  final String subscriptionKey = "aab1d593853c454c9fcec8e4e02dde3c";
+  final String apiUser = "815d497c-9cb6-477c-8e30-23c3c2b3bea6";
+  final String apiKey = "5594113210ab4f3da3a7329b0ae65f40";
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -32,7 +39,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          // Billing Card
           Card(
             elevation: 3,
             color: const Color.fromARGB(255, 212, 228, 245),
@@ -102,12 +108,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               ]),
             ),
           ),
-
           const SizedBox(height: 20),
           const Text("Mobile Money Payment", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
-
-          // MTN
           _buildNetworkCard(
             value: PaymentNetwork.mtn,
             title: "MTN Mobile Money",
@@ -115,8 +118,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             bgColor: Colors.yellow.shade100,
             borderColor: Colors.orange,
           ),
-
-          // Airtel
           _buildNetworkCard(
             value: PaymentNetwork.airtel,
             title: "Airtel Money",
@@ -124,7 +125,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             bgColor: Colors.red.shade50,
             borderColor: Colors.redAccent,
           ),
-
           const Spacer(),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -157,7 +157,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     required Color borderColor,
   }) {
     final isSelected = _selectedNetwork == value;
-
     return GestureDetector(
       onTap: () => setState(() => _selectedNetwork = value),
       child: Card(
@@ -187,9 +186,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   void _openMobileMoneyDialog(PaymentNetwork network) {
     String phone = '';
+    String qrData = '';
     String provider = network == PaymentNetwork.mtn ? 'MTN' : 'Airtel';
-    String qrData = _generateQRData();
-    print("QR Data: $qrData");
 
     showDialog(
       context: context,
@@ -203,18 +201,24 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 children: [
                   TextFormField(
                     decoration: const InputDecoration(labelText: "Phone Number"),
-                    onChanged: (val) => phone = val,
+                    onChanged: (val) async {
+                      phone = val;
+                      final token = await getAccessToken();
+                      if (token != null) {
+                        await validateAccountHolder(phone, token);
+                      }
+                      setState(() => qrData = _generateQRData(phone));
+                    },
                   ),
                   const SizedBox(height: 20),
-                  if(qrData.isNotEmpty)
-                  QrImageView(
-                    data: qrData,
-                    version: QrVersions.auto,
-                    size: 150.0,
-                    gapless: true, 
-                  )
-                  else
-                    const Text("Generating QR code..."),
+                  qrData.isNotEmpty
+                      ? QrImageView(
+                          data: qrData,
+                          version: QrVersions.auto,
+                          size: 150.0,
+                          gapless: true,
+                        )
+                      : const Text("Generating QR code..."),
                   const SizedBox(height: 10),
                   const Text("Scan this QR code to complete your payment."),
                 ],
@@ -222,19 +226,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             ),
             actions: [
               TextButton(
-                onPressed: () {
-                  // Regenerate the QR code
-                  setState(() {
-                    qrData = _generateQRData();
-                  });
-                },
-                child: const Text("Cancel & Regenerate"),
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Cancel"),
               ),
               ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _showSuccessDialog();
-                },
+                onPressed: () => _showSuccessDialog(),
                 child: const Text("Confirm Payment"),
               ),
             ],
@@ -244,9 +240,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  String _generateQRData() {
+  String _generateQRData(String phone) {
     final now = DateTime.now().millisecondsSinceEpoch;
-    return "${firstName}_${lastName}_${email}_${widget.total}_$now";
+    return "$firstName $lastName, $email, ${widget.total}, $phone, $now";
   }
 
   void _showSuccessDialog() {
@@ -264,11 +260,43 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       ),
     );
   }
+
+  Future<String?> getAccessToken() async {
+    final credentials = base64Encode(utf8.encode('$apiUser:$apiKey'));
+    final headers = {
+      'Authorization': 'Basic $credentials',
+      'Ocp-Apim-Subscription-Key': subscriptionKey,
+    };
+
+    final response = await http.post(
+      Uri.parse("https://sandbox.momodeveloper.mtn.com/collection/token/"),
+      headers: headers,
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body)['access_token'];
+    } else {
+      print("Token error: ${response.body}");
+      return null;
+    }
+  }
+
+  Future<void> validateAccountHolder(String phone, String accessToken) async {
+    final headers = {
+      'Authorization': 'Bearer $accessToken',
+      'X-Target-Environment': 'sandbox',
+      'Ocp-Apim-Subscription-Key': subscriptionKey,
+    };
+
+    final response = await http.get(
+      Uri.parse("https://sandbox.momodeveloper.mtn.com/collection/v1_0/accountholder/msisdn/$phone/active"),
+      headers: headers,
+    );
+
+    if (response.statusCode == 200) {
+      print("Account is active");
+    } else {
+      print("Account not active: ${response.body}");
+    }
+  }
 }
-
-
-
-
-
-
-
