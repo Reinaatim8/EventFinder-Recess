@@ -99,7 +99,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       onChanged: (val) => setState(() => subscribeOrganizer = val!),
                     ),
                     CheckboxListTile(
-                      title: const Text("Send me emails about the best events happening nearby or online."),
+                      title: const Text("Send me emails about the best events Happening nearby or online."),
                       value: subscribeUpdates,
                       onChanged: (val) => setState(() => subscribeUpdates = val!),
                     ),
