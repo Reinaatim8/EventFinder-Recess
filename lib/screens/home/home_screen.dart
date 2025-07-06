@@ -528,7 +528,7 @@ class _EventCard extends StatelessWidget {
           MaterialPageRoute(
             builder: (context) => CheckoutScreen(
               total: event.price,
-              onPaymentSuccess: () {
+               onPaymentSuccess: () {
                 if (bookingsTabKey.currentState != null) {
                   bookingsTabKey.currentState!.addBooking({
                     'id': DateTime.now().millisecondsSinceEpoch,
@@ -938,316 +938,320 @@ class _BookingsTabState extends State<BookingsTab> {
             trailing: booking['paid']
                 ? const Text('Paid', style: TextStyle(color: Colors.green))
                 : ElevatedButton(
-                    child: const Text('Checkout'),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => CheckoutScreen(
-                            total: booking['total'],
-                            //onPaymentSuccess: () {
-                              // Mark this booking as paid
-                             // setState(() {
-                               // bookings[index]['paid'] = true;
-                             // });
-                         // );
-                          
-                            //},
+              child: const Text('Checkout'),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => CheckoutScreen(
+                      total: booking['total'],
+                      onPaymentSuccess: () {
+                        // Mark this booking as paid
+                        setState(() {
+                          bookings[index]['paid'] = true;
+                        });
+                        // Show a success message
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Payment Successful!'),
+                            backgroundColor: Colors.green,
                           ),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
+                );
+              },
+            ),
           );
         },
       ),
     );
   }
 }
-
-class CheckoutScreen extends StatefulWidget {
-  final double total;
-  final VoidCallback? onPaymentSuccess;
-
-  const CheckoutScreen({
-    super.key,
-    required this.total,
-    this.onPaymentSuccess,
-  });
-
-  
-  @override
-  State<CheckoutScreen> createState() => _CheckoutScreenState();
-}
-enum PaymentNetwork { mtn, airtel }
-class _CheckoutScreenState extends State<CheckoutScreen> {
-  final _formKey = GlobalKey<FormState>();
-  String firstName = '';
-  String lastName = '';
-  String email = '';
-   bool subscribeOrganizer = true;
-  bool subscribeUpdates = true;
-  PaymentNetwork? _selectedNetwork;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          "Checkout Your Ticket",
-          style: TextStyle(
-              color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
-        backgroundColor: Colors.blueAccent,
-      ),
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Card(
-                elevation: 3,
-                color: const Color.fromARGB(255, 212, 228, 245),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text("Billing Information",
-                          style: TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 10),
-                      Form(
-                        key: _formKey,
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Card(
-                                    color: Colors.white,
-                                    elevation: 1,
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 8.0),
-                                      child: TextFormField(
-                                        decoration: const InputDecoration(
-                                          labelText: "First Name *",
-                                          border: InputBorder.none,
-                                        ),
-                                        onChanged: (val) => firstName = val,
-                                        validator: (val) =>
-                                            val!.isEmpty ? "Required" : null,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Card(
-                                    color: Colors.white,
-                                    elevation: 1,
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 8.0),
-                                      child: TextFormField(
-                                        decoration: const InputDecoration(
-                                          labelText: "Surname *",
-                                          border: InputBorder.none,
-                                        ),
-                                        onChanged: (val) => lastName = val,
-                                        validator: (val) =>
-                                            val!.isEmpty ? "Required" : null,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            Card(
-                              color: Colors.white,
-                              elevation: 1,
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8.0),
-                                child: TextFormField(
-                                  decoration: const InputDecoration(
-                                    labelText: "Email Address *",
-                                    border: InputBorder.none,
-                                  ),
-                                  onChanged: (val) => email = val,
-                                  validator: (val) =>
-                                      val!.isEmpty ? "Required" : null,
-                                ),
-                              ),
-                            ),
-                              const SizedBox(height: 10),
-                      CheckboxListTile(
-                      title: const Text("Keep me updated on more events and news from this organiser."),
-                      value: subscribeOrganizer,
-                      onChanged: (val) => setState(() => subscribeOrganizer = val!),
-                    ),
-                    CheckboxListTile(
-                      title: const Text("Send me emails about the best events Happening nearby or online."),
-                      value: subscribeUpdates,
-                      onChanged: (val) => setState(() => subscribeUpdates = val!),
-                    ),
-                  ]),
-                ),
-              ]),
-            ),
-              ), 
-              const SizedBox(height: 20),
-              const Text("Mobile Money Payment",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-              _buildNetworkCard(
-                value: PaymentNetwork.mtn,
-                title: "MTN Mobile Money",
-                image: "assets/images/mtn.jpg",
-                bgColor: Colors.yellow.shade100,
-                borderColor: Colors.orange,
-              ),
-              _buildNetworkCard(
-                value: PaymentNetwork.airtel,
-                title: "Airtel Money",
-                image: "assets/images/airtel.png",
-                bgColor: Colors.red.shade50,
-                borderColor: Colors.redAccent,
-              ),
-              const SizedBox(height: 40),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(50),
-                  backgroundColor: Colors.blue,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    if (_selectedNetwork == null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text("Please select a payment network")),
-                      );
-                      return;
-                    }
-                    _openMobileMoneyDialog(_selectedNetwork!);
-                  }
-                },
-                child: const Text("Book Ticket",
-                    style: TextStyle(color: Colors.white, fontSize: 15)),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNetworkCard({
-    required PaymentNetwork value,
-    required String title,
-    required String image,
-    required Color bgColor,
-    required Color borderColor,
-  }) {
-    final isSelected = _selectedNetwork == value;
-    return GestureDetector(
-      onTap: () => setState(() => _selectedNetwork = value),
-      child: Card(
-        color: bgColor,
-        elevation: isSelected ? 4 : 1,
-        shape: RoundedRectangleBorder(
-          side: BorderSide(
-            color: isSelected ? borderColor : Colors.grey.shade300,
-            width: 1.5,
-          ),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: Image.asset(
-                  image,
-                  height: 30,
-                  width: 50,
-                  fit: BoxFit.contain,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.w500),
-                ),
-              ),
-              if (isSelected) Icon(Icons.check_circle, color: borderColor),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _openMobileMoneyDialog(PaymentNetwork network) {
-    String phone = '';
-    String provider = network == PaymentNetwork.mtn ? 'MTN' : 'Airtel';
-
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text("Pay with $provider Money"),
-        content: TextFormField(
-          decoration: const InputDecoration(labelText: "Phone Number"),
-          onChanged: (val) => phone = val,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel"),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _showSuccessDialog();
-            },
-            child: const Text("Confirm Payment"),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showSuccessDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Booking Successful"),
-        content:
-            Text("You booked your ticket for €${widget.total.toStringAsFixed(2)}."),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.popUntil(context, (route) => route.isFirst);
-              if (widget.onPaymentSuccess != null) {
-                widget.onPaymentSuccess!();
-              }
-            },
-            child: const Text("OK"),
-          ),
-        ],
-      ),
-    );
-  }
-}
+// class CheckoutScreen extends StatefulWidget {
+//   final double total;
+//   final VoidCallback? onPaymentSuccess;
+//
+//   const CheckoutScreen({
+//     super.key,
+//     required this.total,
+//     this.onPaymentSuccess,
+//   });
+//
+//
+//   @override
+//   State<CheckoutScreen> createState() => _CheckoutScreenState();
+// }
+// enum PaymentNetwork { mtn, airtel }
+// class _CheckoutScreenState extends State<CheckoutScreen> {
+//   final _formKey = GlobalKey<FormState>();
+//   String firstName = '';
+//   String lastName = '';
+//   String email = '';
+//    bool subscribeOrganizer = true;
+//   bool subscribeUpdates = true;
+//   PaymentNetwork? _selectedNetwork;
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       appBar: AppBar(
+//         title: const Text(
+//           "Checkout Your Ticket",
+//           style: TextStyle(
+//               color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+//         ),
+//         centerTitle: true,
+//         backgroundColor: Colors.blueAccent,
+//       ),
+//       backgroundColor: Colors.white,
+//       body: SafeArea(
+//         child: SingleChildScrollView(
+//           padding: const EdgeInsets.all(20),
+//           child: Column(
+//             crossAxisAlignment: CrossAxisAlignment.start,
+//             children: [
+//               Card(
+//                 elevation: 3,
+//                 color: const Color.fromARGB(255, 212, 228, 245),
+//                 shape: RoundedRectangleBorder(
+//                     borderRadius: BorderRadius.circular(12)),
+//                 child: Padding(
+//                   padding: const EdgeInsets.all(16.0),
+//                   child: Column(
+//                     crossAxisAlignment: CrossAxisAlignment.start,
+//                     children: [
+//                       const Text("Billing Information",
+//                           style: TextStyle(
+//                               fontSize: 18, fontWeight: FontWeight.bold)),
+//                       const SizedBox(height: 10),
+//                       Form(
+//                         key: _formKey,
+//                         child: Column(
+//                           children: [
+//                             Row(
+//                               children: [
+//                                 Expanded(
+//                                   child: Card(
+//                                     color: Colors.white,
+//                                     elevation: 1,
+//                                     child: Padding(
+//                                       padding: const EdgeInsets.symmetric(
+//                                           horizontal: 8.0),
+//                                       child: TextFormField(
+//                                         decoration: const InputDecoration(
+//                                           labelText: "First Name *",
+//                                           border: InputBorder.none,
+//                                         ),
+//                                         onChanged: (val) => firstName = val,
+//                                         validator: (val) =>
+//                                             val!.isEmpty ? "Required" : null,
+//                                       ),
+//                                     ),
+//                                   ),
+//                                 ),
+//                                 const SizedBox(width: 10),
+//                                 Expanded(
+//                                   child: Card(
+//                                     color: Colors.white,
+//                                     elevation: 1,
+//                                     child: Padding(
+//                                       padding: const EdgeInsets.symmetric(
+//                                           horizontal: 8.0),
+//                                       child: TextFormField(
+//                                         decoration: const InputDecoration(
+//                                           labelText: "Surname *",
+//                                           border: InputBorder.none,
+//                                         ),
+//                                         onChanged: (val) => lastName = val,
+//                                         validator: (val) =>
+//                                             val!.isEmpty ? "Required" : null,
+//                                       ),
+//                                     ),
+//                                   ),
+//                                 ),
+//                               ],
+//                             ),
+//                             const SizedBox(height: 10),
+//                             Card(
+//                               color: Colors.white,
+//                               elevation: 1,
+//                               child: Padding(
+//                                 padding: const EdgeInsets.symmetric(
+//                                     horizontal: 8.0),
+//                                 child: TextFormField(
+//                                   decoration: const InputDecoration(
+//                                     labelText: "Email Address *",
+//                                     border: InputBorder.none,
+//                                   ),
+//                                   onChanged: (val) => email = val,
+//                                   validator: (val) =>
+//                                       val!.isEmpty ? "Required" : null,
+//                                 ),
+//                               ),
+//                             ),
+//                               const SizedBox(height: 10),
+//                       CheckboxListTile(
+//                       title: const Text("Keep me updated on more events and news from this organiser."),
+//                       value: subscribeOrganizer,
+//                       onChanged: (val) => setState(() => subscribeOrganizer = val!),
+//                     ),
+//                     CheckboxListTile(
+//                       title: const Text("Send me emails about the best events Happening nearby or online."),
+//                       value: subscribeUpdates,
+//                       onChanged: (val) => setState(() => subscribeUpdates = val!),
+//                     ),
+//                   ]),
+//                 ),
+//               ]),
+//             ),
+//               ),
+//               const SizedBox(height: 20),
+//               const Text("Mobile Money Payment",
+//                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+//               const SizedBox(height: 10),
+//               _buildNetworkCard(
+//                 value: PaymentNetwork.mtn,
+//                 title: "MTN Mobile Money",
+//                 image: "assets/images/mtn.jpg",
+//                 bgColor: Colors.yellow.shade100,
+//                 borderColor: Colors.orange,
+//               ),
+//               _buildNetworkCard(
+//                 value: PaymentNetwork.airtel,
+//                 title: "Airtel Money",
+//                 image: "assets/images/airtel.png",
+//                 bgColor: Colors.red.shade50,
+//                 borderColor: Colors.redAccent,
+//               ),
+//               const SizedBox(height: 40),
+//               ElevatedButton(
+//                 style: ElevatedButton.styleFrom(
+//                   minimumSize: const Size.fromHeight(50),
+//                   backgroundColor: Colors.blue,
+//                   shape: RoundedRectangleBorder(
+//                       borderRadius: BorderRadius.circular(12)),
+//                 ),
+//                 onPressed: () {
+//                   if (_formKey.currentState!.validate()) {
+//                     if (_selectedNetwork == null) {
+//                       ScaffoldMessenger.of(context).showSnackBar(
+//                         const SnackBar(
+//                             content: Text("Please select a payment network")),
+//                       );
+//                       return;
+//                     }
+//                     _openMobileMoneyDialog(_selectedNetwork!);
+//                   }
+//                 },
+//                 child: const Text("Book Ticket",
+//                     style: TextStyle(color: Colors.white, fontSize: 15)),
+//               ),
+//             ],
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+//
+//   Widget _buildNetworkCard({
+//     required PaymentNetwork value,
+//     required String title,
+//     required String image,
+//     required Color bgColor,
+//     required Color borderColor,
+//   }) {
+//     final isSelected = _selectedNetwork == value;
+//     return GestureDetector(
+//       onTap: () => setState(() => _selectedNetwork = value),
+//       child: Card(
+//         color: bgColor,
+//         elevation: isSelected ? 4 : 1,
+//         shape: RoundedRectangleBorder(
+//           side: BorderSide(
+//             color: isSelected ? borderColor : Colors.grey.shade300,
+//             width: 1.5,
+//           ),
+//           borderRadius: BorderRadius.circular(12),
+//         ),
+//         child: Padding(
+//           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+//           child: Row(
+//             children: [
+//               ClipRRect(
+//                 borderRadius: BorderRadius.circular(6),
+//                 child: Image.asset(
+//                   image,
+//                   height: 30,
+//                   width: 50,
+//                   fit: BoxFit.contain,
+//                 ),
+//               ),
+//               const SizedBox(width: 16),
+//               Expanded(
+//                 child: Text(
+//                   title,
+//                   style: const TextStyle(
+//                       fontSize: 16, fontWeight: FontWeight.w500),
+//                 ),
+//               ),
+//               if (isSelected) Icon(Icons.check_circle, color: borderColor),
+//             ],
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+//
+//   void _openMobileMoneyDialog(PaymentNetwork network) {
+//     String phone = '';
+//     String provider = network == PaymentNetwork.mtn ? 'MTN' : 'Airtel';
+//
+//     showDialog(
+//       context: context,
+//       builder: (_) => AlertDialog(
+//         title: Text("Pay with $provider Money"),
+//         content: TextFormField(
+//           decoration: const InputDecoration(labelText: "Phone Number"),
+//           onChanged: (val) => phone = val,
+//         ),
+//         actions: [
+//           TextButton(
+//             onPressed: () => Navigator.pop(context),
+//             child: const Text("Cancel"),
+//           ),
+//           ElevatedButton(
+//             onPressed: () {
+//               Navigator.pop(context);
+//               _showSuccessDialog();
+//             },
+//             child: const Text("Confirm Payment"),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+//
+//   void _showSuccessDialog() {
+//     showDialog(
+//       context: context,
+//       builder: (context) => AlertDialog(
+//         title: const Text("Booking Successful"),
+//         content:
+//             Text("You booked your ticket for €${widget.total.toStringAsFixed(2)}."),
+//         actions: [
+//           TextButton(
+//             onPressed: () {
+//               Navigator.popUntil(context, (route) => route.isFirst);
+//               if (widget.onPaymentSuccess != null) {
+//                 widget.onPaymentSuccess!();
+//               }
+//             },
+//             child: const Text("OK"),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+// }

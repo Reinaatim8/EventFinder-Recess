@@ -5,7 +5,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final double total;
-  const CheckoutScreen({super.key, required this.total});
+  const CheckoutScreen({super.key, required this.total, required Null Function() onPaymentSuccess});
 
   @override
   State<CheckoutScreen> createState() => _CheckoutScreenState();

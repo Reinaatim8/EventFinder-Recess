@@ -1,7 +1,13 @@
-android {
-    namespace = "com.example.event_locator_app"
-    compileSdk = 34
+plugins {
+    id("com.android.application")
+    id("kotlin-android")
+    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    id("dev.flutter.flutter-gradle-plugin")
+}
 
+android {
+    namespace = "com.example.temp_fix"
+    compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -14,71 +20,25 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.event_locator_app"
-        minSdk = 21
-        targetSdk = 34
+        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
+        applicationId = "com.example.temp_fix"
+        // You can update the following values to match your application needs.
+        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        minSdk = 23
+        targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        
-        // Additional configurations for better compatibility
-        multiDexEnabled = true
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        
-        // Vector drawables support
-        vectorDrawables {
-            useSupportLibrary = true
-        }
     }
 
     buildTypes {
         release {
-            // Signing configuration for release builds
+            // TODO: Add your own signing config for the release build.
+            // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
-            
-            // Code shrinking and obfuscation
-            isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
-        
-        debug {
-            applicationIdSuffix = ".debug"
-            isDebuggable = true
         }
     }
+}
 
-    // Configure build features
-    buildFeatures {
-        buildConfig = true
-    }
-
-    // Packaging options
-    packagingOptions {
-        resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-        }
-    }
-
-    // Lint options
-    lint {
-        disable += "InvalidPackage"
-        checkReleaseBuilds = false
-    }
-
-    // Dependency resolution strategy
-    configurations.all {
-        resolutionStrategy {
-            force("androidx.core:core-ktx:1.10.1")
-            force("androidx.lifecycle:lifecycle-runtime-ktx:2.6.1")
-        }
-    }
-
-    // Source sets (if needed)
-    sourceSets {
-        getByName("main") {
-            java.srcDirs("src/main/kotlin")
-        }
-    }
+flutter {
+    source = "../.."
 }
