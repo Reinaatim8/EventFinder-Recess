@@ -23,6 +23,7 @@ class Event {
   final String category;
   final String? imageUrl;
   final String organizerId;
+  final double price;
 
   Event({
     required this.id,
@@ -33,6 +34,7 @@ class Event {
     required this.category,
     this.imageUrl,
     required this.organizerId,
+    required this.price,
   });
 
   factory Event.fromFirestore(DocumentSnapshot doc) {
@@ -46,6 +48,7 @@ class Event {
       category: data['category'] ?? 'Other',
       imageUrl: data['imageUrl'],
       organizerId: data['organizerId'] ?? '',
+      price: (data['price'] ?? 0.0).toDouble(),
     );
   }
 
@@ -59,6 +62,7 @@ class Event {
       'category': category,
       'imageUrl': imageUrl,
       'organizerId': organizerId,
+      'price': price,
       'createdAt': FieldValue.serverTimestamp(),
     };
   }
@@ -210,7 +214,7 @@ class HomeTab extends StatelessWidget {
         eventsByDate[date]!.asMap().entries.map(
               (entry) => Padding(
                 padding: const EdgeInsets.only(bottom: 15, left: 20, right: 20),
-                child: _EventCard(event: entry.value),
+                child: _EventCard(event: entry.value, onTap: () {  },),
               ),
             ),
       );
@@ -511,8 +515,9 @@ class _CategoryChip extends StatelessWidget {
 
 class _EventCard extends StatelessWidget {
   final Event event;
+  final VoidCallback onTap;
 
-  const _EventCard({required this.event});
+  const _EventCard({required this.event, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -522,13 +527,13 @@ class _EventCard extends StatelessWidget {
           context,
           MaterialPageRoute(
             builder: (context) => CheckoutScreen(
-              total: 50.0,
+              total: event.price,
               onPaymentSuccess: () {
                 if (bookingsTabKey.currentState != null) {
                   bookingsTabKey.currentState!.addBooking({
                     'id': DateTime.now().millisecondsSinceEpoch,
                     'event': event.title,
-                    'total': 50.0,
+                    'total': event.price,
                     'paid': true,
                   });
                 }
@@ -850,7 +855,7 @@ class _SearchTabState extends State<SearchTab> {
                     itemBuilder: (context, index) {
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 15),
-                        child: _EventCard(event: _filteredEvents[index]),
+                        child: _EventCard(event: _filteredEvents[index], onTap: () {  },),
                       );
                     },
                   ),
@@ -970,20 +975,19 @@ class CheckoutScreen extends StatefulWidget {
     this.onPaymentSuccess,
   });
 
+  
   @override
   State<CheckoutScreen> createState() => _CheckoutScreenState();
 }
-
-enum PaymentMethod { paypal, card, mobileMoney }
-
+enum PaymentNetwork { mtn, airtel }
 class _CheckoutScreenState extends State<CheckoutScreen> {
   final _formKey = GlobalKey<FormState>();
   String firstName = '';
   String lastName = '';
   String email = '';
-  bool subscribeOrganizer = true;
+   bool subscribeOrganizer = true;
   bool subscribeUpdates = true;
-  PaymentMethod? _selectedPayment;
+  PaymentNetwork? _selectedNetwork;
 
   @override
   Widget build(BuildContext context) {
@@ -1014,7 +1018,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text("Billing information",
+                      const Text("Billing Information",
                           style: TextStyle(
                               fontSize: 18, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 10),
@@ -1033,7 +1037,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                           horizontal: 8.0),
                                       child: TextFormField(
                                         decoration: const InputDecoration(
-                                          labelText: "First name *",
+                                          labelText: "First Name *",
                                           border: InputBorder.none,
                                         ),
                                         onChanged: (val) => firstName = val,
@@ -1074,7 +1078,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                     horizontal: 8.0),
                                 child: TextFormField(
                                   decoration: const InputDecoration(
-                                    labelText: "Email address *",
+                                    labelText: "Email Address *",
                                     border: InputBorder.none,
                                   ),
                                   onChanged: (val) => email = val,
@@ -1083,52 +1087,39 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 10),
-                            CheckboxListTile(
-                              title: const Text(
-                                  "Keep me updated on more events and news from this organiser."),
-                              value: subscribeOrganizer,
-                              onChanged: (val) =>
-                                  setState(() => subscribeOrganizer = val!),
-                            ),
-                            CheckboxListTile(
-                              title: const Text(
-                                  "Send me emails about the best events happening nearby or online."),
-                              value: subscribeUpdates,
-                              onChanged: (val) =>
-                                  setState(() => subscribeUpdates = val!),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                              const SizedBox(height: 10),
+                      CheckboxListTile(
+                      title: const Text("Keep me updated on more events and news from this organiser."),
+                      value: subscribeOrganizer,
+                      onChanged: (val) => setState(() => subscribeOrganizer = val!),
+                    ),
+                    CheckboxListTile(
+                      title: const Text("Send me emails about the best events Happening nearby or online."),
+                      value: subscribeUpdates,
+                      onChanged: (val) => setState(() => subscribeUpdates = val!),
+                    ),
+                  ]),
                 ),
-              ),
+              ]),
+            ),
+              ), 
               const SizedBox(height: 20),
-              const Text("Payment Methods",
+              const Text("Mobile Money Payment",
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
-              _buildStyledPaymentCard(
-                value: PaymentMethod.paypal,
-                logo: 'assets/images/paid.jpg',
-                title: "PayPal",
-                bgColor: Colors.white,
-                borderColor: const Color.fromARGB(255, 2, 92, 26),
+              _buildNetworkCard(
+                value: PaymentNetwork.mtn,
+                title: "MTN Mobile Money",
+                image: "assets/images/mtn.jpg",
+                bgColor: Colors.yellow.shade100,
+                borderColor: Colors.orange,
               ),
-              _buildStyledPaymentCard(
-                value: PaymentMethod.card,
-                logo: 'assets/images/card.jpeg',
-                title: "Credit / Debit Card",
-                bgColor: const Color.fromARGB(255, 252, 253, 254),
-                borderColor: const Color.fromARGB(255, 0, 97, 13),
-              ),
-              _buildStyledPaymentCard(
-                value: PaymentMethod.mobileMoney,
-                logo: 'assets/images/mobile.jpg',
-                title: "Mobile Money",
-                bgColor: Colors.white,
-                borderColor: const Color.fromARGB(255, 1, 103, 4),
+              _buildNetworkCard(
+                value: PaymentNetwork.airtel,
+                title: "Airtel Money",
+                image: "assets/images/airtel.png",
+                bgColor: Colors.red.shade50,
+                borderColor: Colors.redAccent,
               ),
               const SizedBox(height: 40),
               ElevatedButton(
@@ -1140,14 +1131,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ),
                 onPressed: () {
                   if (_formKey.currentState!.validate()) {
-                    if (_selectedPayment == null) {
+                    if (_selectedNetwork == null) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                            content: Text("Please select a payment method")),
+                            content: Text("Please select a payment network")),
                       );
                       return;
                     }
-                    _openPaymentDialog(_selectedPayment!);
+                    _openMobileMoneyDialog(_selectedNetwork!);
                   }
                 },
                 child: const Text("Book Ticket",
@@ -1160,16 +1151,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  Widget _buildStyledPaymentCard({
-    required PaymentMethod value,
-    required String logo,
+  Widget _buildNetworkCard({
+    required PaymentNetwork value,
     required String title,
+    required String image,
     required Color bgColor,
     required Color borderColor,
   }) {
-    final isSelected = _selectedPayment == value;
+    final isSelected = _selectedNetwork == value;
     return GestureDetector(
-      onTap: () => setState(() => _selectedPayment = value),
+      onTap: () => setState(() => _selectedNetwork = value),
       child: Card(
         color: bgColor,
         elevation: isSelected ? 4 : 1,
@@ -1187,7 +1178,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               ClipRRect(
                 borderRadius: BorderRadius.circular(6),
                 child: Image.asset(
-                  logo,
+                  image,
                   height: 30,
                   width: 50,
                   fit: BoxFit.contain,
@@ -1209,101 +1200,29 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  void _openPaymentDialog(PaymentMethod method) {
-    switch (method) {
-      case PaymentMethod.paypal:
-        String paypalEmail = '';
-        _showInputDialog(
-          title: "Pay with PayPal",
-          content: TextFormField(
-            decoration: const InputDecoration(labelText: "PayPal Email"),
-            onChanged: (val) => paypalEmail = val,
-          ),
-          onConfirm: () {
-            _showSuccessDialog();
-          },
-        );
-        break;
-      case PaymentMethod.card:
-        String cardNumber = '';
-        String expiry = '';
-        String cvv = '';
-        _showInputDialog(
-          title: "Pay with Card",
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                decoration: const InputDecoration(labelText: "Card Number"),
-                onChanged: (val) => cardNumber = val,
-              ),
-              TextFormField(
-                decoration:
-                    const InputDecoration(labelText: "Expiry Date (MM/YY)"),
-                onChanged: (val) => expiry = val,
-              ),
-              TextFormField(
-                decoration: const InputDecoration(labelText: "CVV"),
-                onChanged: (val) => cvv = val,
-              ),
-            ],
-          ),
-          onConfirm: () {
-            _showSuccessDialog();
-          },
-        );
-        break;
-      case PaymentMethod.mobileMoney:
-        String phone = '';
-        String provider = 'MTN';
-        _showInputDialog(
-          title: "Pay with Mobile Money",
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                decoration: const InputDecoration(labelText: "Phone Number"),
-                onChanged: (val) => phone = val,
-              ),
-              DropdownButtonFormField<String>(
-                value: provider,
-                decoration: const InputDecoration(labelText: "Network"),
-                items: const [
-                  DropdownMenuItem(value: "MTN", child: Text("MTN")),
-                  DropdownMenuItem(value: "Airtel", child: Text("Airtel")),
-                ],
-                onChanged: (val) => provider = val!,
-              ),
-            ],
-          ),
-          onConfirm: () {
-            _showSuccessDialog();
-          },
-        );
-        break;
-    }
-  }
+  void _openMobileMoneyDialog(PaymentNetwork network) {
+    String phone = '';
+    String provider = network == PaymentNetwork.mtn ? 'MTN' : 'Airtel';
 
-  void _showInputDialog({
-    required String title,
-    required Widget content,
-    required VoidCallback onConfirm,
-  }) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: SingleChildScrollView(child: content),
+      builder: (_) => AlertDialog(
+        title: Text("Pay with $provider Money"),
+        content: TextFormField(
+          decoration: const InputDecoration(labelText: "Phone Number"),
+          onChanged: (val) => phone = val,
+        ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancel")),
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              onConfirm();
+              _showSuccessDialog();
             },
-            child: const Text("Pay Now"),
+            child: const Text("Confirm Payment"),
           ),
         ],
       ),

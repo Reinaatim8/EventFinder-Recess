@@ -525,6 +525,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
           category: _selectedCategory,
           imageUrl: imageUrl,
           organizerId: organizerId,
+          price: double.tryParse(_descriptionController.text.trim()) ?? 0.0,
         );
 
         await _saveEventToFirestore(event);
