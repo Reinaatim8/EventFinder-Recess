@@ -203,22 +203,28 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     decoration: const InputDecoration(labelText: "Phone Number"),
                     onChanged: (val) async {
                       phone = val;
-                      final token = await getAccessToken();
-                      if (token != null) {
-                        await validateAccountHolder(phone, token);
+                      if (phone.isNotEmpty) {
+                        final token = await getAccessToken();
+                        if (token != null) {
+                          await validateAccountHolder(phone, token);
+                        }
+                        setState(() {
+                          qrData = _generateQRData(phone);
+                          print("QR Data: $qrData"); // Debugging print
+                        });
                       }
-                      setState(() => qrData = _generateQRData(phone));
                     },
                   ),
                   const SizedBox(height: 20),
                   qrData.isNotEmpty
                       ? QrImageView(
-                          data: qrData,
-                          version: QrVersions.auto,
-                          size: 150.0,
-                          gapless: true,
-                        )
-                      : const Text("Generating QR code..."),
+                    data: qrData,
+                    version: QrVersions.auto,
+                    size: 150.0,
+                    gapless: true,
+
+                  )
+                      : const Text("Enter your phone number to generate a QR code."),
                   const SizedBox(height: 10),
                   const Text("Scan this QR code to complete your payment."),
                 ],
