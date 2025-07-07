@@ -70,14 +70,14 @@ class _SplashScreenState extends State<SplashScreen>
                // ),
                  Icon(
                   Icons.travel_explore, // or Icons.search
-                  size: 80,
-                  color: Colors.white,
+                  size: 90,
+                  color: Colors.orange,
                 ),
                 SizedBox(height: 20),
                 Text(
                   "E.v.e.n.t-F.i.n.d.e.r",
                   style: TextStyle(
-                    fontSize: 28,
+                    fontSize: 34,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 2.5,
                     color: Colors.white,
