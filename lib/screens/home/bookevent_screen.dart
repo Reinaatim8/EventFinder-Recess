@@ -364,6 +364,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:uuid/uuid.dart';
 
 
 class CheckoutScreen extends StatefulWidget {
@@ -390,11 +391,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   bool subscribeOrganizer = true;
   bool subscribeUpdates = true;
   PaymentNetwork? _selectedNetwork;
+  String? _validatedPhone;
 
   final String subscriptionKey = "aab1d593853c454c9fcec8e4e02dde3c";
   final String apiUser = "815d497c-9cb6-477c-8e30-23c3c2b3bea6";
   final String apiKey = "5594113210ab4f3da3a7329b0ae65f40";
-
 
   @override
   Widget build(BuildContext context) {
@@ -568,19 +569,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         if (token != null) {
                           try {
                             await validateAccountHolder(phone, token);
-                            await requestToPay(
-                              phoneNumber: phone,
-                              accessToken: token,
-                              amount: widget.total,
-                            );
+                            _validatedPhone = phone;
                             Fluttertoast.showToast(
-                              msg: "📲 Valid Mobile Money account. Continue to payment.",
+                              msg: "📲 Valid Mobile Money account. You may now proceed to Confirm Payment.",
                               toastLength: Toast.LENGTH_SHORT,
                               gravity: ToastGravity.TOP,
                               backgroundColor: Colors.green,
                               textColor: Colors.white,
                             );
-                            _hasShownToast = true;
                           } catch (e) {
                             Fluttertoast.showToast(
                               msg: "❌ Invalid account or error verifying number.",
@@ -589,12 +585,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                               backgroundColor: Colors.red,
                               textColor: Colors.white,
                             );
+                            _validatedPhone = null;
                             _hasShownToast = false;
                           }
                         }
                         setState(() => isLoading = false);
                       } else if (phone.length < 10) {
-                        _hasShownToast = false; // reset if digits deleted
+                        _hasShownToast = false;
+                        _validatedPhone = null;
                       }
                     },
                   ),
@@ -611,7 +609,33 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 child: const Text("Cancel"),
               ),
               ElevatedButton(
-                onPressed: () => _showSuccessDialog(),
+                onPressed: () async {
+                  if (_validatedPhone != null) {
+                    final token = await getAccessToken();
+                    if (token != null) {
+                      try {
+                        await requestToPay(phoneNumber: _validatedPhone!, accessToken: token, amount: widget.total);
+                        _showSuccessDialog();
+                      } catch (e) {
+                        Fluttertoast.showToast(
+                          msg: "❌ Payment failed: ${e.toString()}",
+                          toastLength: Toast.LENGTH_LONG,
+                          gravity: ToastGravity.TOP,
+                          backgroundColor: Colors.red,
+                          textColor: Colors.white,
+                        );
+                      }
+                    }
+                  } else {
+                    Fluttertoast.showToast(
+                      msg: "❌ Please enter and validate a valid number first.",
+                      toastLength: Toast.LENGTH_SHORT,
+                      gravity: ToastGravity.TOP,
+                      backgroundColor: Colors.red,
+                      textColor: Colors.white,
+                    );
+                  }
+                },
                 child: const Text("Confirm Payment"),
               ),
             ],
@@ -655,6 +679,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
 
     if (response.statusCode == 200) {
+      print("Access token obtained successfully");
       return jsonDecode(response.body)['access_token'];
     } else {
       print("Token error: ${response.body}");
@@ -675,8 +700,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
 
     if (response.statusCode == 200) {
-      print("Account is active");
+      print("✅ Account is active: $phone");
     } else {
+      print("❌ Account not active: ${response.body}");
       throw Exception("Account not active: ${response.body}");
     }
   }
@@ -686,11 +712,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     required String accessToken,
     required double amount,
   }) async {
-
-
+    final uuid = const Uuid().v4();
     final headers = {
       'Authorization': 'Bearer $accessToken',
-      'X-Reference-Id': apiUser,
+      'X-Reference-Id': uuid,
       'X-Target-Environment': 'sandbox',
       'Content-Type': 'application/json',
       'Ocp-Apim-Subscription-Key': subscriptionKey,
@@ -709,10 +734,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     });
 
     final url = Uri.parse("https://sandbox.momodeveloper.mtn.com/collection/v1_0/requesttopay");
+    print("📤 Sending request to pay to $phoneNumber...");
 
     final response = await http.post(url, headers: headers, body: body);
 
     if (response.statusCode == 202) {
+      print("✅ RequestToPay sent successfully. Awaiting user action.");
       Fluttertoast.showToast(
         msg: "✅ Payment request sent. Please approve it on your phone.",
         toastLength: Toast.LENGTH_LONG,
@@ -721,9 +748,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         textColor: Colors.white,
       );
     } else {
+      print("❌ Failed to initiate payment: ${response.body}");
       throw Exception("Failed to initiate payment: ${response.body}");
     }
   }
 }
-
-
