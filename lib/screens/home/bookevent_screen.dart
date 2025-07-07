@@ -5,8 +5,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:uuid/uuid.dart';
 import 'package:pretty_qr_code/pretty_qr_code.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:screenshot/screenshot.dart';
-import 'package:gallery_saver/gallery_saver.dart';
+//import 'package:screenshot/screenshot.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 
@@ -37,6 +36,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   String? _validatedPhone;
   String? _ticketId; // QR code ticket
 
+  //final ScreenshotController _screenshotController = ScreenshotController();
   final String subscriptionKey = "aab1d593853c454c9fcec8e4e02dde3c";
   final String apiUser = "815d497c-9cb6-477c-8e30-23c3c2b3bea6";
   final String apiKey = "5594113210ab4f3da3a7329b0ae65f40";
@@ -303,7 +303,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text("Booking Successful"),
+        title: const Text("Booking Successful ✅", style: TextStyle(fontSize:20,fontWeight: FontWeight.bold,)),
         content:Column(
           mainAxisSize: MainAxisSize.min,
            children: [
@@ -311,9 +311,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             const SizedBox(height: 16),
             const Text("🎟 Your Ticket QR Code", style: TextStyle(fontWeight: FontWeight.bold,)),
              if (_ticketId != null)
+
                SizedBox(
                  width: 180,
-                 height: 150,
+                 height: 180,
                  child: PrettyQrView.data(
                    data: _ticketId!,
                    errorCorrectLevel: QrErrorCorrectLevel.M,
@@ -325,7 +326,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
              const SizedBox(height:10),
             const Text("Save or screenshot this QR for entry.",
-               style: TextStyle(fontSize:12,color:Colors.grey)),
+               style: TextStyle(fontSize:12,color:Colors.black)),
             ],
         ),
         actions: [
