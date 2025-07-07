@@ -1,11 +1,17 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:qr_flutter/qr_flutter.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 class CheckoutScreen extends StatefulWidget {
   final double total;
-  const CheckoutScreen({super.key, required this.total, required Null Function() onPaymentSuccess});
+  final VoidCallback? onPaymentSuccess;
+
+  const CheckoutScreen({
+    super.key,
+    required this.total,
+    this.onPaymentSuccess,
+  });
 
   @override
   State<CheckoutScreen> createState() => _CheckoutScreenState();
@@ -22,7 +28,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   bool subscribeUpdates = true;
   PaymentNetwork? _selectedNetwork;
 
-  
   final String subscriptionKey = "aab1d593853c454c9fcec8e4e02dde3c";
   final String apiUser = "815d497c-9cb6-477c-8e30-23c3c2b3bea6";
   final String apiKey = "5594113210ab4f3da3a7329b0ae65f40";
@@ -45,7 +50,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: Padding(
               padding: const EdgeInsets.all(16.0),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              child: Column(children: [
                 const Text("Billing Information", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 10),
                 Form(
@@ -53,44 +58,29 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   child: Column(children: [
                     Row(children: [
                       Expanded(
-                        child: Card(
-                          color: Colors.white,
-                          child: Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: TextFormField(
-                              decoration: const InputDecoration(labelText: "First Name *", border: InputBorder.none),
-                              onChanged: (val) => firstName = val,
-                              validator: (val) => val!.isEmpty ? "Required" : null,
-                            ),
-                          ),
+
+                        child: TextFormField(
+                          decoration: const InputDecoration(labelText: "First Name *"),
+                          onChanged: (val) => firstName = val,
+                          validator: (val) => val!.isEmpty ? "Required" : null,
                         ),
+
                       ),
                       const SizedBox(width: 10),
                       Expanded(
-                        child: Card(
-                          color: Colors.white,
-                          child: Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: TextFormField(
-                              decoration: const InputDecoration(labelText: "Surname *", border: InputBorder.none),
-                              onChanged: (val) => lastName = val,
-                              validator: (val) => val!.isEmpty ? "Required" : null,
-                            ),
-                          ),
+
+                        child: TextFormField(
+                          decoration: const InputDecoration(labelText: "Surname *"),
+                          onChanged: (val) => lastName = val,
+                          validator: (val) => val!.isEmpty ? "Required" : null,
                         ),
                       ),
                     ]),
                     const SizedBox(height: 10),
-                    Card(
-                      color: Colors.white,
-                      child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: TextFormField(
-                          decoration: const InputDecoration(labelText: "Email Address *", border: InputBorder.none),
-                          onChanged: (val) => email = val,
-                          validator: (val) => val!.isEmpty ? "Required" : null,
-                        ),
-                      ),
+                    TextFormField(
+                      decoration: const InputDecoration(labelText: "Email Address *"),
+                      onChanged: (val) => email = val,
+                      validator: (val) => val!.isEmpty ? "Required" : null,
                     ),
                     const SizedBox(height: 10),
                     CheckboxListTile(
@@ -99,7 +89,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       onChanged: (val) => setState(() => subscribeOrganizer = val!),
                     ),
                     CheckboxListTile(
-                      title: const Text("Send me emails about the best events Happening nearby or online."),
+                      title: const Text("Send me emails about the best events happening nearby or online."),
                       value: subscribeUpdates,
                       onChanged: (val) => setState(() => subscribeUpdates = val!),
                     ),
@@ -136,7 +126,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               if (_formKey.currentState!.validate()) {
                 if (_selectedNetwork == null) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Please select a payment network")));
+                    const SnackBar(content: Text("Please select a payment network")),
+                  );
                   return;
                 }
                 _openMobileMoneyDialog(_selectedNetwork!);
@@ -175,7 +166,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 child: Image.asset(image, height: 30, width: 50, fit: BoxFit.contain),
               ),
               const SizedBox(width: 16),
-              Expanded(child: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500))),
+              Expanded(
+                child: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+              ),
               if (isSelected) Icon(Icons.check_circle, color: borderColor),
             ],
           ),
@@ -186,8 +179,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   void _openMobileMoneyDialog(PaymentNetwork network) {
     String phone = '';
-    String qrData = '';
     String provider = network == PaymentNetwork.mtn ? 'MTN' : 'Airtel';
+    bool isLoading = false;
+    bool _hasShownToast =false;
 
     showDialog(
       context: context,
@@ -200,33 +194,48 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               child: Column(
                 children: [
                   TextFormField(
+                    keyboardType: TextInputType.phone,
                     decoration: const InputDecoration(labelText: "Phone Number"),
                     onChanged: (val) async {
                       phone = val;
-                      if (phone.isNotEmpty) {
+                      if (phone.length ==10 && !_hasShownToast) {
+                        setState(() {
+                          isLoading = true;
+                          _hasShownToast = true;
+                        });
                         final token = await getAccessToken();
                         if (token != null) {
+                         try{
                           await validateAccountHolder(phone, token);
-                        }
-                        setState(() {
-                          qrData = _generateQRData(phone);
-                          print("QR Data: $qrData"); // Debugging print
-                        });
+                          Fluttertoast.showToast(
+                            msg: "📲 Valid Mobile Money account. Continue to payment.",
+                            toastLength: Toast.LENGTH_SHORT,
+                            gravity: ToastGravity.TOP,
+                            backgroundColor: Colors.green,
+                            textColor: Colors.white,
+                          );
+                          _hasShownToast = true;
+                         } catch (e) {
+                           Fluttertoast.showToast(
+                               msg: "❌ Invalid account or error verifying number.",
+                               toastLength: Toast.LENGTH_SHORT,
+                               gravity: ToastGravity.TOP,
+                               backgroundColor: Colors.red,
+                               textColor: Colors.white,
+                           );
+                         _hasShownToast = false;
+                           }
+                           }
+                        setState(() => isLoading = false);
+                      }else if (phone.length < 10) {
+                        _hasShownToast = false;//to reset if no. digits are deleted
                       }
                     },
                   ),
-                  const SizedBox(height: 20),
-                  qrData.isNotEmpty
-                      ? QrImageView(
-                    data: qrData,
-                    version: QrVersions.auto,
-                    size: 150.0,
-                    gapless: true,
-
-                  )
-                      : const Text("Enter your phone number to generate a QR code."),
+                  const SizedBox(height: 16),
+                  if (isLoading) const CircularProgressIndicator(),
                   const SizedBox(height: 10),
-                  const Text("Scan this QR code to complete your payment."),
+                  const Text("Complete your payment."),
                 ],
               ),
             ),
@@ -246,11 +255,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  String _generateQRData(String phone) {
-    final now = DateTime.now().millisecondsSinceEpoch;
-    return "$firstName $lastName, $email, ${widget.total}, $phone, $now";
-  }
-
   void _showSuccessDialog() {
     showDialog(
       context: context,
@@ -259,7 +263,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         content: Text("You booked your ticket for €${widget.total.toStringAsFixed(2)}."),
         actions: [
           TextButton(
-            onPressed: () => Navigator.popUntil(context, (route) => route.isFirst),
+            onPressed: () {
+              if (widget.onPaymentSuccess != null) {
+                widget.onPaymentSuccess!();
+              }
+              Navigator.popUntil(context, (route) => route.isFirst);
+            },
             child: const Text("OK"),
           ),
         ],
@@ -306,3 +315,4 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
   }
 }
+
