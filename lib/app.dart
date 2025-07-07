@@ -14,9 +14,7 @@ class LocalEventFinderApp extends StatelessWidget {
       //darkTheme: AppTheme.darkTheme,
       
       themeMode: ThemeMode.system,
-      //home: const CheckoutScreen(
-        //total: 0.0, // Placeholder value for total
-      //),
+
       home: const AuthWrapper(),
     );
   }
