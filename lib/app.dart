@@ -8,7 +8,7 @@ import 'package:event_locator_app/screens/profile/edit_profile_screen.dart'; // 
 import 'package:event_locator_app/screens/profile/notifications_screen.dart'; // Placeholder
 import 'package:event_locator_app/screens/profile/privacy_security_screen.dart'; // Placeholder
 import 'package:event_locator_app/screens/home/event_management_screen.dart'; // Adjust path
-import 'package:event_locator_app/screens/home/bookevent_screen.dart'; // Direct import (placeholder or actual)
+import 'package:event_locator_app/screens/auth/splash_screen.dart'; // Direct import (placeholder or actual)
 import 'package:event_locator_app/screens/home/addingevent.dart'; // Direct import (placeholder or actual)
 import 'package:event_locator_app/screens/home/home_screen.dart' as home_screen;
 
@@ -21,6 +21,8 @@ class LocalEventFinderApp extends StatelessWidget {
       title: 'Local Event Finder',
       theme: AppTheme.lightTheme,
       themeMode: ThemeMode.system,
+      home: const SplashScreen(),
+      //home: const AuthWrapper(),
       home: const AuthWrapper(),
       routes: {
         '/home': (context) => const HomeScreen(),
