@@ -1,9 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
-import 'package:latlong2/latlong.dart';
 
 class LocationPickerScreen extends StatefulWidget {
   const LocationPickerScreen({Key? key}) : super(key: key);
@@ -13,17 +12,27 @@ class LocationPickerScreen extends StatefulWidget {
 }
 
 class _LocationPickerScreenState extends State<LocationPickerScreen> {
-  LatLng _selectedLocation = LatLng(0.347596, 32.582520); // Default to Kampala
+  LatLng _selectedLocation = const LatLng(0.347596, 32.582520); // Default to Kampala
   bool _locationSelected = false;
   String? _locationName;
   bool _isLoadingLocationName = false;
+  late GoogleMapController _mapController;
+  final Set<Marker> _markers = {};
 
-  void _onTapMap(TapPosition tapPosition, LatLng latlng) async {
+  void _onTapMap(LatLng latlng) async {
     setState(() {
       _selectedLocation = latlng;
       _locationSelected = true;
       _isLoadingLocationName = true;
       _locationName = null;
+      _markers.clear();
+      _markers.add(
+        Marker(
+          markerId: const MarkerId('selected-location'),
+          position: latlng,
+          icon: BitmapDescriptor.defaultMarkerWithHue(270.0),
+        ),
+      );
     });
 
     try {
@@ -60,6 +69,10 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     }
   }
 
+  void _onMapCreated(GoogleMapController controller) {
+    _mapController = controller;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -87,48 +100,14 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       body: Column(
         children: [
           Expanded(
-            child: FlutterMap(
-              options: MapOptions(
-                initialCenter: _selectedLocation,
-                initialZoom: 12.0,
-                onTap: _onTapMap,
+            child: GoogleMap(
+              onMapCreated: _onMapCreated,
+              initialCameraPosition: CameraPosition(
+                target: _selectedLocation,
+                zoom: 12.0,
               ),
-              children: [
-                TileLayer(
-                  urlTemplate:
-                      'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-                  subdomains: const ['a', 'b', 'c', 'd'],
-                  userAgentPackageName: 'com.example.event_locator_app',
-                ),
-                if (_locationSelected)
-                  MarkerLayer(
-                    markers: [
-                      Marker(
-                        point: _selectedLocation,
-                        width: 40,
-                        height: 40,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.deepPurple.shade50,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.deepPurple.withOpacity(0.5),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.location_on,
-                            color: Colors.deepPurple,
-                            size: 30,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-              ],
+              markers: _markers,
+              onTap: _onTapMap,
             ),
           ),
           Container(

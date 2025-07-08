@@ -51,8 +51,8 @@
 	<string>This app needs access to location when in the background.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>This app needs access to location to show events on the map.</string>
-	<key>MGLMapboxAccessToken</key>
-	<string>aW51hMuYTgRtYKb6lTkM</string>
+	<key>GMSApiKey</key>
+	<string>AIzaSyCzBRIfGgPV_nZQ-7WlGtW7SMjQFiODz7Q</string>
 	<key>io.flutter.embedded_views_preview</key>
 	<true/>
 </dict>

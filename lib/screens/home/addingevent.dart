@@ -9,7 +9,7 @@ import 'dart:typed_data';
 import '../../providers/auth_provider.dart';
 import '../../models/event.dart';
 import '../map/location_picker_screen.dart';
-import 'package:maplibre_gl/maplibre_gl.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class AddEventDialog extends StatefulWidget {
   final Function(Event) onAddEvent;
