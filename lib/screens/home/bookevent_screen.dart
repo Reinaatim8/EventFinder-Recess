@@ -56,7 +56,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         title: const Text("Checkout Your Ticket",
             style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
         centerTitle: true,
-        backgroundColor: Colors.blueAccent,
+        backgroundColor: Colors.purple.shade900,
+          //color: Theme.of(context).primaryColor
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),
@@ -133,7 +134,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               minimumSize: const Size.fromHeight(50),
-              backgroundColor: Colors.blueAccent,
+              backgroundColor: Colors.purple.shade900,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             onPressed: () {
@@ -225,7 +226,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             _validatedPhone = phone;
                             Fluttertoast.showToast(
                               msg: "📲 Valid Mobile Money account. You may now proceed to Confirm Payment.",
-                              toastLength: Toast.LENGTH_SHORT,
+                              toastLength: Toast.LENGTH_LONG,
                               gravity: ToastGravity.TOP,
                               backgroundColor: Colors.green,
                               textColor: Colors.white,
@@ -233,7 +234,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           } catch (e) {
                             Fluttertoast.showToast(
                               msg: "❌ Invalid account or error verifying number.",
-                              toastLength: Toast.LENGTH_SHORT,
+                              toastLength: Toast.LENGTH_LONG,
                               gravity: ToastGravity.TOP,
                               backgroundColor: Colors.red,
                               textColor: Colors.white,
