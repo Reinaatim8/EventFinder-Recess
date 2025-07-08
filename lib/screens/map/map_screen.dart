@@ -1,5 +1,5 @@
 import 'dart:async';
-
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' show GoogleMap, GoogleMapController, Marker, MarkerId, BitmapDescriptor, CameraPosition, LatLng, InfoWindow;
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -48,22 +48,64 @@ class _MapScreenState extends State<MapScreen> {
     });
   }
 
-  void _updateMarkers() {
+  Future<BitmapDescriptor> _createCustomMarker(String label) async {
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    const double width = 150;
+    const double height = 60;
+
+    final paint = Paint()..color = Colors.deepPurple;
+    final textPainter = TextPainter(
+      textDirection: TextDirection.ltr,
+    );
+
+    // Draw label background
+    final rect = Rect.fromLTWH(0, 0, width, height);
+    final rrect = RRect.fromRectAndRadius(rect, const Radius.circular(10));
+    canvas.drawRRect(rrect, paint);
+
+    // Draw label text
+    textPainter.text = TextSpan(
+      text: label,
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 16,
+        fontWeight: FontWeight.bold,
+      ),
+    );
+    textPainter.layout(minWidth: 0, maxWidth: width);
+    textPainter.paint(canvas, const Offset(10, 15));
+
+    // Draw marker icon (triangle pointer)
+    final path = Path();
+    path.moveTo(width / 2 - 10, height);
+    path.lineTo(width / 2 + 10, height);
+    path.lineTo(width / 2, height + 20);
+    path.close();
+    canvas.drawPath(path, paint);
+
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(width.toInt(), (height + 20).toInt());
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    final bytes = byteData!.buffer.asUint8List();
+
+    return BitmapDescriptor.fromBytes(bytes);
+  }
+
+  void _updateMarkers() async {
     if (!_showMarkers) {
       setState(() {
         _markers.clear();
       });
       return;
     }
-    final newMarkers = _events.map((event) {
-      return Marker(
+    final newMarkers = <Marker>{};
+    for (final event in _events) {
+      final icon = await _createCustomMarker(event.title);
+      final marker = Marker(
         markerId: MarkerId(event.id),
         position: LatLng(event.latitude, event.longitude),
-        infoWindow: InfoWindow(
-          title: event.title,
-          snippet: '${event.date} - ${event.category}',
-        ),
-        icon: BitmapDescriptor.defaultMarkerWithHue(280.0),
+        icon: icon,
         onTap: () {
           showDialog(
             context: context,
@@ -87,7 +129,6 @@ class _MapScreenState extends State<MapScreen> {
                 ElevatedButton(
                   onPressed: () {
                     Navigator.pop(context);
-                    // Navigate to event details or payment screen
                     Navigator.pushNamed(context, '/eventDetails', arguments: event);
                   },
                   child: const Text('View Details'),
@@ -97,7 +138,8 @@ class _MapScreenState extends State<MapScreen> {
           );
         },
       );
-    }).toSet();
+      newMarkers.add(marker);
+    }
     setState(() {
       _markers
         ..clear()
