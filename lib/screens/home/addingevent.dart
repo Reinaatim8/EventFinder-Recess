@@ -435,18 +435,19 @@ class _AddEventDialogState extends State<AddEventDialog> {
                     return null;
                   },
                   onTap: () async {
-                    final result = await Navigator.push<LatLng?>(
+                    final result = await Navigator.push<Map<String, dynamic>?>(
                       context,
                       MaterialPageRoute(
                         builder: (context) => const LocationPickerScreen(),
                       ),
                     );
                     if (result != null) {
+                      final LatLng location = result['location'];
+                      final String locationName = result['locationName'] ?? 'Unknown location';
                       setState(() {
-                        _latitude = result.latitude;
-                        _longitude = result.longitude;
-                        _locationController.text =
-                            'Lat: ${result.latitude.toStringAsFixed(4)}, Lon: ${result.longitude.toStringAsFixed(4)}';
+                        _latitude = location.latitude;
+                        _longitude = location.longitude;
+                        _locationController.text = locationName;
                       });
                     }
                   },

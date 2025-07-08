@@ -59,8 +59,43 @@ class _MapScreenState extends State<MapScreen> {
       return Marker(
         markerId: MarkerId(event.id),
         position: LatLng(event.latitude, event.longitude),
-        infoWindow: InfoWindow(title: event.title),
-        icon: BitmapDescriptor.defaultMarkerWithHue(270.0),
+        infoWindow: InfoWindow(
+          title: event.title,
+          snippet: '${event.date} - ${event.category}',
+        ),
+        icon: BitmapDescriptor.defaultMarkerWithHue(280.0),
+        onTap: () {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: Text(event.title),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Date: ${event.date}'),
+                  Text('Category: ${event.category}'),
+                  if (event.description.isNotEmpty) Text('Description: ${event.description}'),
+                  if (event.price > 0) Text('Price: \$${event.price.toStringAsFixed(2)}'),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Close'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    // Navigate to event details or payment screen
+                    Navigator.pushNamed(context, '/eventDetails', arguments: event);
+                  },
+                  child: const Text('View Details'),
+                ),
+              ],
+            ),
+          );
+        },
       );
     }).toSet();
     setState(() {

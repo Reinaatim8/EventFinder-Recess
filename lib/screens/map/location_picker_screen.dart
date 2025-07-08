@@ -65,7 +65,10 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
 
   void _onConfirm() {
     if (_locationSelected) {
-      Navigator.pop(context, _selectedLocation);
+      Navigator.pop(context, {
+        'location': _selectedLocation,
+        'locationName': _locationName ?? 'Unknown location',
+      });
     }
   }
 
