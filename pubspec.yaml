@@ -9,37 +9,34 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  
+
   # Firebase
-  firebase_core: ^3.15.0
-  firebase_auth: ^5.6.1
-  cloud_firestore: ^5.6.10
-  firebase_storage: ^12.4.8
-  
+  firebase_core: ^3.15.1
+  firebase_auth: ^5.6.2
+  cloud_firestore: ^5.6.11
+  firebase_storage: ^12.4.9
+  permission_handler: ^12.0.1
+
   # HTTP & Networking
   http: ^1.4.0
-  
+
   # Utilities
   intl: ^0.20.2
   provider: ^6.1.5
   fluttertoast: ^8.2.12
   email_validator: ^3.0.0
   equatable: ^2.0.7
-  
+  vm_service: ^15.0.2  # Updated
+
   # Image Handling
   image_picker: ^1.1.2
-  
+
   # Payment
   flutterwave_standard: ^1.1.0
-  
+
   # Webview
   flutter_inappwebview: ^6.1.5
-  webview_flutter: ^4.13.0
-  webview_flutter_android: ^4.7.0
-  webview_flutter_wkwebview: ^3.22.0
-  webview_flutter_platform_interface: ^2.13.1
-  
-  
+
   # Web compatibility
   web: ^1.1.1
 
@@ -49,15 +46,14 @@ dev_dependencies:
   flutter_lints: ^6.0.0
 
 dependency_overrides:
-  flutter_inappwebview: ^6.1.5
-  # Remove other overrides unless needed after testing
-  # webview_flutter: ^4.13.0
-  # webview_flutter_android: ^4.7.0
-  # webview_flutter_wkwebview: ^3.22.0
-  # webview_flutter_platform_interface: ^2.13.1
-  # web: ^1.1.1
-  # collection: ^1.19.1
-  # meta: ^1.16.0
+  firebase_core_platform_interface: ^6.0.0
+  firebase_auth_platform_interface: ^7.7.2
+  firebase_storage_platform_interface: ^5.2.9
+  image_picker_for_web: ^3.0.6
+  permission_handler_platform_interface: ^4.3.0
+  meta: ^1.17.0
+  material_color_utilities: ^0.13.0
+  mime: ^2.0.0
 
 flutter:
   uses-material-design: true

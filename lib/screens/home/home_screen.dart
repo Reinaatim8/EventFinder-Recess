@@ -270,12 +270,7 @@ class HomeTab extends StatelessWidget {
                               const SizedBox(width: 10),
                               GestureDetector(
                                 onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (context) =>
-                                            const ProfileScreen()),
-                                  );
+                                  Navigator.pushNamed(context, '/profile');
                                 },
                                 child: CircleAvatar(
                                   radius: 20,
@@ -293,12 +288,9 @@ class HomeTab extends StatelessWidget {
                                       context,
                                       listen: false);
                                   if (authProvider.user != null) {
-                                    Navigator.push(
+                                    Navigator.pushNamed(
                                       context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            const EventManagementScreen(),
-                                      ),
+                                      '/event-management',
                                     );
                                   } else {
                                     ScaffoldMessenger.of(context).showSnackBar(
@@ -354,11 +346,10 @@ class HomeTab extends StatelessWidget {
                           horizontal: 20, vertical: 15),
                     ),
                     onTap: () {
-                      Navigator.push(
+                      Navigator.pushNamed(
                         context,
-                        MaterialPageRoute(
-                          builder: (context) => SearchTab(events: events),
-                        ),
+                        '/search',
+                        arguments: {'events': events},
                       );
                     },
                   ),
@@ -480,11 +471,10 @@ class _CategoryChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        Navigator.push(
+        Navigator.pushNamed(
           context,
-          MaterialPageRoute(
-            builder: (context) => SearchTab(events: events),
-          ),
+          '/search',
+          arguments: {'events': events, 'category': label},
         );
       },
       child: Container(
