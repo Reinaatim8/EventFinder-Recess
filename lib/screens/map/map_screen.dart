@@ -3,7 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' show GoogleMap, GoogleMapController, Marker, MarkerId, BitmapDescriptor, CameraPosition, LatLng, InfoWindow;
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../models/event.dart';
+import '../../models/event.dart'; //the devil is a liar
 
 class MapScreen extends StatefulWidget {
   const MapScreen({Key? key}) : super(key: key);
