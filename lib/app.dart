@@ -23,7 +23,7 @@ class LocalEventFinderApp extends StatelessWidget {
       themeMode: ThemeMode.system,
       home: const SplashScreen(),
       //home: const AuthWrapper(),
-      home: const AuthWrapper(),
+     // home: const AuthWrapper(),
       routes: {
         '/home': (context) => const HomeScreen(),
         '/login': (context) => const LoginScreen(),
