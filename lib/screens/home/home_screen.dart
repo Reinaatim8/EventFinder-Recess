@@ -11,62 +11,10 @@ import 'package:flutter/foundation.dart';
 import 'dart:typed_data';
 import 'addingevent.dart';
 import '../home/event_management_screen.dart';
+import '../../models/event.dart';
+import '../map/map_screen.dart';
 
 final GlobalKey<_BookingsTabState> bookingsTabKey = GlobalKey<_BookingsTabState>();
-
-class Event {
-  final String id;
-  final String title;
-  final String description;
-  final String date;
-  final String location;
-  final String category;
-  final String? imageUrl;
-  final String organizerId;
-  final double price;
-
-  Event({
-    required this.id,
-    required this.title,
-    required this.description,
-    required this.date,
-    required this.location,
-    required this.category,
-    this.imageUrl,
-    required this.organizerId,
-    required this.price,
-  });
-
-  factory Event.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-    return Event(
-      id: doc.id,
-      title: data['title'] ?? '',
-      description: data['description'] ?? '',
-      date: data['date'] ?? '',
-      location: data['location'] ?? '',
-      category: data['category'] ?? 'Other',
-      imageUrl: data['imageUrl'],
-      organizerId: data['organizerId'] ?? '',
-      price: (data['price'] ?? 0.0).toDouble(),
-    );
-  }
-
-  Map<String, dynamic> toFirestore() {
-    return {
-      'id': id,
-      'title': title,
-      'description': description,
-      'date': date,
-      'location': location,
-      'category': category,
-      'imageUrl': imageUrl,
-      'organizerId': organizerId,
-      'price': price,
-      'createdAt': FieldValue.serverTimestamp(),
-    };
-  }
-}
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -138,6 +86,7 @@ class _HomeScreenState extends State<HomeScreen> {
         SearchTab(events: events),
         BookingsTab(key: bookingsTabKey),
         const ProfileScreen(),
+        const MapScreen(),
       ];
 
   @override
@@ -173,7 +122,11 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icon(Icons.person),
             label: 'Profile',
           ),
-        ],
+         BottomNavigationBarItem(
+           icon: Icon(Icons.map),
+           label: 'Map',
+         ),
+       ],
       ),
     );
   }

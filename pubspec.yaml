@@ -9,56 +9,55 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  qr_flutter: ^4.1.0 
-  
+  qr_flutter: ^4.1.0
+
   # Firebase
   firebase_core: ^3.15.0
   firebase_auth: ^5.6.1
   cloud_firestore: ^5.6.10
   firebase_storage: ^12.4.8
-  
+
   # HTTP & Networking
   http: ^1.4.0
-  
+
   # Utilities
   intl: ^0.20.2
   provider: ^6.1.5
   fluttertoast: ^8.2.12
   email_validator: ^3.0.0
   equatable: ^2.0.7
-  
+
+  # Map & Location
+  maplibre_gl: ^0.22.0
+  flutter_map: ^8.1.1
+  latlong2: ^0.9.1
+  geocoding: ^4.0.0
+  geolocator: ^14.0.2
+  permission_handler: ^12.0.1
+
   # Image Handling
   image_picker: ^1.1.2
-  
+
   # Payment
   flutterwave_standard: ^1.1.0
-  
+
   # Webview
   flutter_inappwebview: ^6.1.5
   webview_flutter: ^4.13.0
   webview_flutter_android: ^4.7.0
   webview_flutter_wkwebview: ^3.22.0
   webview_flutter_platform_interface: ^2.13.1
-  
-  
+
   # Web compatibility
   web: ^1.1.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^4.0.0
+  flutter_lints: ^6.0.0
 
 dependency_overrides:
   flutter_inappwebview: ^6.1.5
-  # Remove other overrides unless needed after testing
-  # webview_flutter: ^4.13.0
-  # webview_flutter_android: ^4.7.0
-  # webview_flutter_wkwebview: ^3.22.0
-  # webview_flutter_platform_interface: ^2.13.1
-  # web: ^1.1.1
-  # collection: ^1.19.1
-  # meta: ^1.16.0
 
 flutter:
   uses-material-design: true

@@ -7,7 +7,9 @@ import 'package:flutter/foundation.dart';
 import 'dart:io';
 import 'dart:typed_data';
 import '../../providers/auth_provider.dart';
-import 'home_screen.dart';
+import '../../models/event.dart';
+import '../map/location_picker_screen.dart';
+import 'package:maplibre_gl/maplibre_gl.dart';
 
 class AddEventDialog extends StatefulWidget {
   final Function(Event) onAddEvent;
@@ -30,6 +32,8 @@ class _AddEventDialogState extends State<AddEventDialog> {
   bool _isUploading = false;
   final ImagePicker _picker = ImagePicker();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  double? _latitude;
+  double? _longitude;
 
   final List<String> _categories = [
     'Concert',
@@ -430,6 +434,22 @@ class _AddEventDialogState extends State<AddEventDialog> {
                     }
                     return null;
                   },
+                  onTap: () async {
+                    final result = await Navigator.push<LatLng?>(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const LocationPickerScreen(),
+                      ),
+                    );
+                    if (result != null) {
+                      setState(() {
+                        _latitude = result.latitude;
+                        _longitude = result.longitude;
+                        _locationController.text =
+                            'Lat: ${result.latitude.toStringAsFixed(4)}, Lon: ${result.longitude.toStringAsFixed(4)}';
+                      });
+                    }
+                  },
                 ),
                 const SizedBox(height: 15),
                 DropdownButtonFormField<String>(
@@ -522,6 +542,8 @@ class _AddEventDialogState extends State<AddEventDialog> {
           description: _descriptionController.text.trim(),
           date: _dateController.text.trim(),
           location: _locationController.text.trim(),
+          latitude: _latitude ?? 0.0,
+          longitude: _longitude ?? 0.0,
           category: _selectedCategory,
           imageUrl: imageUrl,
           organizerId: organizerId,
