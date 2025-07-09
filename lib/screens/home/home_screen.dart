@@ -80,12 +80,13 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Event> events = [];
   bool _isLoading = true;
 
+
   @override
   void initState() {
     super.initState();
     _fetchEvents();
   }
-
+//fetch events from firestore
   Future<void> _fetchEvents() async {
     setState(() {
       _isLoading = true;
@@ -137,25 +138,32 @@ class _HomeScreenState extends State<HomeScreen> {
 
 // (i) Show bottom sheet with event details and actions
   void _showEventDetailsModal(Event event) {
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) {
-        return Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(event.title,
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-              Text(event.description),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
+      //shape: const RoundedRectangleBorder(
+       // borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      builder: (_) => AlertDialog (
+        title: Text(event.title),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(event.description),
+            const SizedBox(height: 20),
+            if (_eventStatus[event.id] != 'Reserved')
+        // return Padding(
+        //   padding: const EdgeInsets.all(20.0),
+        //   child: Column(
+        //     mainAxisSize: MainAxisSize.min,
+        //     children: [
+        //       Text(event.title,
+        //           style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        //       const SizedBox(height: 10),
+        //       Text(event.description),
+        //       const SizedBox(height: 20),
+        //       Row(
+        //         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        //         children: [
                   ElevatedButton(
                     onPressed: () {
                       bookingsTabKey.currentState?.addBooking({
@@ -177,6 +185,16 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                     child: const Text('Book Event'),
                   ),
+                  if (_eventStatus[event.id] == 'Reserved')
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 8.0),
+                        child: Text(
+                        'Event Reserved',
+                        style: TextStyle(
+                         color: Colors.orange,
+                         fontWeight: FontWeight.bold,
+                         ),
+                      ),),
                   ElevatedButton(
                     onPressed: () {
                       Navigator.pop(context);
@@ -202,13 +220,20 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                     child: const Text('Pay For Event'),
                   ),
+                 TextButton(
+                     onPressed: () {
+                       Navigator.pop(context);
+                     },
+                  child: const Text(
+                   'Cancel',
+                       style: TextStyle(color: Colors.red),
+                 ),
+                 ),
                 ],
               ),
-            ],
+
           ),
         );
-      },
-    );
   }
 
   List<Widget> _getScreens() => [
@@ -611,26 +636,9 @@ class _EventCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => CheckoutScreen(
-              total: event.price,
-               onPaymentSuccess: () {
-                if (bookingsTabKey.currentState != null) {
-                  bookingsTabKey.currentState!.addBooking({
-                    'id': DateTime.now().millisecondsSinceEpoch,
-                    'event': event.title,
-                    'total': event.price,
-                    'paid': true,
-                  });
-                }
-              },
-            ),
-          ),
-        );
-      },
+        onTap: onTap,
+
+
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -1025,17 +1033,69 @@ class BookingsTab extends StatefulWidget {
 }
 
 class _BookingsTabState extends State<BookingsTab> {
-  List<Map<String, dynamic>> bookings = [
-    {'id': 1, 'event': 'Concert A', 'total': 50.0, 'paid': false},
-    {'id': 2, 'event': 'Festival B', 'total': 30.0, 'paid': false},
-    {'id': 3, 'event': 'Theatre C', 'total': 40.0, 'paid': true},
-  ];
+  List<Map<String, dynamic>> bookings = [];
 
-  void addBooking(Map<String, dynamic> booking) {
-    setState(() {
-      bookings.add(booking);
-    });
+  @override
+  void initState() {
+    super.initState();
+    _fetchBookings();
   }
+
+  void _fetchBookings() async {
+    final userId = Provider.of<AuthProvider>(context, listen: false).user?.uid;
+
+    if (userId == null) return;
+
+    try {
+      QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('bookings')
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      setState(() {
+        bookings = snapshot.docs
+            .map((doc) => doc.data() as Map<String, dynamic>)
+            .toList();
+      });
+    } catch (e) {
+      print("Error fetching bookings: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error fetching bookings'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+  void addBooking(Map<String, dynamic> booking) async {
+    final userId = Provider.of<AuthProvider>(context, listen: false).user?.uid;
+    // setState(() {
+    //   bookings.add(booking);
+    // });
+    if (userId == null) return;
+
+    try {
+      await FirebaseFirestore.instance.collection('bookings').add({
+        'userId': userId,
+        'event': booking['event'],
+        'price': booking['total'],
+        'paid': booking['paid'],
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      _fetchBookings();
+    } catch (e) {
+      print("Error saving booking: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error saving booking'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -1045,14 +1105,16 @@ class _BookingsTabState extends State<BookingsTab> {
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
       ),
-      body: ListView.builder(
+      body: bookings.isEmpty
+          ? const Center(child: Text('No bookings yet.'))
+          : ListView.builder(
         itemCount: bookings.length,
         itemBuilder: (context, index) {
           final booking = bookings[index];
           return ListTile(
-            title: Text(booking['event']),
-            subtitle: Text('Total: €${booking['total']}'),
-            trailing: booking['paid']
+            title: Text(booking['event'] ?? ''),
+            subtitle: Text('Total: €${booking['price']}'),
+            trailing: booking['paid'] == true
                 ? const Text('Paid', style: TextStyle(color: Colors.green))
                 : ElevatedButton(
               child: const Text('Checkout'),
@@ -1061,13 +1123,11 @@ class _BookingsTabState extends State<BookingsTab> {
                   context,
                   MaterialPageRoute(
                     builder: (_) => CheckoutScreen(
-                      total: booking['total'],
+                      total: booking['price'],
                       onPaymentSuccess: () {
-                        // Mark this booking as paid
                         setState(() {
                           bookings[index]['paid'] = true;
                         });
-                        // Show a success message
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('Payment Successful!'),
