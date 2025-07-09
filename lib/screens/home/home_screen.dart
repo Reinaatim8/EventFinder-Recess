@@ -132,9 +132,87 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
   }
+  // (iii) Track booking/payment status per event
+  final Map<String, String> _eventStatus = {};
+
+// (i) Show bottom sheet with event details and actions
+  void _showEventDetailsModal(Event event) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) {
+        return Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(event.title,
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
+              Text(event.description),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton(
+                    onPressed: () {
+                      bookingsTabKey.currentState?.addBooking({
+                        'id': DateTime.now().millisecondsSinceEpoch,
+                        'event': event.title,
+                        'total': event.price,
+                        'paid': false,
+                      });
+                      setState(() {
+                        _eventStatus[event.id] = 'Reserved';
+                      });
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Event Reserved!'),
+                          backgroundColor: Colors.orange,
+                        ),
+                      );
+                    },
+                    child: const Text('Book Event'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => CheckoutScreen(
+                            total: event.price,
+                            onPaymentSuccess: () {
+                              bookingsTabKey.currentState?.addBooking({
+                                'id': DateTime.now().millisecondsSinceEpoch,
+                                'event': event.title,
+                                'total': event.price,
+                                'paid': true,
+                              });
+                              setState(() {
+                                _eventStatus[event.id] = 'Paid';
+                              });
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                    child: const Text('Pay For Event'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   List<Widget> _getScreens() => [
-        HomeTab(events: events, onAddEvent: _addEvent),
+        HomeTab(events: events, onAddEvent: _addEvent, onEventTap: _showEventDetailsModal, eventStatus: _eventStatus,),
         SearchTab(events: events),
         BookingsTab(key: bookingsTabKey),
         const ProfileScreen(),
@@ -182,8 +260,14 @@ class _HomeScreenState extends State<HomeScreen> {
 class HomeTab extends StatelessWidget {
   final List<Event> events;
   final Function(Event) onAddEvent;
-
-  const HomeTab({Key? key, required this.events, required this.onAddEvent})
+  final Function(Event) onEventTap; // (i) Used to trigger event details bottom sheet
+  final Map<String, String> eventStatus;
+  const HomeTab({Key? key,
+    required this.events,
+    required this.onAddEvent,
+    required this.onEventTap,
+    required this.eventStatus,
+  })
       : super(key: key);
 
   @override
@@ -214,7 +298,11 @@ class HomeTab extends StatelessWidget {
         eventsByDate[date]!.asMap().entries.map(
               (entry) => Padding(
                 padding: const EdgeInsets.only(bottom: 15, left: 20, right: 20),
-                child: _EventCard(event: entry.value, onTap: () {  },),
+                child: _EventCard(
+                  event: entry.value,
+                  onTap: () => onEventTap(entry.value),
+                  status: eventStatus[entry.value.id],
+                ),
               ),
             ),
       );
@@ -516,8 +604,9 @@ class _CategoryChip extends StatelessWidget {
 class _EventCard extends StatelessWidget {
   final Event event;
   final VoidCallback onTap;
+  final String? status;
 
-  const _EventCard({required this.event, required this.onTap});
+  const _EventCard({required this.event, required this.onTap, this.status});
 
   @override
   Widget build(BuildContext context) {
@@ -646,9 +735,37 @@ class _EventCard extends StatelessWidget {
                                 ),
                               ],
                             ),
-                          ],
-                        ),
-                      ),
+                            if (status != null)
+                             Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                color: status == 'Paid'
+                                    ? Colors.green.withOpacity(0.2)
+                                    : Colors.orange.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(20),
+                             ),
+                              child: Text(
+                               status!,
+                               style: TextStyle(
+                                 color: status == 'Paid' ? Colors.green : Colors.orange,
+                                 fontWeight: FontWeight.bold,
+                                 fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                             ],),),
+                            // if (event.description.isNotEmpty)
+                            //   Padding(
+                            //     padding: const EdgeInsets.only(top: 8.0),
+                            //     child: Text(
+                            //       event.description,
+                            //       maxLines: 2,
+                            //       overflow: TextOverflow.ellipsis,
+                            //       style: TextStyle(color: Colors.grey[700]),
+                            //       ),
+                               // ),
+                                ],
+                              ),
+
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 6),
@@ -666,7 +783,7 @@ class _EventCard extends StatelessWidget {
                         ),
                       ),
                     ],
-                  ),
+                  ),),
                   if (event.description.isNotEmpty) ...[
                     const SizedBox(height: 12),
                     Text(
@@ -681,12 +798,12 @@ class _EventCard extends StatelessWidget {
                     ),
                   ],
                 ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+              ),)
+            );
+         // ],
+       // ),
+    //   ),
+    // );
   }
 
   IconData _getCategoryIcon(String category) {
