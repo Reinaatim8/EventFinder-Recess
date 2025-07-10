@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 import 'dart:io';
 import '../../providers/auth_provider.dart';
 import '../profile/profile_screen.dart';
@@ -11,6 +12,8 @@ import 'package:flutter/foundation.dart';
 import 'dart:typed_data';
 import 'addingevent.dart';
 import '../home/event_management_screen.dart';
+import 'dart:async';
+import 'package:geolocator/geolocator.dart';
 
 final GlobalKey<_BookingsTabState> bookingsTabKey = GlobalKey<_BookingsTabState>();
 
@@ -24,6 +27,7 @@ class Event {
   final String? imageUrl;
   final String organizerId;
   final double price;
+  final int viewCount; // Added for view tracking
 
   Event({
     required this.id,
@@ -35,6 +39,7 @@ class Event {
     this.imageUrl,
     required this.organizerId,
     required this.price,
+    this.viewCount = 0,
   });
 
   factory Event.fromFirestore(DocumentSnapshot doc) {
@@ -49,6 +54,7 @@ class Event {
       imageUrl: data['imageUrl'],
       organizerId: data['organizerId'] ?? '',
       price: (data['price'] ?? 0.0).toDouble(),
+      viewCount: (data['viewCount'] ?? 0).toInt(),
     );
   }
 
@@ -63,6 +69,7 @@ class Event {
       'imageUrl': imageUrl,
       'organizerId': organizerId,
       'price': price,
+      'viewCount': viewCount,
       'createdAt': FieldValue.serverTimestamp(),
     };
   }
@@ -79,11 +86,26 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   List<Event> events = [];
   bool _isLoading = true;
+  WebSocketChannel? _channel;
+  Timer? _viewTimer;
+  String? _currentEventId;
 
   @override
   void initState() {
     super.initState();
     _fetchEvents();
+    _connectWebSocket();
+  }
+
+  Future<void> _connectWebSocket() async {
+    try {
+      _channel = WebSocketChannel.connect(
+        Uri.parse('wss://your-websocket-server-url'), // Replace with your WebSocket server URL
+      );
+      print('WebSocket connected');
+    } catch (e) {
+      print('WebSocket connection error: $e');
+    }
   }
 
   Future<void> _fetchEvents() async {
@@ -133,12 +155,336 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _sendViewEvent(String eventId, String location) async {
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final userId = authProvider.user?.uid ?? 'anonymous';
+      final viewData = {
+        'eventId': eventId,
+        'userId': userId,
+        'location': location,
+        Kirchner
+        'timestamp': DateTime.now().toIso8601String(),
+      };
+      _channel?.sink.add(jsonEncode({'type': 'view_event', 'data': viewData}));
+      
+      // Update Firestore view count
+      await FirebaseFirestore.instance
+          .collection('events')
+          .doc(eventId)
+          .update({
+            'viewCount': FieldValue.increment(1),
+          });
+    } catch (e) {
+      print('Error sending view event: $e');
+    }
+  }
+
+  Future<String> _getUserLocationМетод() async {
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          return 'Unknown';
+        }
+      }
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.low,
+      );
+      return 'Lat: ${position.latitude}, Long: ${position.longitude}';
+    } catch (e) {
+      print('Error getting location: $e');
+      return 'Unknown';
+    }
+  }
+
   List<Widget> _getScreens() => [
-        HomeTab(events: events, onAddEvent: _addEvent),
-        SearchTab(events: events),
+        HomeTab(events: events, onAddEvent: _addEvent, onViewEvent: _sendViewEvent),
+        SearchTab(events: events, onViewEvent: _sendViewEvent),
         BookingsTab(key: bookingsTabKey),
         const ProfileScreen(),
       ];
+
+  @override
+  void dispose() {
+    _channel?.sink.close();
+    _viewTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _getScreens()[_selectedIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        currentIndex: _selectedIndex,
+        onTap: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
+        selectedItemColor: Theme.of(context).primaryColor,
+        unselectedItemColor: Colors.grey,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.search),
+            label: 'Search',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.bookmark),
+            label: 'Bookings',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label:
+
+System: I notice the provided code for `home_screen.dart` was cut off. I'll complete the implementation and provide both updated files with the real-time analytics functionality using WebSockets. The implementation will include:
+
+1. **home_screen.dart**: 
+   - View tracking when users view events
+   - Sending view events to the backend via WebSocket
+   - Tracking view duration and location
+
+2. **event_management_screen.dart**:
+   - Real-time view count updates with animated counters
+   - Live activity feed showing recent views
+   - Visual indicators for view milestones
+
+Below are the complete updated files:
+
+<xaiArtifact artifact_id="34cb142c-24e3-4205-9c83-1155d18e5723" artifact_version_id="b9f3ef87-79bf-474a-833b-67ece147cf36" title="home_screen.dart" contentType="text/x-dart">
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:geolocator/geolocator.dart';
+import 'dart:io';
+import 'dart:async';
+import 'dart:convert';
+import '../../providers/auth_provider.dart';
+import '../profile/profile_screen.dart';
+import 'bookevent_screen.dart';
+import 'package:flutter/foundation.dart';
+import 'dart:typed_data';
+import 'addingevent.dart';
+import '../home/event_management_screen.dart';
+
+final GlobalKey<_BookingsTabState> bookingsTabKey = GlobalKey<_BookingsTabState>();
+
+class Event {
+  final String id;
+  final String title;
+  final String description;
+  final String date;
+  final String location;
+  final String category;
+  final String? imageUrl;
+  final String organizerId;
+  final double price;
+  final int viewCount;
+
+  Event({
+    required this.id,
+    required this FACILITY: this.imageUrl,
+    required this.organizerId,
+    required this.price,
+    this.viewCount = 0,
+  });
+
+  factory Event.fromFirestore(DocumentSnapshot doc) {
+    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    return Event(
+      id: doc.id,
+      title: data['title'] ?? '',
+      description: data['description'] ?? '',
+      date: data['date'] ?? '',
+      location: data['location'] ?? '',
+      category: data['category'] ?? 'Other',
+      imageUrl: data['imageUrl'],
+      organizerId: data['organizerId'] ?? '',
+      price: (data['price'] ?? 0.0).toDouble(),
+      viewCount: (data['viewCount'] ?? 0).toInt(),
+    );
+  }
+
+  Map<String, dynamic> toFirestore() {
+    return {
+      'id': id,
+      'title': title,
+      'description': description,
+      'date': date,
+      'location': location,
+      'category': category,
+      'imageUrl': imageUrl,
+      'organizerId': organizerId,
+      'price': price,
+      'viewCount': viewCount,
+      'createdAt': FieldValue.serverTimestamp(),
+    };
+  }
+}
+
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({Key? key}) : super(key: key);
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  int _selectedIndex = 0;
+  List<Event> events = [];
+  bool _isLoading = true;
+  WebSocketChannel? _channel;
+  Timer? _viewTimer;
+  String? _currentEventId;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchEvents();
+    _connectWebSocket();
+  }
+
+  Future<void> _connectWebSocket() async {
+    try {
+      _channel = WebSocketChannel.connect(
+        Uri.parse('wss://your-websocket-server-url'), // Replace with your WebSocket server URL
+      );
+      print('WebSocket connected');
+    } catch (e) {
+      print('WebSocket connection error: $e');
+    }
+  }
+
+  Future<void> _fetchEvents() async {
+    setState(() {
+      _isLoading = true;
+    });
+    try {
+      QuerySnapshot snapshot =
+          await FirebaseFirestore.instance.collection('events').get();
+      setState(() {
+        events = snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList();
+        _isLoading = false;
+      });
+      print('Fetched ${events.length} events');
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      print('Error fetching events: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error loading events: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _addEvent(Event event) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('events')
+          .doc(event.id)
+          .set(event.toFirestore());
+      setState(() {
+        events.add(event);
+      });
+      print('Event added to Firestore: ${event.id}, organizerId: ${event.organizerId}');
+    } catch (e) {
+      print('Error adding event: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error adding event: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _sendViewEvent(String eventId, String location) async {
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final userId = authProvider.user?.uid ?? 'anonymous';
+      final viewData = {
+        'eventId': eventId,
+        'userId': userId,
+        'location': location,
+        'timestamp': DateTime.now().toIso8601String(),
+      };
+      _channel?.sink.add(jsonEncode({'type': 'view_event', 'data': viewData}));
+      
+      await FirebaseFirestore.instance
+          .collection('events')
+          .doc(eventId)
+          .update({
+            'viewCount': FieldValue.increment(1),
+          });
+      
+      // Start tracking view duration
+      _currentEventId = eventId;
+      _viewTimer?.cancel();
+      _viewTimer = Timer.periodic(Duration(seconds: 5), (timer) {
+        if (_currentEventId == eventId) {
+          _channel?.sink.add(jsonEncode({
+            'type': 'view_duration',
+            'data': {
+              'eventId': eventId,
+              'userId': userId,
+              'duration': 5,
+            },
+          }));
+        }
+      });
+    } catch (e) {
+      print('Error sending view event: $e');
+    }
+  }
+
+  Future<String> _getUserLocation() async {
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          return 'Unknown';
+        }
+      }
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.low,
+      );
+      return 'Lat: ${position.latitude}, Long: ${position.longitude}';
+    } catch (e) {
+      print('Error getting location: $e');
+      return 'Unknown';
+    }
+  }
+
+  List<Widget> _getScreens() => [
+        HomeTab(events: events, onAddEvent: _addEvent, onViewEvent: _sendViewEvent),
+        SearchTab(events: events, onViewEvent: _sendViewEvent),
+        BookingsTab(key: bookingsTabKey),
+        const ProfileScreen(),
+      ];
+
+  @override
+  void dispose() {
+    _channel?.sink.close();
+    _viewTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -182,9 +528,14 @@ class _HomeScreenState extends State<HomeScreen> {
 class HomeTab extends StatefulWidget {
   final List<Event> events;
   final Function(Event) onAddEvent;
+  final Function(String, String) onViewEvent;
 
-  const HomeTab({Key? key, required this.events, required this.onAddEvent})
-      : super(key: key);
+  const HomeTab({
+    Key? key,
+    required this.events,
+    required this.onAddEvent,
+    required this.onViewEvent,
+  }) : super(key: key);
 
   @override
   State<HomeTab> createState() => _HomeTabState();
@@ -281,7 +632,7 @@ class _HomeTabState extends State<HomeTab> {
       }
     } catch (e) {
       print('Error parsing date: $e');
-      return true; // Include event if date parsing fails
+      return true;
     }
   }
 
@@ -323,7 +674,13 @@ class _HomeTabState extends State<HomeTab> {
           eventsByDate[date]!.asMap().entries.map(
                 (entry) => Padding(
                   padding: const EdgeInsets.only(bottom: 15, left: 20, right: 20),
-                  child: _EventCard(event: entry.value, onTap: () {}),
+                  child: _EventCard(
+                    event: entry.value,
+                    onTap: () async {
+                      String location = await _getUserLocation();
+                      widget.onViewEvent(entry.value.id, location);
+                    },
+                  ),
                 ),
               ),
         );
@@ -471,7 +828,10 @@ class _HomeTabState extends State<HomeTab> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => SearchTab(events: widget.events),
+                          builder: (context) => SearchTab(
+                            events: widget.events,
+                            onViewEvent: widget.onViewEvent,
+                          ),
                         ),
                       );
                     },
@@ -840,6 +1200,7 @@ class _EventCard extends StatelessWidget {
             ),
           ),
         );
+        onTap();
       },
       child: Container(
         decoration: BoxDecoration(
@@ -1015,8 +1376,10 @@ class _EventCard extends StatelessWidget {
 
 class SearchTab extends StatefulWidget {
   final List<Event> events;
+  final Function(String, String) onViewEvent;
 
-  const SearchTab({Key? key, required this.events}) : super(key: key);
+  const SearchTab({Key? key, required this.events, required this.onViewEvent})
+      : super(key: key);
 
   @override
   State<SearchTab> createState() => _SearchTabState();
@@ -1135,7 +1498,7 @@ class _SearchTabState extends State<SearchTab> {
       }
     } catch (e) {
       print('Error parsing date: $e');
-      return true; // Include event if date parsing fails
+      return true;
     }
   }
 
@@ -1245,7 +1608,10 @@ class _SearchTabState extends State<SearchTab> {
                         padding: const EdgeInsets.only(bottom: 15),
                         child: _EventCard(
                           event: _filteredEvents[index],
-                          onTap: () {},
+                          onTap: () async {
+                            String location = await _getUserLocation();
+                            widget.onViewEvent(_filteredEvents[index].id, location);
+                          },
                         ),
                       );
                     },
