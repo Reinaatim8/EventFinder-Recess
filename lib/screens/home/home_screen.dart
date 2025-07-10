@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
+import 'package:intl/intl.dart';
 import '../../providers/auth_provider.dart';
 import '../profile/profile_screen.dart';
 import 'bookevent_screen.dart';
@@ -66,6 +67,85 @@ class Event {
       'price': price,
       'createdAt': FieldValue.serverTimestamp(),
     };
+  }
+}
+
+// Utility class for date filtering logic
+class DateFilterUtils {
+  static bool isEventInDateRange(Event event, String dateRange) {
+    if (dateRange == 'All Dates') return true;
+
+    try {
+      DateTime eventDate = _parseDate(event.date);
+      DateTime now = DateTime.now();
+      DateTime today = DateTime(now.year, now.month, now.day);
+      DateTime eventDay = DateTime(
+        eventDate.year,
+        eventDate.month,
+        eventDate.day,
+      );
+
+      switch (dateRange) {
+        case 'Today':
+          return eventDay.isAtSameMomentAs(today);
+        case 'This Week':
+          int daysFromMonday = now.weekday - 1; // Monday is 1
+          DateTime startOfWeek = today.subtract(Duration(days: daysFromMonday));
+          DateTime endOfWeek = startOfWeek.add(const Duration(days: 6));
+          return !eventDay.isBefore(startOfWeek) &&
+              !eventDay.isAfter(endOfWeek);
+        case 'This Weekend':
+          int daysUntilSaturday = 6 - now.weekday; // 6=Saturday
+          if (daysUntilSaturday < 0) daysUntilSaturday += 7;
+          DateTime thisSaturday = today.add(Duration(days: daysUntilSaturday));
+          DateTime thisSunday = thisSaturday.add(const Duration(days: 1));
+          if (now.weekday == 7) {
+            thisSunday = today;
+            thisSaturday = today.subtract(const Duration(days: 1));
+          }
+          return eventDay.isAtSameMomentAs(thisSaturday) ||
+              eventDay.isAtSameMomentAs(thisSunday);
+        case 'Next Week':
+          int daysFromMonday = now.weekday - 1;
+          DateTime startOfThisWeek = today.subtract(
+            Duration(days: daysFromMonday),
+          );
+          DateTime startOfNextWeek = startOfThisWeek.add(
+            const Duration(days: 7),
+          );
+          DateTime endOfNextWeek = startOfNextWeek.add(const Duration(days: 6));
+          return !eventDay.isBefore(startOfNextWeek) &&
+              !eventDay.isAfter(endOfNextWeek);
+        case 'This Month':
+          DateTime startOfMonth = DateTime(now.year, now.month, 1);
+          DateTime endOfMonth = DateTime(now.year, now.month + 1, 0);
+          return !eventDay.isBefore(startOfMonth) &&
+              !eventDay.isAfter(endOfMonth);
+        default:
+          return true;
+      }
+    } catch (e) {
+      print('Error parsing date: $e');
+      return true; // Include event if date parsing fails
+    }
+  }
+
+  static DateTime _parseDate(String date) {
+    try {
+      return DateTime.parse(date);
+    } catch (e) {
+      try {
+        final formatter = DateFormat('dd/MM/yyyy');
+        return formatter.parseStrict(date);
+      } catch (e) {
+        try {
+          final formatter = DateFormat('yyyy/MM/dd');
+          return formatter.parseStrict(date);
+        } catch (e) {
+          throw FormatException('Invalid date format: $date');
+        }
+      }
+    }
   }
 }
 
@@ -219,81 +299,13 @@ class _HomeTabState extends State<HomeTab> {
       _filteredEvents = widget.events.where((event) {
         final matchesCategory =
             _selectedCategory == 'All' || event.category == _selectedCategory;
-        final matchesDateRange = _isEventInDateRange(event, _selectedDateRange);
+        final matchesDateRange = DateFilterUtils.isEventInDateRange(
+          event,
+          _selectedDateRange,
+        );
         return matchesCategory && matchesDateRange;
       }).toList();
     });
-  }
-
-  bool _isEventInDateRange(Event event, String dateRange) {
-    if (dateRange == 'All Dates') return true;
-
-    try {
-      DateTime eventDate = DateTime.parse(event.date);
-      DateTime now = DateTime.now();
-      DateTime today = DateTime(now.year, now.month, now.day);
-
-      switch (dateRange) {
-        case 'Today':
-          DateTime eventDay = DateTime(
-            eventDate.year,
-            eventDate.month,
-            eventDate.day,
-          );
-          return eventDay.isAtSameMomentAs(today);
-        case 'This Week':
-          int daysFromMonday = now.weekday - 1;
-          DateTime startOfWeek = today.subtract(Duration(days: daysFromMonday));
-          DateTime endOfWeek = startOfWeek.add(const Duration(days: 6));
-          return eventDate.isAfter(
-                startOfWeek.subtract(const Duration(days: 1)),
-              ) &&
-              eventDate.isBefore(endOfWeek.add(const Duration(days: 1)));
-        case 'This Weekend':
-          int daysUntilSaturday = (6 - now.weekday) % 7;
-          if (now.weekday == 7) {
-            daysUntilSaturday = 6;
-          }
-          DateTime thisSaturday = today.add(Duration(days: daysUntilSaturday));
-          DateTime thisSunday = thisSaturday.add(const Duration(days: 1));
-          if (now.weekday == 7) {
-            thisSaturday = today.subtract(const Duration(days: 1));
-            thisSunday = today;
-          }
-          DateTime eventDay = DateTime(
-            eventDate.year,
-            eventDate.month,
-            eventDate.day,
-          );
-          return eventDay.isAtSameMomentAs(thisSaturday) ||
-              eventDay.isAtSameMomentAs(thisSunday);
-        case 'Next Week':
-          int daysFromMonday = now.weekday - 1;
-          DateTime startOfThisWeek = today.subtract(
-            Duration(days: daysFromMonday),
-          );
-          DateTime startOfNextWeek = startOfThisWeek.add(
-            const Duration(days: 7),
-          );
-          DateTime endOfNextWeek = startOfNextWeek.add(const Duration(days: 6));
-          return eventDate.isAfter(
-                startOfNextWeek.subtract(const Duration(days: 1)),
-              ) &&
-              eventDate.isBefore(endOfNextWeek.add(const Duration(days: 1)));
-        case 'This Month':
-          DateTime startOfMonth = DateTime(now.year, now.month, 1);
-          DateTime endOfMonth = DateTime(now.year, now.month + 1, 0);
-          return eventDate.isAfter(
-                startOfMonth.subtract(const Duration(days: 1)),
-              ) &&
-              eventDate.isBefore(endOfMonth.add(const Duration(days: 1)));
-        default:
-          return true;
-      }
-    } catch (e) {
-      print('Error parsing date: $e');
-      return true; // Include event if date parsing fails
-    }
   }
 
   @override
@@ -306,11 +318,11 @@ class _HomeTabState extends State<HomeTab> {
     var sortedDates = eventsByDate.keys.toList()
       ..sort((a, b) {
         try {
-          DateTime dateA = DateTime.parse(a);
-          DateTime dateB = DateTime.parse(b);
+          DateTime dateA = DateFilterUtils._parseDate(a);
+          DateTime dateB = DateFilterUtils._parseDate(b);
           return dateA.compareTo(dateB);
         } catch (e) {
-          return a.compareTo(b);
+          return a.compareTo(b); // Fallback to string comparison
         }
       });
 
@@ -1115,81 +1127,13 @@ class _SearchTabState extends State<SearchTab> {
             );
         final matchesCategory =
             _selectedCategory == 'All' || event.category == _selectedCategory;
-        final matchesDateRange = _isEventInDateRange(event, _selectedDateRange);
+        final matchesDateRange = DateFilterUtils.isEventInDateRange(
+          event,
+          _selectedDateRange,
+        );
         return matchesSearch && matchesCategory && matchesDateRange;
       }).toList();
     });
-  }
-
-  bool _isEventInDateRange(Event event, String dateRange) {
-    if (dateRange == 'All Dates') return true;
-
-    try {
-      DateTime eventDate = DateTime.parse(event.date);
-      DateTime now = DateTime.now();
-      DateTime today = DateTime(now.year, now.month, now.day);
-
-      switch (dateRange) {
-        case 'Today':
-          DateTime eventDay = DateTime(
-            eventDate.year,
-            eventDate.month,
-            eventDate.day,
-          );
-          return eventDay.isAtSameMomentAs(today);
-        case 'This Week':
-          int daysFromMonday = now.weekday - 1;
-          DateTime startOfWeek = today.subtract(Duration(days: daysFromMonday));
-          DateTime endOfWeek = startOfWeek.add(const Duration(days: 6));
-          return eventDate.isAfter(
-                startOfWeek.subtract(const Duration(days: 1)),
-              ) &&
-              eventDate.isBefore(endOfWeek.add(const Duration(days: 1)));
-        case 'This Weekend':
-          int daysUntilSaturday = (6 - now.weekday) % 7;
-          if (now.weekday == 7) {
-            daysUntilSaturday = 6;
-          }
-          DateTime thisSaturday = today.add(Duration(days: daysUntilSaturday));
-          DateTime thisSunday = thisSaturday.add(const Duration(days: 1));
-          if (now.weekday == 7) {
-            thisSaturday = today.subtract(const Duration(days: 1));
-            thisSunday = today;
-          }
-          DateTime eventDay = DateTime(
-            eventDate.year,
-            eventDate.month,
-            eventDate.day,
-          );
-          return eventDay.isAtSameMomentAs(thisSaturday) ||
-              eventDay.isAtSameMomentAs(thisSunday);
-        case 'Next Week':
-          int daysFromMonday = now.weekday - 1;
-          DateTime startOfThisWeek = today.subtract(
-            Duration(days: daysFromMonday),
-          );
-          DateTime startOfNextWeek = startOfThisWeek.add(
-            const Duration(days: 7),
-          );
-          DateTime endOfNextWeek = startOfNextWeek.add(const Duration(days: 6));
-          return eventDate.isAfter(
-                startOfNextWeek.subtract(const Duration(days: 1)),
-              ) &&
-              eventDate.isBefore(endOfNextWeek.add(const Duration(days: 1)));
-        case 'This Month':
-          DateTime startOfMonth = DateTime(now.year, now.month, 1);
-          DateTime endOfMonth = DateTime(now.year, now.month + 1, 0);
-          return eventDate.isAfter(
-                startOfMonth.subtract(const Duration(days: 1)),
-              ) &&
-              eventDate.isBefore(endOfMonth.add(const Duration(days: 1)));
-        default:
-          return true;
-      }
-    } catch (e) {
-      print('Error parsing date: $e');
-      return true; // Include event if date parsing fails
-    }
   }
 
   @override
