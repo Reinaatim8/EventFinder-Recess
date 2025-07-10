@@ -7,10 +7,7 @@ import '../../providers/auth_provider.dart';
 import '../home/home_screen.dart';
 import 'dart:async';
 
-// Note: Ensure 'geocoding' is added to pubspec.yaml:
-// dependencies:
-//   geocoding: ^2.1.0
-
+// View Record Model
 class ViewRecord {
   final String id;
   final String eventId;
@@ -47,6 +44,7 @@ class ViewRecord {
   }
 }
 
+// Existing Event and Booking models (unchanged)
 class Event {
   final String id;
   final String title;
@@ -86,7 +84,7 @@ class Event {
 class Booking {
   final String eventId;
   final String firstName;
-  final String? lastName;
+  final String lastName;
   final String email;
   final DateTime bookingDate;
   final double total;
@@ -95,7 +93,7 @@ class Booking {
   Booking({
     required this.eventId,
     required this.firstName,
-    this.lastName,
+    final String lastName,
     required this.email,
     required this.bookingDate,
     required this.total,
@@ -107,7 +105,7 @@ class Booking {
     return Booking(
       eventId: data['eventId'] ?? '',
       firstName: data['firstName'] ?? '',
-      lastName: data['lastName'],
+      lastName: data['lastName'] ?? '',
       email: data['email'] ?? '',
       bookingDate: (data['bookingDate'] as Timestamp).toDate(),
       total: (data['total'] as num).toDouble(),
@@ -120,7 +118,7 @@ class AddEventScreen extends StatelessWidget {
   final VoidCallback onEventAdded;
 
   const AddEventScreen({Key? key, required this.onEventAdded})
-      : super(key: key);
+    : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -315,10 +313,10 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : !_hasAccess
-              ? _buildNoAccessState()
-              : organizerEvents.isEmpty
-                  ? _buildEmptyState()
-                  : _buildEventsList(),
+          ? _buildNoAccessState()
+          : organizerEvents.isEmpty
+          ? _buildEmptyState()
+          : _buildEventsList(),
       floatingActionButton: _hasAccess
           ? FloatingActionButton(
               onPressed: () {
@@ -750,7 +748,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
       }
 
       yield {'revenue': totalRevenue, 'bookings': totalBookings};
-      await Future.delayed(const Duration(seconds: 5));
+      await Future.delayed(const Duration(seconds: 5)); // Pull every 5 seconds
     }
   }
 
@@ -759,8 +757,10 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
         .collection('bookings')
         .where('eventId', isEqualTo: eventId)
         .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map((doc) => Booking.fromFirestore(doc)).toList());
+        .map(
+          (snapshot) =>
+              snapshot.docs.map((doc) => Booking.fromFirestore(doc)).toList(),
+        );
   }
 
   Widget _buildActionButton({
@@ -1040,7 +1040,7 @@ class _AttendeesScreenState extends State<AttendeesScreen> {
                                   ),
                                 ),
                                 title: Text(
-                                  '${booking.firstName} ${booking.lastName ?? ''}',
+                                  '${booking.firstName} ${booking.lastName}',
                                 ),
                                 subtitle: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1168,38 +1168,44 @@ class _EventAnalyticsScreenState extends State<EventAnalyticsScreen> {
         .collection('views')
         .snapshots()
         .listen((snapshot) {
-      if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
-      _debounceTimer = Timer(const Duration(milliseconds: 500), () {
-        setState(() {
-          final now = DateTime.now();
-          final tenMinutesAgo = now.subtract(const Duration(minutes: 10));
-          _currentViewers = snapshot.docs
-              .where((doc) =>
-                  (doc['timestamp'] as Timestamp)
-                      .toDate()
-                      .isAfter(tenMinutesAgo))
-              .length;
-          _activityFeed = snapshot.docs
-              .map((doc) => {
-                    'message': 'New view from ${doc['city'] ?? 'Unknown'}',
-                    'timestamp': (doc['timestamp'] as Timestamp).toDate(),
-                  })
-              .toList()
-            ..sort((a, b) => (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime));
-          _activityFeed = _activityFeed.take(10).toList();
+          if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+          _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+            setState(() {
+              final now = DateTime.now();
+              final tenMinutesAgo = now.subtract(const Duration(minutes: 10));
+              _currentViewers = snapshot.docs
+                  .where(
+                    (doc) => (doc['timestamp'] as Timestamp).toDate().isAfter(
+                      tenMinutesAgo,
+                    ),
+                  )
+                  .length;
+              _activityFeed =
+                  snapshot.docs
+                      .map(
+                        (doc) => {
+                          'message':
+                              'New view from ${doc['city'] ?? 'Unknown'}',
+                          'timestamp': (doc['timestamp'] as Timestamp).toDate(),
+                        },
+                      )
+                      .toList()
+                    ..sort((a, b) => b['timestamp'].compareTo(a['timestamp']));
+              _activityFeed = _activityFeed.take(10).toList();
 
-          _hourlyViews = {};
-          _geoViews = {};
-          for (var doc in snapshot.docs) {
-            final view = ViewRecord.fromFirestore(doc);
-            final hour = DateFormat('HH:00').format(view.timestamp);
-            _hourlyViews[hour] = (_hourlyViews[hour] ?? 0) + 1;
-            final geoKey = '${view.city ?? 'Unknown'}, ${view.country ?? 'Unknown'}';
-            _geoViews[geoKey] = (_geoViews[geoKey] ?? 0) + 1;
-          }
+              _hourlyViews = {};
+              _geoViews = {};
+              for (var doc in snapshot.docs) {
+                final view = ViewRecord.fromFirestore(doc);
+                final hour = DateFormat('HH:00').format(view.timestamp);
+                _hourlyViews[hour] = (_hourlyViews[hour] ?? 0) + 1;
+                final geoKey =
+                    '${view.city ?? 'Unknown'}, ${view.country ?? 'Unknown'}';
+                _geoViews[geoKey] = (_geoViews[geoKey] ?? 0) + 1;
+              }
+            });
+          });
         });
-      });
-    });
   }
 
   @override
@@ -1213,8 +1219,10 @@ class _EventAnalyticsScreenState extends State<EventAnalyticsScreen> {
         .collection('bookings')
         .where('eventId', isEqualTo: widget.event.id)
         .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map((doc) => Booking.fromFirestore(doc)).toList());
+        .map(
+          (snapshot) =>
+              snapshot.docs.map((doc) => Booking.fromFirestore(doc)).toList(),
+        );
   }
 
   @override
@@ -1251,6 +1259,7 @@ class _EventAnalyticsScreenState extends State<EventAnalyticsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Summary Cards
                 Row(
                   children: [
                     Expanded(
@@ -1317,6 +1326,8 @@ class _EventAnalyticsScreenState extends State<EventAnalyticsScreen> {
                   ],
                 ),
                 const SizedBox(height: 24),
+
+                // Activity Feed
                 Text(
                   'Activity Feed',
                   style: TextStyle(
@@ -1344,21 +1355,175 @@ class _EventAnalyticsScreenState extends State<EventAnalyticsScreen> {
                       ? const Center(child: Text('No recent activity'))
                       : Column(
                           children: _activityFeed
-                              .map((activity) => ListTile(
-                                    leading: const Icon(Icons.visibility),
-                                    title: Text(activity['message']),
-                                    subtitle: Text(
-                                      DateFormat('MMM dd, HH:mm')
-                                          .format(activity['timestamp'] as DateTime),
-                                    ),
-                                  ))
+                              .map(
+                                (activity) => ListTile(
+                                  leading: const Icon(Icons.visibility),
+                                  title: Text(activity['message']),
+                                  subtitle: Text(
+                                    DateFormat(
+                                      'MMM dd, HH:mm',
+                                    ).format(activity['timestamp']),
+                                  ),
+                                ),
+                              )
                               .toList(),
                         ),
                 ),
                 const SizedBox(height: 24),
+
+                // Temporal Analytics
                 Text(
                   'Hourly View Trends',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: Colors
+                    color: Colors.grey[800],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.1),
+                        spreadRadius: 1,
+                        blurRadius: 5,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: _hourlyViews.isEmpty
+                      ? const Center(child: Text('No view data available'))
+                      : Column(
+                          children: _hourlyViews.entries.map((entry) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              child: Row(
+                                children: [
+                                  Text(
+                                    entry.key,
+                                    style: const TextStyle(fontSize: 14),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: LinearProgressIndicator(
+                                      value:
+                                          entry.value /
+                                          (_hourlyViews.values.reduce(
+                                                (a, b) => a > b ? a : b,
+                                              ) +
+                                              0.1),
+                                      backgroundColor: Colors.grey[200],
+                                      color: Theme.of(context).primaryColor,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Text('${entry.value} views'),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                ),
+                const SizedBox(height: 24),
+
+                // Geographic Analytics
+                Text(
+                  'Geographic Distribution',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[800],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.1),
+                        spreadRadius: 1,
+                        blurRadius: 5,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: _geoViews.isEmpty
+                      ? const Center(
+                          child: Text('No geographic data available'),
+                        )
+                      : Column(
+                          children: _geoViews.entries.map((entry) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              child: Row(
+                                children: [
+                                  Text(
+                                    entry.key,
+                                    style: const TextStyle(fontSize: 14),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: LinearProgressIndicator(
+                                      value:
+                                          entry.value /
+                                          (_geoViews.values.reduce(
+                                                (a, b) => a > b ? a : b,
+                                              ) +
+                                              0.1),
+                                      backgroundColor: Colors.grey[200],
+                                      color: Theme.of(context).primaryColor,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Text('${entry.value} views'),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildSummaryCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 24),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              title,
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
