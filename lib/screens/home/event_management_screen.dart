@@ -1,10 +1,52 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:intl/intl.dart';
 import '../../providers/auth_provider.dart';
 import '../home/home_screen.dart';
+import 'dart:async';
 
-// Placeholder Event model (replace with your actual Event model)
+// Note: Ensure 'geocoding' is added to pubspec.yaml:
+// dependencies:
+//   geocoding: ^2.1.0
+
+class ViewRecord {
+  final String id;
+  final String eventId;
+  final DateTime timestamp;
+  final String? city;
+  final String? country;
+
+  ViewRecord({
+    required this.id,
+    required this.eventId,
+    required this.timestamp,
+    this.city,
+    this.country,
+  });
+
+  factory ViewRecord.fromFirestore(DocumentSnapshot doc) {
+    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    return ViewRecord(
+      id: doc.id,
+      eventId: data['eventId'] ?? '',
+      timestamp: (data['timestamp'] as Timestamp).toDate(),
+      city: data['city'],
+      country: data['country'],
+    );
+  }
+
+  Map<String, dynamic> toFirestore() {
+    return {
+      'eventId': eventId,
+      'timestamp': Timestamp.fromDate(timestamp),
+      'city': city,
+      'country': country,
+    };
+  }
+}
+
 class Event {
   final String id;
   final String title;
@@ -41,11 +83,10 @@ class Event {
   }
 }
 
-// Booking model
 class Booking {
   final String eventId;
   final String firstName;
-  final String lastName;
+  final String? lastName;
   final String email;
   final DateTime bookingDate;
   final double total;
@@ -54,7 +95,7 @@ class Booking {
   Booking({
     required this.eventId,
     required this.firstName,
-    required this.lastName,
+    this.lastName,
     required this.email,
     required this.bookingDate,
     required this.total,
@@ -66,7 +107,7 @@ class Booking {
     return Booking(
       eventId: data['eventId'] ?? '',
       firstName: data['firstName'] ?? '',
-      lastName: data['lastName'] ?? '',
+      lastName: data['lastName'],
       email: data['email'] ?? '',
       bookingDate: (data['bookingDate'] as Timestamp).toDate(),
       total: (data['total'] as num).toDouble(),
@@ -75,12 +116,11 @@ class Booking {
   }
 }
 
-// Placeholder AddEventScreen (replace with actual implementation)
 class AddEventScreen extends StatelessWidget {
   final VoidCallback onEventAdded;
 
   const AddEventScreen({Key? key, required this.onEventAdded})
-    : super(key: key);
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -91,7 +131,6 @@ class AddEventScreen extends StatelessWidget {
   }
 }
 
-// Placeholder EditEventScreen (replace with actual implementation)
 class EditEventScreen extends StatelessWidget {
   final Event event;
   final VoidCallback onEventUpdated;
@@ -135,10 +174,8 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
     organizerId = authProvider.user?.uid;
 
     if (organizerId != null) {
-      print('Initializing organizer with ID: $organizerId');
       await _checkAccessAndFetchEvents();
     } else {
-      print('No organizer ID found, denying access');
       setState(() {
         _isLoading = false;
         _hasAccess = false;
@@ -146,7 +183,6 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
     }
   }
 
-  // Checks if the user has any events in Firestore and fetches them
   Future<void> _checkAccessAndFetchEvents() async {
     if (organizerId == null) return;
 
@@ -155,28 +191,22 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
     });
 
     try {
-      print('Fetching events for organizerId: $organizerId');
       QuerySnapshot snapshot = await FirebaseFirestore.instance
           .collection('events')
           .where('organizerId', isEqualTo: organizerId)
           .get();
 
-      print('Found ${snapshot.docs.length} events');
-      snapshot.docs.forEach((doc) => print('Event data: ${doc.data()}'));
-
       setState(() {
         organizerEvents = snapshot.docs
             .map((doc) => Event.fromFirestore(doc))
             .toList();
-        _hasAccess =
-            true; // Allow access for authenticated users to create events
+        _hasAccess = true;
         _isLoading = false;
       });
     } catch (e) {
-      print('Error loading events: $e');
       setState(() {
         _isLoading = false;
-        _hasAccess = true; // Still allow access to try creating events
+        _hasAccess = true;
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -187,7 +217,6 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
     }
   }
 
-  // New method to explicitly check if the user has any events
   Future<bool> _hasUserEvents() async {
     if (organizerId == null) return false;
 
@@ -195,13 +224,10 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
       QuerySnapshot snapshot = await FirebaseFirestore.instance
           .collection('events')
           .where('organizerId', isEqualTo: organizerId)
-          .limit(1) // Optimize by limiting to one document
+          .limit(1)
           .get();
-
-      print('Has user events: ${snapshot.docs.isNotEmpty}');
       return snapshot.docs.isNotEmpty;
     } catch (e) {
-      print('Error checking user events: $e');
       return false;
     }
   }
@@ -216,17 +242,14 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
           .collection('bookings')
           .where('eventId', isEqualTo: eventId)
           .get();
-
       return snapshot.docs.map((doc) => Booking.fromFirestore(doc)).toList();
     } catch (e) {
-      print('Error fetching bookings: $e');
       return [];
     }
   }
 
   Future<void> _deleteEvent(Event event) async {
     try {
-      // Show confirmation dialog
       bool? confirmed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
@@ -253,14 +276,12 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
             .collection('events')
             .doc(event.id)
             .delete();
-
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Event deleted successfully'),
             backgroundColor: Colors.green,
           ),
         );
-
         await _fetchOrganizerEvents();
       }
     } catch (e) {
@@ -294,10 +315,10 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : !_hasAccess
-          ? _buildNoAccessState()
-          : organizerEvents.isEmpty
-          ? _buildEmptyState()
-          : _buildEventsList(),
+              ? _buildNoAccessState()
+              : organizerEvents.isEmpty
+                  ? _buildEmptyState()
+                  : _buildEventsList(),
       floatingActionButton: _hasAccess
           ? FloatingActionButton(
               onPressed: () {
@@ -346,7 +367,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
           const SizedBox(height: 30),
           ElevatedButton.icon(
             onPressed: () {
-              Navigator.pop(context); // Go back to previous screen
+              Navigator.pop(context);
             },
             icon: const Icon(Icons.arrow_back),
             label: const Text('Go Back'),
@@ -408,7 +429,6 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
   Widget _buildEventsList() {
     return Column(
       children: [
-        // Summary cards at the top
         Container(
           padding: const EdgeInsets.all(16),
           child: Row(
@@ -423,8 +443,8 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: FutureBuilder<Map<String, dynamic>>(
-                  future: _getOverallStats(),
+                child: StreamBuilder<Map<String, dynamic>>(
+                  stream: _getOverallStatsStream(),
                   builder: (context, snapshot) {
                     final stats =
                         snapshot.data ?? {'revenue': 0.0, 'bookings': 0};
@@ -440,7 +460,6 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
             ],
           ),
         ),
-        // Events list
         Expanded(
           child: ListView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -529,10 +548,8 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                           ],
                         ),
                         const SizedBox(height: 16),
-
-                        // Booking status
-                        FutureBuilder<List<Booking>>(
-                          future: _getEventBookings(event.id),
+                        StreamBuilder<List<Booking>>(
+                          stream: _getEventBookingsStream(event.id),
                           builder: (context, snapshot) {
                             if (snapshot.connectionState ==
                                 ConnectionState.waiting) {
@@ -602,7 +619,6 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                             );
                           },
                         ),
-
                         const SizedBox(height: 16),
                         Row(
                           children: [
@@ -720,19 +736,31 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
     );
   }
 
-  Future<Map<String, dynamic>> _getOverallStats() async {
-    double totalRevenue = 0.0;
-    int totalBookings = 0;
+  Stream<Map<String, dynamic>> _getOverallStatsStream() async* {
+    while (true) {
+      double totalRevenue = 0.0;
+      int totalBookings = 0;
 
-    for (Event event in organizerEvents) {
-      List<Booking> bookings = await _getEventBookings(event.id);
-      totalBookings += bookings.length;
-      totalRevenue += bookings
-          .where((b) => b.paid)
-          .fold(0.0, (sum, booking) => sum + booking.total);
+      for (Event event in organizerEvents) {
+        List<Booking> bookings = await _getEventBookings(event.id);
+        totalBookings += bookings.length;
+        totalRevenue += bookings
+            .where((b) => b.paid)
+            .fold(0.0, (sum, booking) => sum + booking.total);
+      }
+
+      yield {'revenue': totalRevenue, 'bookings': totalBookings};
+      await Future.delayed(const Duration(seconds: 5));
     }
+  }
 
-    return {'revenue': totalRevenue, 'bookings': totalBookings};
+  Stream<List<Booking>> _getEventBookingsStream(String eventId) {
+    return FirebaseFirestore.instance
+        .collection('bookings')
+        .where('eventId', isEqualTo: eventId)
+        .snapshots()
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => Booking.fromFirestore(doc)).toList());
   }
 
   Widget _buildActionButton({
@@ -792,7 +820,6 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
   }
 }
 
-// Event Details Screen
 class EventDetailsScreen extends StatelessWidget {
   final Event event;
 
@@ -853,7 +880,6 @@ class EventDetailsScreen extends StatelessWidget {
   }
 }
 
-// Enhanced Attendees Screen
 class AttendeesScreen extends StatefulWidget {
   final Event event;
 
@@ -944,7 +970,6 @@ class _AttendeesScreenState extends State<AttendeesScreen> {
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
-                // Filter tabs
                 Container(
                   padding: const EdgeInsets.all(16),
                   child: Row(
@@ -975,8 +1000,6 @@ class _AttendeesScreenState extends State<AttendeesScreen> {
                     ],
                   ),
                 ),
-
-                // Bookings list
                 Expanded(
                   child: filteredBookings.isEmpty
                       ? Center(
@@ -1017,7 +1040,7 @@ class _AttendeesScreenState extends State<AttendeesScreen> {
                                   ),
                                 ),
                                 title: Text(
-                                  '${booking.firstName} ${booking.lastName}',
+                                  '${booking.firstName} ${booking.lastName ?? ''}',
                                 ),
                                 subtitle: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1116,36 +1139,94 @@ class _AttendeesScreenState extends State<AttendeesScreen> {
   }
 }
 
-// Enhanced Event Analytics Screen
-class EventAnalyticsScreen extends StatelessWidget {
+class EventAnalyticsScreen extends StatefulWidget {
   final Event event;
 
   const EventAnalyticsScreen({Key? key, required this.event}) : super(key: key);
 
-  Future<List<Booking>> _getEventBookings() async {
-    try {
-      QuerySnapshot snapshot = await FirebaseFirestore.instance
-          .collection('bookings')
-          .where('eventId', isEqualTo: event.id)
-          .get();
+  @override
+  State<EventAnalyticsScreen> createState() => _EventAnalyticsScreenState();
+}
 
-      return snapshot.docs.map((doc) => Booking.fromFirestore(doc)).toList();
-    } catch (e) {
-      print('Error fetching bookings: $e');
-      return [];
-    }
+class _EventAnalyticsScreenState extends State<EventAnalyticsScreen> {
+  Timer? _debounceTimer;
+  int _currentViewers = 0;
+  List<Map<String, dynamic>> _activityFeed = [];
+  Map<String, int> _hourlyViews = {};
+  Map<String, int> _geoViews = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _setupRealtimeListeners();
+  }
+
+  void _setupRealtimeListeners() {
+    FirebaseFirestore.instance
+        .collection('events')
+        .doc(widget.event.id)
+        .collection('views')
+        .snapshots()
+        .listen((snapshot) {
+      if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+      _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+        setState(() {
+          final now = DateTime.now();
+          final tenMinutesAgo = now.subtract(const Duration(minutes: 10));
+          _currentViewers = snapshot.docs
+              .where((doc) =>
+                  (doc['timestamp'] as Timestamp)
+                      .toDate()
+                      .isAfter(tenMinutesAgo))
+              .length;
+          _activityFeed = snapshot.docs
+              .map((doc) => {
+                    'message': 'New view from ${doc['city'] ?? 'Unknown'}',
+                    'timestamp': (doc['timestamp'] as Timestamp).toDate(),
+                  })
+              .toList()
+            ..sort((a, b) => (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime));
+          _activityFeed = _activityFeed.take(10).toList();
+
+          _hourlyViews = {};
+          _geoViews = {};
+          for (var doc in snapshot.docs) {
+            final view = ViewRecord.fromFirestore(doc);
+            final hour = DateFormat('HH:00').format(view.timestamp);
+            _hourlyViews[hour] = (_hourlyViews[hour] ?? 0) + 1;
+            final geoKey = '${view.city ?? 'Unknown'}, ${view.country ?? 'Unknown'}';
+            _geoViews[geoKey] = (_geoViews[geoKey] ?? 0) + 1;
+          }
+        });
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    super.dispose();
+  }
+
+  Stream<List<Booking>> _getEventBookingsStream() {
+    return FirebaseFirestore.instance
+        .collection('bookings')
+        .where('eventId', isEqualTo: widget.event.id)
+        .snapshots()
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => Booking.fromFirestore(doc)).toList());
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('${event.title} - Analytics'),
+        title: Text('${widget.event.title} - Analytics'),
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
       ),
-      body: FutureBuilder<List<Booking>>(
-        future: _getEventBookings(),
+      body: StreamBuilder<List<Booking>>(
+        stream: _getEventBookingsStream(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -1161,15 +1242,26 @@ class EventAnalyticsScreen extends StatelessWidget {
           final averageBookingValue = paidBookings > 0
               ? totalRevenue / paidBookings
               : 0.0;
+          final conversionRate = totalBookings > 0
+              ? (paidBookings / totalBookings * 100).toStringAsFixed(1)
+              : '0.0';
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Summary Cards
                 Row(
                   children: [
+                    Expanded(
+                      child: _buildSummaryCard(
+                        'Current Viewers',
+                        _currentViewers.toString(),
+                        Icons.visibility,
+                        Colors.blue,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
                     Expanded(
                       child: _buildSummaryCard(
                         'Total Bookings',
@@ -1178,13 +1270,26 @@ class EventAnalyticsScreen extends StatelessWidget {
                         Colors.blue,
                       ),
                     ),
-                    const SizedBox(width: 16),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
                     Expanded(
                       child: _buildSummaryCard(
                         'Paid Bookings',
                         paidBookings.toString(),
                         Icons.check_circle,
                         Colors.green,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildSummaryCard(
+                        'Conversion Rate',
+                        '$conversionRate%',
+                        Icons.trending_up,
+                        Colors.purple,
                       ),
                     ),
                   ],
@@ -1194,35 +1299,26 @@ class EventAnalyticsScreen extends StatelessWidget {
                   children: [
                     Expanded(
                       child: _buildSummaryCard(
-                        'Pending Bookings',
-                        pendingBookings.toString(),
-                        Icons.pending,
-                        Colors.orange,
+                        'Total Revenue',
+                        '€${totalRevenue.toStringAsFixed(2)}',
+                        Icons.attach_money,
+                        Colors.green,
                       ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: _buildSummaryCard(
-                        'Total Revenue',
-                        '€${totalRevenue.toStringAsFixed(2)}',
-                        Icons.attach_money,
-                        Colors.purple,
+                        'Avg. Booking',
+                        '€${averageBookingValue.toStringAsFixed(2)}',
+                        Icons.calculate,
+                        Colors.teal,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                _buildSummaryCard(
-                  'Average Booking Value',
-                  '€${averageBookingValue.toStringAsFixed(2)}',
-                  Icons.calculate,
-                  Colors.teal,
-                ),
                 const SizedBox(height: 24),
-
-                // Detailed Analytics
                 Text(
-                  'Booking Trends',
+                  'Activity Feed',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -1244,95 +1340,25 @@ class EventAnalyticsScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Booking Status Breakdown',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey[700],
+                  child: _activityFeed.isEmpty
+                      ? const Center(child: Text('No recent activity'))
+                      : Column(
+                          children: _activityFeed
+                              .map((activity) => ListTile(
+                                    leading: const Icon(Icons.visibility),
+                                    title: Text(activity['message']),
+                                    subtitle: Text(
+                                      DateFormat('MMM dd, HH:mm')
+                                          .format(activity['timestamp'] as DateTime),
+                                    ),
+                                  ))
+                              .toList(),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _buildStatusIndicator(
-                            'Paid',
-                            paidBookings,
-                            Colors.green,
-                          ),
-                          _buildStatusIndicator(
-                            'Pending',
-                            pendingBookings,
-                            Colors.orange,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
                 ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildSummaryCard(
-    String title,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            Text(
-              title,
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatusIndicator(String label, int count, Color color) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            shape: BoxShape.circle,
-          ),
-          child: Text(
-            count.toString(),
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(label, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
-      ],
-    );
-  }
-}
+                const SizedBox(height: 24),
+                Text(
+                  'Hourly View Trends',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors

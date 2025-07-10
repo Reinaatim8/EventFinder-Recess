@@ -5,6 +5,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
 import 'package:intl/intl.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 import '../../providers/auth_provider.dart';
 import '../profile/profile_screen.dart';
 import 'bookevent_screen.dart';
@@ -70,7 +72,6 @@ class Event {
   }
 }
 
-// Utility class for date filtering logic
 class DateFilterUtils {
   static bool isEventInDateRange(Event event, String dateRange) {
     if (dateRange == 'All Dates') return true;
@@ -89,13 +90,13 @@ class DateFilterUtils {
         case 'Today':
           return eventDay.isAtSameMomentAs(today);
         case 'This Week':
-          int daysFromMonday = now.weekday - 1; // Monday is 1
+          int daysFromMonday = now.weekday - 1;
           DateTime startOfWeek = today.subtract(Duration(days: daysFromMonday));
           DateTime endOfWeek = startOfWeek.add(const Duration(days: 6));
           return !eventDay.isBefore(startOfWeek) &&
               !eventDay.isAfter(endOfWeek);
         case 'This Weekend':
-          int daysUntilSaturday = 6 - now.weekday; // 6=Saturday
+          int daysUntilSaturday = 6 - now.weekday;
           if (daysUntilSaturday < 0) daysUntilSaturday += 7;
           DateTime thisSaturday = today.add(Duration(days: daysUntilSaturday));
           DateTime thisSunday = thisSaturday.add(const Duration(days: 1));
@@ -126,7 +127,7 @@ class DateFilterUtils {
       }
     } catch (e) {
       print('Error parsing date: $e');
-      return true; // Include event if date parsing fails
+      return true;
     }
   }
 
@@ -179,12 +180,10 @@ class _HomeScreenState extends State<HomeScreen> {
         events = snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList();
         _isLoading = false;
       });
-      print('Fetched ${events.length} events');
     } catch (e) {
       setState(() {
         _isLoading = false;
       });
-      print('Error fetching events: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error loading events: $e'),
@@ -203,11 +202,7 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         events.add(event);
       });
-      print(
-        'Event added to Firestore: ${event.id}, organizerId: ${event.organizerId}',
-      );
     } catch (e) {
-      print('Error adding event: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error adding event: $e'),
@@ -218,11 +213,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   List<Widget> _getScreens() => [
-    HomeTab(events: events, onAddEvent: _addEvent),
-    SearchTab(events: events),
-    BookingsTab(key: bookingsTabKey),
-    const ProfileScreen(),
-  ];
+        HomeTab(events: events, onAddEvent: _addEvent),
+        SearchTab(events: events),
+        BookingsTab(key: bookingsTabKey),
+        const ProfileScreen(),
+      ];
 
   @override
   Widget build(BuildContext context) {
@@ -259,7 +254,7 @@ class HomeTab extends StatefulWidget {
   final Function(Event) onAddEvent;
 
   const HomeTab({Key? key, required this.events, required this.onAddEvent})
-    : super(key: key);
+      : super(key: key);
 
   @override
   State<HomeTab> createState() => _HomeTabState();
@@ -322,7 +317,7 @@ class _HomeTabState extends State<HomeTab> {
           DateTime dateB = DateFilterUtils._parseDate(b);
           return dateA.compareTo(dateB);
         } catch (e) {
-          return a.compareTo(b); // Fallback to string comparison
+          return a.compareTo(b);
         }
       });
 
@@ -854,10 +849,45 @@ class _EventCard extends StatelessWidget {
 
   const _EventCard({required this.event, required this.onTap});
 
+  Future<void> _trackView(BuildContext context) async {
+    try {
+      // Request location permission
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) return;
+      }
+      if (permission == LocationPermission.deniedForever) return;
+
+      // Get location
+      Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.medium);
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+          position.latitude, position.longitude);
+      String? city = placemarks.isNotEmpty ? placemarks[0].locality : null;
+      String? country = placemarks.isNotEmpty ? placemarks[0].country : null;
+
+      // Save view record
+      await FirebaseFirestore.instance
+          .collection('events')
+          .doc(event.id)
+          .collection('views')
+          .add({
+        'eventId': event.id,
+        'timestamp': FieldValue.serverTimestamp(),
+        'city': city,
+        'country': country,
+      });
+    } catch (e) {
+      print('Error tracking view: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
+      onTap: () async {
+        await _trackView(context);
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -1183,175 +1213,4 @@ class _SearchTabState extends State<SearchTab> {
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
-                    children: _categories.map((category) {
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: _CategoryFilterChip(
-                          label: category,
-                          isSelected: _selectedCategory == category,
-                          onTap: () {
-                            setState(() {
-                              _selectedCategory = category;
-                              _filterEvents();
-                            });
-                          },
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: _filteredEvents.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.event_busy,
-                          size: 80,
-                          color: Colors.grey[400],
-                        ),
-                        const SizedBox(height: 20),
-                        Text(
-                          'No events found',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Colors.grey[600],
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          'Try changing your filter or search criteria',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[500],
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _filteredEvents.length,
-                    itemBuilder: (context, index) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 15),
-                        child: _EventCard(
-                          event: _filteredEvents[index],
-                          onTap: () {},
-                        ),
-                      );
-                    },
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CategoryFilterChip extends StatelessWidget {
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _CategoryFilterChip({
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? Theme.of(context).primaryColor : Colors.grey[200],
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? Colors.white : Colors.black,
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class BookingsTab extends StatefulWidget {
-  const BookingsTab({Key? key}) : super(key: key);
-
-  @override
-  State<BookingsTab> createState() => _BookingsTabState();
-}
-
-class _BookingsTabState extends State<BookingsTab> {
-  List<Map<String, dynamic>> bookings = [
-    {'id': 1, 'event': 'Concert A', 'total': 50.0, 'paid': false},
-    {'id': 2, 'event': 'Festival B', 'total': 30.0, 'paid': false},
-    {'id': 3, 'event': 'Theatre C', 'total': 40.0, 'paid': true},
-  ];
-
-  void addBooking(Map<String, dynamic> booking) {
-    setState(() {
-      bookings.add(booking);
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Bookings'),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
-      ),
-      body: ListView.builder(
-        itemCount: bookings.length,
-        itemBuilder: (context, index) {
-          final booking = bookings[index];
-          return ListTile(
-            title: Text(booking['event']),
-            subtitle: Text('Total: €${booking['total']}'),
-            trailing: booking['paid']
-                ? const Text('Paid', style: TextStyle(color: Colors.green))
-                : ElevatedButton(
-                    child: const Text('Checkout'),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => CheckoutScreen(
-                            total: booking['total'],
-                            onPaymentSuccess: () {
-                              setState(() {
-                                bookings[index]['paid'] = true;
-                              });
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Payment Successful!'),
-                                  backgroundColor: Colors.green,
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-          );
-        },
-      ),
-    );
-  }
-}
+                    children: _
