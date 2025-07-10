@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
 import 'dart:io';
 import '../../providers/auth_provider.dart';
 import '../profile/profile_screen.dart';
@@ -12,10 +11,9 @@ import 'package:flutter/foundation.dart';
 import 'dart:typed_data';
 import 'addingevent.dart';
 import '../home/event_management_screen.dart';
-import 'dart:async';
-import 'package:geolocator/geolocator.dart';
 
-final GlobalKey<_BookingsTabState> bookingsTabKey = GlobalKey<_BookingsTabState>();
+final GlobalKey<_BookingsTabState> bookingsTabKey =
+    GlobalKey<_BookingsTabState>();
 
 class Event {
   final String id;
@@ -27,7 +25,6 @@ class Event {
   final String? imageUrl;
   final String organizerId;
   final double price;
-  final int viewCount; // Added for view tracking
 
   Event({
     required this.id,
@@ -39,7 +36,6 @@ class Event {
     this.imageUrl,
     required this.organizerId,
     required this.price,
-    this.viewCount = 0,
   });
 
   factory Event.fromFirestore(DocumentSnapshot doc) {
@@ -54,7 +50,6 @@ class Event {
       imageUrl: data['imageUrl'],
       organizerId: data['organizerId'] ?? '',
       price: (data['price'] ?? 0.0).toDouble(),
-      viewCount: (data['viewCount'] ?? 0).toInt(),
     );
   }
 
@@ -69,7 +64,6 @@ class Event {
       'imageUrl': imageUrl,
       'organizerId': organizerId,
       'price': price,
-      'viewCount': viewCount,
       'createdAt': FieldValue.serverTimestamp(),
     };
   }
@@ -86,26 +80,11 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   List<Event> events = [];
   bool _isLoading = true;
-  WebSocketChannel? _channel;
-  Timer? _viewTimer;
-  String? _currentEventId;
 
   @override
   void initState() {
     super.initState();
     _fetchEvents();
-    _connectWebSocket();
-  }
-
-  Future<void> _connectWebSocket() async {
-    try {
-      _channel = WebSocketChannel.connect(
-        Uri.parse('wss://your-websocket-server-url'), // Replace with your WebSocket server URL
-      );
-      print('WebSocket connected');
-    } catch (e) {
-      print('WebSocket connection error: $e');
-    }
   }
 
   Future<void> _fetchEvents() async {
@@ -113,8 +92,9 @@ class _HomeScreenState extends State<HomeScreen> {
       _isLoading = true;
     });
     try {
-      QuerySnapshot snapshot =
-          await FirebaseFirestore.instance.collection('events').get();
+      QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('events')
+          .get();
       setState(() {
         events = snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList();
         _isLoading = false;
@@ -143,7 +123,9 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         events.add(event);
       });
-      print('Event added to Firestore: ${event.id}, organizerId: ${event.organizerId}');
+      print(
+        'Event added to Firestore: ${event.id}, organizerId: ${event.organizerId}',
+      );
     } catch (e) {
       print('Error adding event: $e');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -155,63 +137,12 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _sendViewEvent(String eventId, String location) async {
-    try {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final userId = authProvider.user?.uid ?? 'anonymous';
-      final viewData = {
-        'eventId': eventId,
-        'userId': userId,
-        'location': location,
-        Kirchner
-        'timestamp': DateTime.now().toIso8601String(),
-      };
-      _channel?.sink.add(jsonEncode({'type': 'view_event', 'data': viewData}));
-      
-      // Update Firestore view count
-      await FirebaseFirestore.instance
-          .collection('events')
-          .doc(eventId)
-          .update({
-            'viewCount': FieldValue.increment(1),
-          });
-    } catch (e) {
-      print('Error sending view event: $e');
-    }
-  }
-
-  Future<String> _getUserLocationМетод() async {
-    try {
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          return 'Unknown';
-        }
-      }
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.low,
-      );
-      return 'Lat: ${position.latitude}, Long: ${position.longitude}';
-    } catch (e) {
-      print('Error getting location: $e');
-      return 'Unknown';
-    }
-  }
-
   List<Widget> _getScreens() => [
-        HomeTab(events: events, onAddEvent: _addEvent, onViewEvent: _sendViewEvent),
-        SearchTab(events: events, onViewEvent: _sendViewEvent),
-        BookingsTab(key: bookingsTabKey),
-        const ProfileScreen(),
-      ];
-
-  @override
-  void dispose() {
-    _channel?.sink.close();
-    _viewTimer?.cancel();
-    super.dispose();
-  }
+    HomeTab(events: events, onAddEvent: _addEvent),
+    SearchTab(events: events),
+    BookingsTab(key: bookingsTabKey),
+    const ProfileScreen(),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -230,295 +161,13 @@ class _HomeScreenState extends State<HomeScreen> {
         selectedItemColor: Theme.of(context).primaryColor,
         unselectedItemColor: Colors.grey,
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.search),
-            label: 'Search',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
           BottomNavigationBarItem(
             icon: Icon(Icons.bookmark),
             label: 'Bookings',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label:
-
-System: I notice the provided code for `home_screen.dart` was cut off. I'll complete the implementation and provide both updated files with the real-time analytics functionality using WebSockets. The implementation will include:
-
-1. **home_screen.dart**: 
-   - View tracking when users view events
-   - Sending view events to the backend via WebSocket
-   - Tracking view duration and location
-
-2. **event_management_screen.dart**:
-   - Real-time view count updates with animated counters
-   - Live activity feed showing recent views
-   - Visual indicators for view milestones
-
-Below are the complete updated files:
-
-<xaiArtifact artifact_id="34cb142c-24e3-4205-9c83-1155d18e5723" artifact_version_id="b9f3ef87-79bf-474a-833b-67ece147cf36" title="home_screen.dart" contentType="text/x-dart">
-import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:provider/provider.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
-import 'package:geolocator/geolocator.dart';
-import 'dart:io';
-import 'dart:async';
-import 'dart:convert';
-import '../../providers/auth_provider.dart';
-import '../profile/profile_screen.dart';
-import 'bookevent_screen.dart';
-import 'package:flutter/foundation.dart';
-import 'dart:typed_data';
-import 'addingevent.dart';
-import '../home/event_management_screen.dart';
-
-final GlobalKey<_BookingsTabState> bookingsTabKey = GlobalKey<_BookingsTabState>();
-
-class Event {
-  final String id;
-  final String title;
-  final String description;
-  final String date;
-  final String location;
-  final String category;
-  final String? imageUrl;
-  final String organizerId;
-  final double price;
-  final int viewCount;
-
-  Event({
-    required this.id,
-    required this FACILITY: this.imageUrl,
-    required this.organizerId,
-    required this.price,
-    this.viewCount = 0,
-  });
-
-  factory Event.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-    return Event(
-      id: doc.id,
-      title: data['title'] ?? '',
-      description: data['description'] ?? '',
-      date: data['date'] ?? '',
-      location: data['location'] ?? '',
-      category: data['category'] ?? 'Other',
-      imageUrl: data['imageUrl'],
-      organizerId: data['organizerId'] ?? '',
-      price: (data['price'] ?? 0.0).toDouble(),
-      viewCount: (data['viewCount'] ?? 0).toInt(),
-    );
-  }
-
-  Map<String, dynamic> toFirestore() {
-    return {
-      'id': id,
-      'title': title,
-      'description': description,
-      'date': date,
-      'location': location,
-      'category': category,
-      'imageUrl': imageUrl,
-      'organizerId': organizerId,
-      'price': price,
-      'viewCount': viewCount,
-      'createdAt': FieldValue.serverTimestamp(),
-    };
-  }
-}
-
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
-
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  int _selectedIndex = 0;
-  List<Event> events = [];
-  bool _isLoading = true;
-  WebSocketChannel? _channel;
-  Timer? _viewTimer;
-  String? _currentEventId;
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchEvents();
-    _connectWebSocket();
-  }
-
-  Future<void> _connectWebSocket() async {
-    try {
-      _channel = WebSocketChannel.connect(
-        Uri.parse('wss://your-websocket-server-url'), // Replace with your WebSocket server URL
-      );
-      print('WebSocket connected');
-    } catch (e) {
-      print('WebSocket connection error: $e');
-    }
-  }
-
-  Future<void> _fetchEvents() async {
-    setState(() {
-      _isLoading = true;
-    });
-    try {
-      QuerySnapshot snapshot =
-          await FirebaseFirestore.instance.collection('events').get();
-      setState(() {
-        events = snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList();
-        _isLoading = false;
-      });
-      print('Fetched ${events.length} events');
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      print('Error fetching events: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error loading events: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  void _addEvent(Event event) async {
-    try {
-      await FirebaseFirestore.instance
-          .collection('events')
-          .doc(event.id)
-          .set(event.toFirestore());
-      setState(() {
-        events.add(event);
-      });
-      print('Event added to Firestore: ${event.id}, organizerId: ${event.organizerId}');
-    } catch (e) {
-      print('Error adding event: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error adding event: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  Future<void> _sendViewEvent(String eventId, String location) async {
-    try {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final userId = authProvider.user?.uid ?? 'anonymous';
-      final viewData = {
-        'eventId': eventId,
-        'userId': userId,
-        'location': location,
-        'timestamp': DateTime.now().toIso8601String(),
-      };
-      _channel?.sink.add(jsonEncode({'type': 'view_event', 'data': viewData}));
-      
-      await FirebaseFirestore.instance
-          .collection('events')
-          .doc(eventId)
-          .update({
-            'viewCount': FieldValue.increment(1),
-          });
-      
-      // Start tracking view duration
-      _currentEventId = eventId;
-      _viewTimer?.cancel();
-      _viewTimer = Timer.periodic(Duration(seconds: 5), (timer) {
-        if (_currentEventId == eventId) {
-          _channel?.sink.add(jsonEncode({
-            'type': 'view_duration',
-            'data': {
-              'eventId': eventId,
-              'userId': userId,
-              'duration': 5,
-            },
-          }));
-        }
-      });
-    } catch (e) {
-      print('Error sending view event: $e');
-    }
-  }
-
-  Future<String> _getUserLocation() async {
-    try {
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          return 'Unknown';
-        }
-      }
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.low,
-      );
-      return 'Lat: ${position.latitude}, Long: ${position.longitude}';
-    } catch (e) {
-      print('Error getting location: $e');
-      return 'Unknown';
-    }
-  }
-
-  List<Widget> _getScreens() => [
-        HomeTab(events: events, onAddEvent: _addEvent, onViewEvent: _sendViewEvent),
-        SearchTab(events: events, onViewEvent: _sendViewEvent),
-        BookingsTab(key: bookingsTabKey),
-        const ProfileScreen(),
-      ];
-
-  @override
-  void dispose() {
-    _channel?.sink.close();
-    _viewTimer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _getScreens()[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: _selectedIndex,
-        onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
-        selectedItemColor: Theme.of(context).primaryColor,
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.search),
-            label: 'Search',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.bookmark),
-            label: 'Bookings',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
     );
@@ -528,14 +177,9 @@ class _HomeScreenState extends State<HomeScreen> {
 class HomeTab extends StatefulWidget {
   final List<Event> events;
   final Function(Event) onAddEvent;
-  final Function(String, String) onViewEvent;
 
-  const HomeTab({
-    Key? key,
-    required this.events,
-    required this.onAddEvent,
-    required this.onViewEvent,
-  }) : super(key: key);
+  const HomeTab({Key? key, required this.events, required this.onAddEvent})
+    : super(key: key);
 
   @override
   State<HomeTab> createState() => _HomeTabState();
@@ -591,15 +235,20 @@ class _HomeTabState extends State<HomeTab> {
 
       switch (dateRange) {
         case 'Today':
-          DateTime eventDay =
-              DateTime(eventDate.year, eventDate.month, eventDate.day);
+          DateTime eventDay = DateTime(
+            eventDate.year,
+            eventDate.month,
+            eventDate.day,
+          );
           return eventDay.isAtSameMomentAs(today);
         case 'This Week':
           int daysFromMonday = now.weekday - 1;
           DateTime startOfWeek = today.subtract(Duration(days: daysFromMonday));
           DateTime endOfWeek = startOfWeek.add(const Duration(days: 6));
-          return eventDate.isAfter(startOfWeek.subtract(const Duration(days: 1))) &&
-                 eventDate.isBefore(endOfWeek.add(const Duration(days: 1)));
+          return eventDate.isAfter(
+                startOfWeek.subtract(const Duration(days: 1)),
+              ) &&
+              eventDate.isBefore(endOfWeek.add(const Duration(days: 1)));
         case 'This Weekend':
           int daysUntilSaturday = (6 - now.weekday) % 7;
           if (now.weekday == 7) {
@@ -611,28 +260,39 @@ class _HomeTabState extends State<HomeTab> {
             thisSaturday = today.subtract(const Duration(days: 1));
             thisSunday = today;
           }
-          DateTime eventDay =
-              DateTime(eventDate.year, eventDate.month, eventDate.day);
+          DateTime eventDay = DateTime(
+            eventDate.year,
+            eventDate.month,
+            eventDate.day,
+          );
           return eventDay.isAtSameMomentAs(thisSaturday) ||
-                 eventDay.isAtSameMomentAs(thisSunday);
+              eventDay.isAtSameMomentAs(thisSunday);
         case 'Next Week':
           int daysFromMonday = now.weekday - 1;
-          DateTime startOfThisWeek = today.subtract(Duration(days: daysFromMonday));
-          DateTime startOfNextWeek = startOfThisWeek.add(const Duration(days: 7));
+          DateTime startOfThisWeek = today.subtract(
+            Duration(days: daysFromMonday),
+          );
+          DateTime startOfNextWeek = startOfThisWeek.add(
+            const Duration(days: 7),
+          );
           DateTime endOfNextWeek = startOfNextWeek.add(const Duration(days: 6));
-          return eventDate.isAfter(startOfNextWeek.subtract(const Duration(days: 1))) &&
-                 eventDate.isBefore(endOfNextWeek.add(const Duration(days: 1)));
+          return eventDate.isAfter(
+                startOfNextWeek.subtract(const Duration(days: 1)),
+              ) &&
+              eventDate.isBefore(endOfNextWeek.add(const Duration(days: 1)));
         case 'This Month':
           DateTime startOfMonth = DateTime(now.year, now.month, 1);
           DateTime endOfMonth = DateTime(now.year, now.month + 1, 0);
-          return eventDate.isAfter(startOfMonth.subtract(const Duration(days: 1))) &&
-                 eventDate.isBefore(endOfMonth.add(const Duration(days: 1)));
+          return eventDate.isAfter(
+                startOfMonth.subtract(const Duration(days: 1)),
+              ) &&
+              eventDate.isBefore(endOfMonth.add(const Duration(days: 1)));
         default:
           return true;
       }
     } catch (e) {
       print('Error parsing date: $e');
-      return true;
+      return true; // Include event if date parsing fails
     }
   }
 
@@ -659,7 +319,10 @@ class _HomeTabState extends State<HomeTab> {
       if (eventsByDate[date]!.isNotEmpty) {
         eventWidgets.add(
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 20.0,
+              vertical: 10.0,
+            ),
             child: Text(
               date,
               style: const TextStyle(
@@ -672,17 +335,11 @@ class _HomeTabState extends State<HomeTab> {
         );
         eventWidgets.addAll(
           eventsByDate[date]!.asMap().entries.map(
-                (entry) => Padding(
-                  padding: const EdgeInsets.only(bottom: 15, left: 20, right: 20),
-                  child: _EventCard(
-                    event: entry.value,
-                    onTap: () async {
-                      String location = await _getUserLocation();
-                      widget.onViewEvent(entry.value.id, location);
-                    },
-                  ),
-                ),
-              ),
+            (entry) => Padding(
+              padding: const EdgeInsets.only(bottom: 15, left: 20, right: 20),
+              child: _EventCard(event: entry.value, onTap: () {}),
+            ),
+          ),
         );
       }
     }
@@ -744,8 +401,9 @@ class _HomeTabState extends State<HomeTab> {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                        builder: (context) =>
-                                            const ProfileScreen()),
+                                      builder: (context) =>
+                                          const ProfileScreen(),
+                                    ),
                                   );
                                 },
                                 child: CircleAvatar(
@@ -760,9 +418,11 @@ class _HomeTabState extends State<HomeTab> {
                               const SizedBox(width: 10),
                               IconButton(
                                 onPressed: () {
-                                  final authProvider = Provider.of<AuthProvider>(
-                                      context,
-                                      listen: false);
+                                  final authProvider =
+                                      Provider.of<AuthProvider>(
+                                        context,
+                                        listen: false,
+                                      );
                                   if (authProvider.user != null) {
                                     Navigator.push(
                                       context,
@@ -774,8 +434,10 @@ class _HomeTabState extends State<HomeTab> {
                                   } else {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                          content: Text(
-                                              'Please log in to manage events')),
+                                        content: Text(
+                                          'Please log in to manage events',
+                                        ),
+                                      ),
                                     );
                                   }
                                 },
@@ -791,10 +453,7 @@ class _HomeTabState extends State<HomeTab> {
                       const SizedBox(height: 10),
                       const Text(
                         'Discover amazing events near you',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 16,
-                        ),
+                        style: TextStyle(color: Colors.white70, fontSize: 16),
                       ),
                     ],
                   ),
@@ -822,16 +481,16 @@ class _HomeTabState extends State<HomeTab> {
                       prefixIcon: Icon(Icons.search, color: Colors.grey[400]),
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 15),
+                        horizontal: 20,
+                        vertical: 15,
+                      ),
                     ),
                     onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => SearchTab(
-                            events: widget.events,
-                            onViewEvent: widget.onViewEvent,
-                          ),
+                          builder: (context) =>
+                              SearchTab(events: widget.events),
                         ),
                       );
                     },
@@ -1032,9 +691,13 @@ class _HomeTabState extends State<HomeTab> {
                             const SizedBox(width: 10),
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 4),
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
-                                color: Theme.of(context).primaryColor.withOpacity(0.1),
+                                color: Theme.of(
+                                  context,
+                                ).primaryColor.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
@@ -1050,9 +713,7 @@ class _HomeTabState extends State<HomeTab> {
                         ],
                       ),
                       const SizedBox(height: 15),
-                      Column(
-                        children: eventWidgets,
-                      ),
+                      Column(children: eventWidgets),
                     ],
                   ),
                 ),
@@ -1093,7 +754,9 @@ class _CategoryChip extends StatelessWidget {
           color: isSelected ? Theme.of(context).primaryColor : Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? Theme.of(context).primaryColor : Colors.grey[300]!,
+            color: isSelected
+                ? Theme.of(context).primaryColor
+                : Colors.grey[300]!,
           ),
         ),
         child: Text(
@@ -1141,10 +804,14 @@ class _DateRangeDropdown extends StatelessWidget {
           icon: Icon(
             Icons.calendar_today,
             size: 16,
-            color: selectedDateRange != 'All Dates' ? Colors.white : Colors.grey[600],
+            color: selectedDateRange != 'All Dates'
+                ? Colors.white
+                : Colors.grey[600],
           ),
           style: TextStyle(
-            color: selectedDateRange != 'All Dates' ? Colors.white : Colors.black,
+            color: selectedDateRange != 'All Dates'
+                ? Colors.white
+                : Colors.black,
             fontSize: 14,
             fontWeight: FontWeight.w500,
           ),
@@ -1154,10 +821,7 @@ class _DateRangeDropdown extends StatelessWidget {
               value: value,
               child: Text(
                 value,
-                style: const TextStyle(
-                  color: Colors.black,
-                  fontSize: 14,
-                ),
+                style: const TextStyle(color: Colors.black, fontSize: 14),
               ),
             );
           }).toList(),
@@ -1200,7 +864,6 @@ class _EventCard extends StatelessWidget {
             ),
           ),
         );
-        onTap();
       },
       child: Container(
         decoration: BoxDecoration(
@@ -1253,7 +916,9 @@ class _EventCard extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).primaryColor.withOpacity(0.1),
+                            color: Theme.of(
+                              context,
+                            ).primaryColor.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Icon(
@@ -1277,8 +942,11 @@ class _EventCard extends StatelessWidget {
                             const SizedBox(height: 8),
                             Row(
                               children: [
-                                Icon(Icons.calendar_today,
-                                    size: 16, color: Colors.grey[600]),
+                                Icon(
+                                  Icons.calendar_today,
+                                  size: 16,
+                                  color: Colors.grey[600],
+                                ),
                                 const SizedBox(width: 5),
                                 Text(
                                   event.date,
@@ -1292,8 +960,11 @@ class _EventCard extends StatelessWidget {
                             const SizedBox(height: 4),
                             Row(
                               children: [
-                                Icon(Icons.location_on,
-                                    size: 16, color: Colors.grey[600]),
+                                Icon(
+                                  Icons.location_on,
+                                  size: 16,
+                                  color: Colors.grey[600],
+                                ),
                                 const SizedBox(width: 5),
                                 Expanded(
                                   child: Text(
@@ -1311,9 +982,13 @@ class _EventCard extends StatelessWidget {
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).primaryColor.withOpacity(0.1),
+                          color: Theme.of(
+                            context,
+                          ).primaryColor.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(15),
                         ),
                         child: Text(
@@ -1376,10 +1051,8 @@ class _EventCard extends StatelessWidget {
 
 class SearchTab extends StatefulWidget {
   final List<Event> events;
-  final Function(String, String) onViewEvent;
 
-  const SearchTab({Key? key, required this.events, required this.onViewEvent})
-      : super(key: key);
+  const SearchTab({Key? key, required this.events}) : super(key: key);
 
   @override
   State<SearchTab> createState() => _SearchTabState();
@@ -1430,15 +1103,16 @@ class _SearchTabState extends State<SearchTab> {
   void _filterEvents() {
     setState(() {
       _filteredEvents = widget.events.where((event) {
-        final matchesSearch = event.title
-                .toLowerCase()
-                .contains(_searchController.text.toLowerCase()) ||
-            event.description
-                .toLowerCase()
-                .contains(_searchController.text.toLowerCase()) ||
-            event.location
-                .toLowerCase()
-                .contains(_searchController.text.toLowerCase());
+        final matchesSearch =
+            event.title.toLowerCase().contains(
+              _searchController.text.toLowerCase(),
+            ) ||
+            event.description.toLowerCase().contains(
+              _searchController.text.toLowerCase(),
+            ) ||
+            event.location.toLowerCase().contains(
+              _searchController.text.toLowerCase(),
+            );
         final matchesCategory =
             _selectedCategory == 'All' || event.category == _selectedCategory;
         final matchesDateRange = _isEventInDateRange(event, _selectedDateRange);
@@ -1457,15 +1131,20 @@ class _SearchTabState extends State<SearchTab> {
 
       switch (dateRange) {
         case 'Today':
-          DateTime eventDay =
-              DateTime(eventDate.year, eventDate.month, eventDate.day);
+          DateTime eventDay = DateTime(
+            eventDate.year,
+            eventDate.month,
+            eventDate.day,
+          );
           return eventDay.isAtSameMomentAs(today);
         case 'This Week':
           int daysFromMonday = now.weekday - 1;
           DateTime startOfWeek = today.subtract(Duration(days: daysFromMonday));
           DateTime endOfWeek = startOfWeek.add(const Duration(days: 6));
-          return eventDate.isAfter(startOfWeek.subtract(const Duration(days: 1))) &&
-                 eventDate.isBefore(endOfWeek.add(const Duration(days: 1)));
+          return eventDate.isAfter(
+                startOfWeek.subtract(const Duration(days: 1)),
+              ) &&
+              eventDate.isBefore(endOfWeek.add(const Duration(days: 1)));
         case 'This Weekend':
           int daysUntilSaturday = (6 - now.weekday) % 7;
           if (now.weekday == 7) {
@@ -1477,28 +1156,39 @@ class _SearchTabState extends State<SearchTab> {
             thisSaturday = today.subtract(const Duration(days: 1));
             thisSunday = today;
           }
-          DateTime eventDay =
-              DateTime(eventDate.year, eventDate.month, eventDate.day);
+          DateTime eventDay = DateTime(
+            eventDate.year,
+            eventDate.month,
+            eventDate.day,
+          );
           return eventDay.isAtSameMomentAs(thisSaturday) ||
-                 eventDay.isAtSameMomentAs(thisSunday);
+              eventDay.isAtSameMomentAs(thisSunday);
         case 'Next Week':
           int daysFromMonday = now.weekday - 1;
-          DateTime startOfThisWeek = today.subtract(Duration(days: daysFromMonday));
-          DateTime startOfNextWeek = startOfThisWeek.add(const Duration(days: 7));
+          DateTime startOfThisWeek = today.subtract(
+            Duration(days: daysFromMonday),
+          );
+          DateTime startOfNextWeek = startOfThisWeek.add(
+            const Duration(days: 7),
+          );
           DateTime endOfNextWeek = startOfNextWeek.add(const Duration(days: 6));
-          return eventDate.isAfter(startOfNextWeek.subtract(const Duration(days: 1))) &&
-                 eventDate.isBefore(endOfNextWeek.add(const Duration(days: 1)));
+          return eventDate.isAfter(
+                startOfNextWeek.subtract(const Duration(days: 1)),
+              ) &&
+              eventDate.isBefore(endOfNextWeek.add(const Duration(days: 1)));
         case 'This Month':
           DateTime startOfMonth = DateTime(now.year, now.month, 1);
           DateTime endOfMonth = DateTime(now.year, now.month + 1, 0);
-          return eventDate.isAfter(startOfMonth.subtract(const Duration(days: 1))) &&
-                 eventDate.isBefore(endOfMonth.add(const Duration(days: 1)));
+          return eventDate.isAfter(
+                startOfMonth.subtract(const Duration(days: 1)),
+              ) &&
+              eventDate.isBefore(endOfMonth.add(const Duration(days: 1)));
         default:
           return true;
       }
     } catch (e) {
       print('Error parsing date: $e');
-      return true;
+      return true; // Include event if date parsing fails
     }
   }
 
@@ -1608,10 +1298,7 @@ class _SearchTabState extends State<SearchTab> {
                         padding: const EdgeInsets.only(bottom: 15),
                         child: _EventCard(
                           event: _filteredEvents[index],
-                          onTap: () async {
-                            String location = await _getUserLocation();
-                            widget.onViewEvent(_filteredEvents[index].id, location);
-                          },
+                          onTap: () {},
                         ),
                       );
                     },

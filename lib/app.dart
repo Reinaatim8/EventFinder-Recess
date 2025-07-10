@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:event_locator_app/screens/auth/auth_wrapper.dart';
 import 'package:event_locator_app/core/theme/app_theme.dart';
-import 'package:event_locator_app/screens/home/bookevent_screen.dart';
+import 'package:event_locator_app/screens/auth/splash_screen.dart';
 
 class LocalEventFinderApp extends StatelessWidget {
   const LocalEventFinderApp({Key? key}) : super(key: key);
@@ -14,10 +14,8 @@ class LocalEventFinderApp extends StatelessWidget {
       //darkTheme: AppTheme.darkTheme,
       
       themeMode: ThemeMode.system,
-      //home: const CheckoutScreen(
-        //total: 0.0, // Placeholder value for total
-      //),
-      home: const AuthWrapper(),
+      home: const SplashScreen(),
+      //home: const AuthWrapper(),
     );
   }
 }
