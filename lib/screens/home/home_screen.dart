@@ -179,7 +179,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class HomeTab extends StatelessWidget {
+class HomeTab extends StatefulWidget {
   final List<Event> events;
   final Function(Event) onAddEvent;
 
@@ -187,9 +187,96 @@ class HomeTab extends StatelessWidget {
       : super(key: key);
 
   @override
+  State<HomeTab> createState() => _HomeTabState();
+}
+
+class _HomeTabState extends State<HomeTab> {
+  String _selectedCategory = 'All';
+  String _selectedDateRange = 'All Dates';
+  List<Event> _filteredEvents = [];
+
+  final List<String> _dateRangeOptions = [
+    'All Dates',
+    'Today',
+    'This Week',
+    'This Weekend',
+    'Next Week',
+    'This Month',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _filteredEvents = widget.events;
+    _filterEvents();
+  }
+
+  @override
+  void didUpdateWidget(HomeTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.events != widget.events) {
+      _filterEvents();
+    }
+  }
+
+  void _filterEvents() {
+    setState(() {
+      _filteredEvents = widget.events.where((event) {
+        final matchesCategory =
+            _selectedCategory == 'All' || event.category == _selectedCategory;
+        final matchesDateRange = _isEventInDateRange(event, _selectedDateRange);
+        return matchesCategory && matchesDateRange;
+      }).toList();
+    });
+  }
+
+  bool _isEventInDateRange(Event event, String dateRange) {
+    if (dateRange == 'All Dates') return true;
+
+    try {
+      DateTime eventDate = DateTime.parse(event.date);
+      DateTime now = DateTime.now();
+      DateTime today = DateTime(now.year, now.month, now.day);
+
+      switch (dateRange) {
+        case 'Today':
+          DateTime eventDay =
+              DateTime(eventDate.year, eventDate.month, eventDate.day);
+          return eventDay.isAtSameMomentAs(today);
+        case 'This Week':
+          DateTime startOfWeek = today.subtract(Duration(days: today.weekday - 1));
+          DateTime endOfWeek = startOfWeek.add(const Duration(days: 6));
+          return eventDate.isAfter(startOfWeek.subtract(const Duration(days: 1))) &&
+                 eventDate.isBefore(endOfWeek.add(const Duration(days: 1)));
+        case 'This Weekend':
+          DateTime saturday = today.add(Duration(days: 6 - today.weekday));
+          DateTime sunday = saturday.add(const Duration(days: 1));
+          return (eventDate.isAfter(saturday.subtract(const Duration(days: 1))) &&
+                  eventDate.isBefore(saturday.add(const Duration(days: 1)))) ||
+                 (eventDate.isAfter(sunday.subtract(const Duration(days: 1))) &&
+                  eventDate.isBefore(sunday.add(const Duration(days: 1))));
+        case 'Next Week':
+          DateTime startOfNextWeek = today.add(Duration(days: 7 - today.weekday + 1));
+          DateTime endOfNextWeek = startOfNextWeek.add(const Duration(days: 6));
+          return eventDate.isAfter(startOfNextWeek.subtract(const Duration(days: 1))) &&
+                 eventDate.isBefore(endOfNextWeek.add(const Duration(days: 1)));
+        case 'This Month':
+          DateTime startOfMonth = DateTime(now.year, now.month, 1);
+          DateTime endOfMonth = DateTime(now.year, now.month + 1, 0);
+          return eventDate.isAfter(startOfMonth.subtract(const Duration(days: 1))) &&
+                 eventDate.isBefore(endOfMonth.add(const Duration(days: 1)));
+        default:
+          return true;
+      }
+    } catch (e) {
+      return true; // Include event if date parsing fails
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     Map<String, List<Event>> eventsByDate = {};
-    for (var event in events) {
+    for (var event in _filteredEvents) {
       eventsByDate.putIfAbsent(event.date, () => []).add(event);
     }
 
@@ -214,7 +301,7 @@ class HomeTab extends StatelessWidget {
         eventsByDate[date]!.asMap().entries.map(
               (entry) => Padding(
                 padding: const EdgeInsets.only(bottom: 15, left: 20, right: 20),
-                child: _EventCard(event: entry.value, onTap: () {  },),
+                child: _EventCard(event: entry.value, onTap: () {}),
               ),
             ),
       );
@@ -361,7 +448,7 @@ class HomeTab extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => SearchTab(events: events),
+                          builder: (context) => SearchTab(events: widget.events),
                         ),
                       );
                     },
@@ -375,33 +462,143 @@ class HomeTab extends StatelessWidget {
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      _CategoryChip(label: 'All', isSelected: true, events: events),
+                      _CategoryChip(
+                        label: 'All',
+                        isSelected: _selectedCategory == 'All',
+                        onTap: () {
+                          setState(() {
+                            _selectedCategory = 'All';
+                          });
+                          _filterEvents();
+                        },
+                      ),
                       const SizedBox(width: 10),
-                      _CategoryChip(label: 'Concert', events: events),
+                      _DateRangeDropdown(
+                        selectedDateRange: _selectedDateRange,
+                        dateRangeOptions: _dateRangeOptions,
+                        onDateRangeChanged: (value) {
+                          setState(() {
+                            _selectedDateRange = value;
+                          });
+                          _filterEvents();
+                        },
+                      ),
                       const SizedBox(width: 10),
-                      _CategoryChip(label: 'Conference', events: events),
+                      _CategoryChip(
+                        label: 'Concert',
+                        isSelected: _selectedCategory == 'Concert',
+                        onTap: () {
+                          setState(() {
+                            _selectedCategory = 'Concert';
+                          });
+                          _filterEvents();
+                        },
+                      ),
                       const SizedBox(width: 10),
-                      _CategoryChip(label: 'Workshop', events: events),
+                      _CategoryChip(
+                        label: 'Conference',
+                        isSelected: _selectedCategory == 'Conference',
+                        onTap: () {
+                          setState(() {
+                            _selectedCategory = 'Conference';
+                          });
+                          _filterEvents();
+                        },
+                      ),
                       const SizedBox(width: 10),
-                      _CategoryChip(label: 'Sports', events: events),
+                      _CategoryChip(
+                        label: 'Workshop',
+                        isSelected: _selectedCategory == 'Workshop',
+                        onTap: () {
+                          setState(() {
+                            _selectedCategory = 'Workshop';
+                          });
+                          _filterEvents();
+                        },
+                      ),
                       const SizedBox(width: 10),
-                      _CategoryChip(label: 'Festival', events: events),
+                      _CategoryChip(
+                        label: 'Sports',
+                        isSelected: _selectedCategory == 'Sports',
+                        onTap: () {
+                          setState(() {
+                            _selectedCategory = 'Sports';
+                          });
+                          _filterEvents();
+                        },
+                      ),
                       const SizedBox(width: 10),
-                      _CategoryChip(label: 'Networking', events: events),
+                      _CategoryChip(
+                        label: 'Festival',
+                        isSelected: _selectedCategory == 'Festival',
+                        onTap: () {
+                          setState(() {
+                            _selectedCategory = 'Festival';
+                          });
+                          _filterEvents();
+                        },
+                      ),
                       const SizedBox(width: 10),
-                      _CategoryChip(label: 'Exhibition', events: events),
+                      _CategoryChip(
+                        label: 'Networking',
+                        isSelected: _selectedCategory == 'Networking',
+                        onTap: () {
+                          setState(() {
+                            _selectedCategory = 'Networking';
+                          });
+                          _filterEvents();
+                        },
+                      ),
                       const SizedBox(width: 10),
-                      _CategoryChip(label: 'Theater', events: events),
+                      _CategoryChip(
+                        label: 'Exhibition',
+                        isSelected: _selectedCategory == 'Exhibition',
+                        onTap: () {
+                          setState(() {
+                            _selectedCategory = 'Exhibition';
+                          });
+                          _filterEvents();
+                        },
+                      ),
                       const SizedBox(width: 10),
-                      _CategoryChip(label: 'Comedy', events: events),
+                      _CategoryChip(
+                        label: 'Theater',
+                        isSelected: _selectedCategory == 'Theater',
+                        onTap: () {
+                          setState(() {
+                            _selectedCategory = 'Theater';
+                          });
+                          _filterEvents();
+                        },
+                      ),
                       const SizedBox(width: 10),
-                      _CategoryChip(label: 'Other', events: events),
+                      _CategoryChip(
+                        label: 'Comedy',
+                        isSelected: _selectedCategory == 'Comedy',
+                        onTap: () {
+                          setState(() {
+                            _selectedCategory = 'Comedy';
+                          });
+                          _filterEvents();
+                        },
+                      ),
+                      const SizedBox(width: 10),
+                      _CategoryChip(
+                        label: 'Other',
+                        isSelected: _selectedCategory == 'Other',
+                        onTap: () {
+                          setState(() {
+                            _selectedCategory = 'Other';
+                          });
+                          _filterEvents();
+                        },
+                      ),
                     ],
                   ),
                 ),
               ),
               const SizedBox(height: 30),
-              if (events.isEmpty)
+              if (_filteredEvents.isEmpty)
                 Padding(
                   padding: const EdgeInsets.all(50.0),
                   child: Center(
@@ -439,12 +636,35 @@ class HomeTab extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Events (${events.length})',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      Row(
+                        children: [
+                          Text(
+                            'Events (${_filteredEvents.length})',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          if (_selectedDateRange != 'All Dates') ...[
+                            const SizedBox(width: 10),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).primaryColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                _selectedDateRange,
+                                style: TextStyle(
+                                  color: Theme.of(context).primaryColor,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                       const SizedBox(height: 15),
                       Column(
@@ -464,7 +684,7 @@ class HomeTab extends StatelessWidget {
   void _showAddEventDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => AddEventDialog(onAddEvent: onAddEvent),
+      builder: (context) => AddEventDialog(onAddEvent: widget.onAddEvent),
     );
   }
 }
@@ -472,25 +692,18 @@ class HomeTab extends StatelessWidget {
 class _CategoryChip extends StatelessWidget {
   final String label;
   final bool isSelected;
-  final List<Event> events;
+  final VoidCallback onTap;
 
   const _CategoryChip({
     required this.label,
-    this.isSelected = false,
-    required this.events,
+    required this.isSelected,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => SearchTab(events: events),
-          ),
-        );
-      },
+      onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
@@ -513,6 +726,69 @@ class _CategoryChip extends StatelessWidget {
   }
 }
 
+class _DateRangeDropdown extends StatelessWidget {
+  final String selectedDateRange;
+  final List<String> dateRangeOptions;
+  final Function(String) onDateRangeChanged;
+
+  const _DateRangeDropdown({
+    required this.selectedDateRange,
+    required this.dateRangeOptions,
+    required this.onDateRangeChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: selectedDateRange != 'All Dates'
+            ? Theme.of(context).primaryColor
+            : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: selectedDateRange != 'All Dates'
+              ? Theme.of(context).primaryColor
+              : Colors.grey[300]!,
+        ),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: selectedDateRange,
+          icon: Icon(
+            Icons.calendar_today,
+            size: 16,
+            color: selectedDateRange != 'All Dates' ? Colors.white : Colors.grey[600],
+          ),
+          style: TextStyle(
+            color: selectedDateRange != 'All Dates' ? Colors.white : Colors.black,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+          dropdownColor: Colors.white,
+          items: dateRangeOptions.map((String value) {
+            return DropdownMenuItem<String>(
+              value: value,
+              child: Text(
+                value,
+                style: const TextStyle(
+                  color: Colors.black,
+                  fontSize: 14,
+                ),
+              ),
+            );
+          }).toList(),
+          onChanged: (String? newValue) {
+            if (newValue != null) {
+              onDateRangeChanged(newValue);
+            }
+          },
+        ),
+      ),
+    );
+  }
+}
+
 class _EventCard extends StatelessWidget {
   final Event event;
   final VoidCallback onTap;
@@ -528,7 +804,7 @@ class _EventCard extends StatelessWidget {
           MaterialPageRoute(
             builder: (context) => CheckoutScreen(
               total: event.price,
-               onPaymentSuccess: () {
+              onPaymentSuccess: () {
                 if (bookingsTabKey.currentState != null) {
                   bookingsTabKey.currentState!.addBooking({
                     'id': DateTime.now().millisecondsSinceEpoch,
@@ -726,6 +1002,7 @@ class SearchTab extends StatefulWidget {
 class _SearchTabState extends State<SearchTab> {
   final _searchController = TextEditingController();
   String _selectedCategory = 'All';
+  String _selectedDateRange = 'All Dates';
   List<Event> _filteredEvents = [];
 
   final List<String> _categories = [
@@ -742,10 +1019,26 @@ class _SearchTabState extends State<SearchTab> {
     'Other',
   ];
 
+  final List<String> _dateRangeOptions = [
+    'All Dates',
+    'Today',
+    'This Week',
+    'This Weekend',
+    'Next Week',
+    'This Month',
+  ];
+
   @override
   void initState() {
     super.initState();
     _filteredEvents = widget.events;
+    _searchController.addListener(_filterEvents);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   void _filterEvents() {
@@ -762,9 +1055,53 @@ class _SearchTabState extends State<SearchTab> {
                 .contains(_searchController.text.toLowerCase());
         final matchesCategory =
             _selectedCategory == 'All' || event.category == _selectedCategory;
-        return matchesSearch && matchesCategory;
+        final matchesDateRange = _isEventInDateRange(event, _selectedDateRange);
+        return matchesSearch && matchesCategory && matchesDateRange;
       }).toList();
     });
+  }
+
+  bool _isEventInDateRange(Event event, String dateRange) {
+    if (dateRange == 'All Dates') return true;
+
+    try {
+      DateTime eventDate = DateTime.parse(event.date);
+      DateTime now = DateTime.now();
+      DateTime today = DateTime(now.year, now.month, now.day);
+
+      switch (dateRange) {
+        case 'Today':
+          DateTime eventDay =
+              DateTime(eventDate.year, eventDate.month, eventDate.day);
+          return eventDay.isAtSameMomentAs(today);
+        case 'This Week':
+          DateTime startOfWeek = today.subtract(Duration(days: today.weekday - 1));
+          DateTime endOfWeek = startOfWeek.add(const Duration(days: 6));
+          return eventDate.isAfter(startOfWeek.subtract(const Duration(days: 1))) &&
+                 eventDate.isBefore(endOfWeek.add(const Duration(days: 1)));
+        case 'This Weekend':
+          DateTime saturday = today.add(Duration(days: 6 - today.weekday));
+          DateTime sunday = saturday.add(const Duration(days: 1));
+          return (eventDate.isAfter(saturday.subtract(const Duration(days: 1))) &&
+                  eventDate.isBefore(saturday.add(const Duration(days: 1)))) ||
+                 (eventDate.isAfter(sunday.subtract(const Duration(days: 1))) &&
+                  eventDate.isBefore(sunday.add(const Duration(days: 1))));
+        case 'Next Week':
+          DateTime startOfNextWeek = today.add(Duration(days: 7 - today.weekday + 1));
+          DateTime endOfNextWeek = startOfNextWeek.add(const Duration(days: 6));
+          return eventDate.isAfter(startOfNextWeek.subtract(const Duration(days: 1))) &&
+                 eventDate.isBefore(endOfNextWeek.add(const Duration(days: 1)));
+        case 'This Month':
+          DateTime startOfMonth = DateTime(now.year, now.month, 1);
+          DateTime endOfMonth = DateTime(now.year, now.month + 1, 0);
+          return eventDate.isAfter(startOfMonth.subtract(const Duration(days: 1))) &&
+                 eventDate.isBefore(endOfMonth.add(const Duration(days: 1)));
+        default:
+          return true;
+      }
+    } catch (e) {
+      return true; // Include event if date parsing fails
+    }
   }
 
   @override
@@ -783,16 +1120,32 @@ class _SearchTabState extends State<SearchTab> {
             color: Colors.white,
             child: Column(
               children: [
-                TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Search events...',
-                    prefixIcon: const Icon(Icons.search),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _searchController,
+                        decoration: InputDecoration(
+                          hintText: 'Search events...',
+                          prefixIcon: const Icon(Icons.search),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                  onChanged: (value) => _filterEvents(),
+                    const SizedBox(width: 8),
+                    _DateRangeDropdown(
+                      selectedDateRange: _selectedDateRange,
+                      dateRangeOptions: _dateRangeOptions,
+                      onDateRangeChanged: (value) {
+                        setState(() {
+                          _selectedDateRange = value;
+                          _filterEvents();
+                        });
+                      },
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
                 SingleChildScrollView(
@@ -807,8 +1160,8 @@ class _SearchTabState extends State<SearchTab> {
                           onTap: () {
                             setState(() {
                               _selectedCategory = category;
+                              _filterEvents();
                             });
-                            _filterEvents();
                           },
                         ),
                       );
@@ -855,7 +1208,7 @@ class _SearchTabState extends State<SearchTab> {
                     itemBuilder: (context, index) {
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 15),
-                        child: _EventCard(event: _filteredEvents[index], onTap: () {  },),
+                        child: _EventCard(event: _filteredEvents[index], onTap: () {}),
                       );
                     },
                   ),
@@ -946,11 +1299,9 @@ class _BookingsTabState extends State<BookingsTab> {
                     builder: (_) => CheckoutScreen(
                       total: booking['total'],
                       onPaymentSuccess: () {
-                        // Mark this booking as paid
                         setState(() {
                           bookings[index]['paid'] = true;
                         });
-                        // Show a success message
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('Payment Successful!'),
@@ -969,289 +1320,3 @@ class _BookingsTabState extends State<BookingsTab> {
     );
   }
 }
-// class CheckoutScreen extends StatefulWidget {
-//   final double total;
-//   final VoidCallback? onPaymentSuccess;
-//
-//   const CheckoutScreen({
-//     super.key,
-//     required this.total,
-//     this.onPaymentSuccess,
-//   });
-//
-//
-//   @override
-//   State<CheckoutScreen> createState() => _CheckoutScreenState();
-// }
-// enum PaymentNetwork { mtn, airtel }
-// class _CheckoutScreenState extends State<CheckoutScreen> {
-//   final _formKey = GlobalKey<FormState>();
-//   String firstName = '';
-//   String lastName = '';
-//   String email = '';
-//    bool subscribeOrganizer = true;
-//   bool subscribeUpdates = true;
-//   PaymentNetwork? _selectedNetwork;
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       appBar: AppBar(
-//         title: const Text(
-//           "Checkout Your Ticket",
-//           style: TextStyle(
-//               color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-//         ),
-//         centerTitle: true,
-//         backgroundColor: Colors.blueAccent,
-//       ),
-//       backgroundColor: Colors.white,
-//       body: SafeArea(
-//         child: SingleChildScrollView(
-//           padding: const EdgeInsets.all(20),
-//           child: Column(
-//             crossAxisAlignment: CrossAxisAlignment.start,
-//             children: [
-//               Card(
-//                 elevation: 3,
-//                 color: const Color.fromARGB(255, 212, 228, 245),
-//                 shape: RoundedRectangleBorder(
-//                     borderRadius: BorderRadius.circular(12)),
-//                 child: Padding(
-//                   padding: const EdgeInsets.all(16.0),
-//                   child: Column(
-//                     crossAxisAlignment: CrossAxisAlignment.start,
-//                     children: [
-//                       const Text("Billing Information",
-//                           style: TextStyle(
-//                               fontSize: 18, fontWeight: FontWeight.bold)),
-//                       const SizedBox(height: 10),
-//                       Form(
-//                         key: _formKey,
-//                         child: Column(
-//                           children: [
-//                             Row(
-//                               children: [
-//                                 Expanded(
-//                                   child: Card(
-//                                     color: Colors.white,
-//                                     elevation: 1,
-//                                     child: Padding(
-//                                       padding: const EdgeInsets.symmetric(
-//                                           horizontal: 8.0),
-//                                       child: TextFormField(
-//                                         decoration: const InputDecoration(
-//                                           labelText: "First Name *",
-//                                           border: InputBorder.none,
-//                                         ),
-//                                         onChanged: (val) => firstName = val,
-//                                         validator: (val) =>
-//                                             val!.isEmpty ? "Required" : null,
-//                                       ),
-//                                     ),
-//                                   ),
-//                                 ),
-//                                 const SizedBox(width: 10),
-//                                 Expanded(
-//                                   child: Card(
-//                                     color: Colors.white,
-//                                     elevation: 1,
-//                                     child: Padding(
-//                                       padding: const EdgeInsets.symmetric(
-//                                           horizontal: 8.0),
-//                                       child: TextFormField(
-//                                         decoration: const InputDecoration(
-//                                           labelText: "Surname *",
-//                                           border: InputBorder.none,
-//                                         ),
-//                                         onChanged: (val) => lastName = val,
-//                                         validator: (val) =>
-//                                             val!.isEmpty ? "Required" : null,
-//                                       ),
-//                                     ),
-//                                   ),
-//                                 ),
-//                               ],
-//                             ),
-//                             const SizedBox(height: 10),
-//                             Card(
-//                               color: Colors.white,
-//                               elevation: 1,
-//                               child: Padding(
-//                                 padding: const EdgeInsets.symmetric(
-//                                     horizontal: 8.0),
-//                                 child: TextFormField(
-//                                   decoration: const InputDecoration(
-//                                     labelText: "Email Address *",
-//                                     border: InputBorder.none,
-//                                   ),
-//                                   onChanged: (val) => email = val,
-//                                   validator: (val) =>
-//                                       val!.isEmpty ? "Required" : null,
-//                                 ),
-//                               ),
-//                             ),
-//                               const SizedBox(height: 10),
-//                       CheckboxListTile(
-//                       title: const Text("Keep me updated on more events and news from this organiser."),
-//                       value: subscribeOrganizer,
-//                       onChanged: (val) => setState(() => subscribeOrganizer = val!),
-//                     ),
-//                     CheckboxListTile(
-//                       title: const Text("Send me emails about the best events Happening nearby or online."),
-//                       value: subscribeUpdates,
-//                       onChanged: (val) => setState(() => subscribeUpdates = val!),
-//                     ),
-//                   ]),
-//                 ),
-//               ]),
-//             ),
-//               ),
-//               const SizedBox(height: 20),
-//               const Text("Mobile Money Payment",
-//                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-//               const SizedBox(height: 10),
-//               _buildNetworkCard(
-//                 value: PaymentNetwork.mtn,
-//                 title: "MTN Mobile Money",
-//                 image: "assets/images/mtn.jpg",
-//                 bgColor: Colors.yellow.shade100,
-//                 borderColor: Colors.orange,
-//               ),
-//               _buildNetworkCard(
-//                 value: PaymentNetwork.airtel,
-//                 title: "Airtel Money",
-//                 image: "assets/images/airtel.png",
-//                 bgColor: Colors.red.shade50,
-//                 borderColor: Colors.redAccent,
-//               ),
-//               const SizedBox(height: 40),
-//               ElevatedButton(
-//                 style: ElevatedButton.styleFrom(
-//                   minimumSize: const Size.fromHeight(50),
-//                   backgroundColor: Colors.blue,
-//                   shape: RoundedRectangleBorder(
-//                       borderRadius: BorderRadius.circular(12)),
-//                 ),
-//                 onPressed: () {
-//                   if (_formKey.currentState!.validate()) {
-//                     if (_selectedNetwork == null) {
-//                       ScaffoldMessenger.of(context).showSnackBar(
-//                         const SnackBar(
-//                             content: Text("Please select a payment network")),
-//                       );
-//                       return;
-//                     }
-//                     _openMobileMoneyDialog(_selectedNetwork!);
-//                   }
-//                 },
-//                 child: const Text("Book Ticket",
-//                     style: TextStyle(color: Colors.white, fontSize: 15)),
-//               ),
-//             ],
-//           ),
-//         ),
-//       ),
-//     );
-//   }
-//
-//   Widget _buildNetworkCard({
-//     required PaymentNetwork value,
-//     required String title,
-//     required String image,
-//     required Color bgColor,
-//     required Color borderColor,
-//   }) {
-//     final isSelected = _selectedNetwork == value;
-//     return GestureDetector(
-//       onTap: () => setState(() => _selectedNetwork = value),
-//       child: Card(
-//         color: bgColor,
-//         elevation: isSelected ? 4 : 1,
-//         shape: RoundedRectangleBorder(
-//           side: BorderSide(
-//             color: isSelected ? borderColor : Colors.grey.shade300,
-//             width: 1.5,
-//           ),
-//           borderRadius: BorderRadius.circular(12),
-//         ),
-//         child: Padding(
-//           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-//           child: Row(
-//             children: [
-//               ClipRRect(
-//                 borderRadius: BorderRadius.circular(6),
-//                 child: Image.asset(
-//                   image,
-//                   height: 30,
-//                   width: 50,
-//                   fit: BoxFit.contain,
-//                 ),
-//               ),
-//               const SizedBox(width: 16),
-//               Expanded(
-//                 child: Text(
-//                   title,
-//                   style: const TextStyle(
-//                       fontSize: 16, fontWeight: FontWeight.w500),
-//                 ),
-//               ),
-//               if (isSelected) Icon(Icons.check_circle, color: borderColor),
-//             ],
-//           ),
-//         ),
-//       ),
-//     );
-//   }
-//
-//   void _openMobileMoneyDialog(PaymentNetwork network) {
-//     String phone = '';
-//     String provider = network == PaymentNetwork.mtn ? 'MTN' : 'Airtel';
-//
-//     showDialog(
-//       context: context,
-//       builder: (_) => AlertDialog(
-//         title: Text("Pay with $provider Money"),
-//         content: TextFormField(
-//           decoration: const InputDecoration(labelText: "Phone Number"),
-//           onChanged: (val) => phone = val,
-//         ),
-//         actions: [
-//           TextButton(
-//             onPressed: () => Navigator.pop(context),
-//             child: const Text("Cancel"),
-//           ),
-//           ElevatedButton(
-//             onPressed: () {
-//               Navigator.pop(context);
-//               _showSuccessDialog();
-//             },
-//             child: const Text("Confirm Payment"),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-//
-//   void _showSuccessDialog() {
-//     showDialog(
-//       context: context,
-//       builder: (context) => AlertDialog(
-//         title: const Text("Booking Successful"),
-//         content:
-//             Text("You booked your ticket for €${widget.total.toStringAsFixed(2)}."),
-//         actions: [
-//           TextButton(
-//             onPressed: () {
-//               Navigator.popUntil(context, (route) => route.isFirst);
-//               if (widget.onPaymentSuccess != null) {
-//                 widget.onPaymentSuccess!();
-//               }
-//             },
-//             child: const Text("OK"),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-// }
