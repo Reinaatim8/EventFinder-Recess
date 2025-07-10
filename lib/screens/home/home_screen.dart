@@ -244,19 +244,30 @@ class _HomeTabState extends State<HomeTab> {
               DateTime(eventDate.year, eventDate.month, eventDate.day);
           return eventDay.isAtSameMomentAs(today);
         case 'This Week':
-          DateTime startOfWeek = today.subtract(Duration(days: today.weekday - 1));
+          int daysFromMonday = now.weekday - 1;
+          DateTime startOfWeek = today.subtract(Duration(days: daysFromMonday));
           DateTime endOfWeek = startOfWeek.add(const Duration(days: 6));
           return eventDate.isAfter(startOfWeek.subtract(const Duration(days: 1))) &&
                  eventDate.isBefore(endOfWeek.add(const Duration(days: 1)));
         case 'This Weekend':
-          DateTime saturday = today.add(Duration(days: 6 - today.weekday));
-          DateTime sunday = saturday.add(const Duration(days: 1));
-          return (eventDate.isAfter(saturday.subtract(const Duration(days: 1))) &&
-                  eventDate.isBefore(saturday.add(const Duration(days: 1)))) ||
-                 (eventDate.isAfter(sunday.subtract(const Duration(days: 1))) &&
-                  eventDate.isBefore(sunday.add(const Duration(days: 1))));
+          int daysUntilSaturday = (6 - now.weekday) % 7;
+          if (now.weekday == 7) {
+            daysUntilSaturday = 6;
+          }
+          DateTime thisSaturday = today.add(Duration(days: daysUntilSaturday));
+          DateTime thisSunday = thisSaturday.add(const Duration(days: 1));
+          if (now.weekday == 7) {
+            thisSaturday = today.subtract(const Duration(days: 1));
+            thisSunday = today;
+          }
+          DateTime eventDay =
+              DateTime(eventDate.year, eventDate.month, eventDate.day);
+          return eventDay.isAtSameMomentAs(thisSaturday) ||
+                 eventDay.isAtSameMomentAs(thisSunday);
         case 'Next Week':
-          DateTime startOfNextWeek = today.add(Duration(days: 7 - today.weekday + 1));
+          int daysFromMonday = now.weekday - 1;
+          DateTime startOfThisWeek = today.subtract(Duration(days: daysFromMonday));
+          DateTime startOfNextWeek = startOfThisWeek.add(const Duration(days: 7));
           DateTime endOfNextWeek = startOfNextWeek.add(const Duration(days: 6));
           return eventDate.isAfter(startOfNextWeek.subtract(const Duration(days: 1))) &&
                  eventDate.isBefore(endOfNextWeek.add(const Duration(days: 1)));
@@ -269,19 +280,18 @@ class _HomeTabState extends State<HomeTab> {
           return true;
       }
     } catch (e) {
+      print('Error parsing date: $e');
       return true; // Include event if date parsing fails
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Group filtered events by date
     Map<String, List<Event>> eventsByDate = {};
     for (var event in _filteredEvents) {
       eventsByDate.putIfAbsent(event.date, () => []).add(event);
     }
 
-    // Sort dates in ascending order
     var sortedDates = eventsByDate.keys.toList()
       ..sort((a, b) {
         try {
@@ -289,11 +299,10 @@ class _HomeTabState extends State<HomeTab> {
           DateTime dateB = DateTime.parse(b);
           return dateA.compareTo(dateB);
         } catch (e) {
-          return a.compareTo(b); // Fallback to string comparison if parsing fails
+          return a.compareTo(b);
         }
       });
 
-    // Build event widgets for each date
     List<Widget> eventWidgets = [];
     for (var date in sortedDates) {
       if (eventsByDate[date]!.isNotEmpty) {
@@ -1089,19 +1098,30 @@ class _SearchTabState extends State<SearchTab> {
               DateTime(eventDate.year, eventDate.month, eventDate.day);
           return eventDay.isAtSameMomentAs(today);
         case 'This Week':
-          DateTime startOfWeek = today.subtract(Duration(days: today.weekday - 1));
+          int daysFromMonday = now.weekday - 1;
+          DateTime startOfWeek = today.subtract(Duration(days: daysFromMonday));
           DateTime endOfWeek = startOfWeek.add(const Duration(days: 6));
           return eventDate.isAfter(startOfWeek.subtract(const Duration(days: 1))) &&
                  eventDate.isBefore(endOfWeek.add(const Duration(days: 1)));
         case 'This Weekend':
-          DateTime saturday = today.add(Duration(days: 6 - today.weekday));
-          DateTime sunday = saturday.add(const Duration(days: 1));
-          return (eventDate.isAfter(saturday.subtract(const Duration(days: 1))) &&
-                  eventDate.isBefore(saturday.add(const Duration(days: 1)))) ||
-                 (eventDate.isAfter(sunday.subtract(const Duration(days: 1))) &&
-                  eventDate.isBefore(sunday.add(const Duration(days: 1))));
+          int daysUntilSaturday = (6 - now.weekday) % 7;
+          if (now.weekday == 7) {
+            daysUntilSaturday = 6;
+          }
+          DateTime thisSaturday = today.add(Duration(days: daysUntilSaturday));
+          DateTime thisSunday = thisSaturday.add(const Duration(days: 1));
+          if (now.weekday == 7) {
+            thisSaturday = today.subtract(const Duration(days: 1));
+            thisSunday = today;
+          }
+          DateTime eventDay =
+              DateTime(eventDate.year, eventDate.month, eventDate.day);
+          return eventDay.isAtSameMomentAs(thisSaturday) ||
+                 eventDay.isAtSameMomentAs(thisSunday);
         case 'Next Week':
-          DateTime startOfNextWeek = today.add(Duration(days: 7 - today.weekday + 1));
+          int daysFromMonday = now.weekday - 1;
+          DateTime startOfThisWeek = today.subtract(Duration(days: daysFromMonday));
+          DateTime startOfNextWeek = startOfThisWeek.add(const Duration(days: 7));
           DateTime endOfNextWeek = startOfNextWeek.add(const Duration(days: 6));
           return eventDate.isAfter(startOfNextWeek.subtract(const Duration(days: 1))) &&
                  eventDate.isBefore(endOfNextWeek.add(const Duration(days: 1)));
@@ -1114,6 +1134,7 @@ class _SearchTabState extends State<SearchTab> {
           return true;
       }
     } catch (e) {
+      print('Error parsing date: $e');
       return true; // Include event if date parsing fails
     }
   }
@@ -1222,7 +1243,10 @@ class _SearchTabState extends State<SearchTab> {
                     itemBuilder: (context, index) {
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 15),
-                        child: _EventCard(event: _filteredEvents[index], onTap: () {}),
+                        child: _EventCard(
+                          event: _filteredEvents[index],
+                          onTap: () {},
+                        ),
                       );
                     },
                   ),
@@ -1305,29 +1329,29 @@ class _BookingsTabState extends State<BookingsTab> {
             trailing: booking['paid']
                 ? const Text('Paid', style: TextStyle(color: Colors.green))
                 : ElevatedButton(
-              child: const Text('Checkout'),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => CheckoutScreen(
-                      total: booking['total'],
-                      onPaymentSuccess: () {
-                        setState(() {
-                          bookings[index]['paid'] = true;
-                        });
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Payment Successful!'),
-                            backgroundColor: Colors.green,
+                    child: const Text('Checkout'),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => CheckoutScreen(
+                            total: booking['total'],
+                            onPaymentSuccess: () {
+                              setState(() {
+                                bookings[index]['paid'] = true;
+                              });
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Payment Successful!'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            },
                           ),
-                        );
-                      },
-                    ),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           );
         },
       ),
