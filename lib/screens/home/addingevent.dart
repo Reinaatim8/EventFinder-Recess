@@ -122,7 +122,8 @@ class _AddEventDialogState extends State<AddEventDialog> {
         _isUploading = true;
       });
 
-      String fileName = 'events/${DateTime.now().millisecondsSinceEpoch}_${_titleController.text.replaceAll(' ', '_').replaceAll(RegExp(r'[^\w\s-]'), '')}.jpg';
+      String fileName =
+          'events/${DateTime.now().millisecondsSinceEpoch}_${_titleController.text.replaceAll(' ', '_').replaceAll(RegExp(r'[^\w\s-]'), '')}.jpg';
       Reference storageRef = FirebaseStorage.instance.ref().child(fileName);
 
       UploadTask uploadTask;
@@ -154,7 +155,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
 
       TaskSnapshot snapshot = await uploadTask;
       String downloadUrl = await snapshot.ref.getDownloadURL();
-      
+
       print('Image uploaded successfully. URL: $downloadUrl');
       return downloadUrl;
     } catch (e) {
@@ -179,8 +180,13 @@ class _AddEventDialogState extends State<AddEventDialog> {
 
   Future<void> _saveEventToFirestore(Event event) async {
     try {
-      await _firestore.collection('events').doc(event.id).set(event.toFirestore());
-      print('Event saved to Firestore successfully: ${event.id}, organizerId: ${event.organizerId}');
+      await _firestore
+          .collection('events')
+          .doc(event.id)
+          .set(event.toFirestore());
+      print(
+        'Event saved to Firestore successfully: ${event.id}, organizerId: ${event.organizerId}',
+      );
     } catch (e) {
       print('Error saving event to Firestore: $e');
       throw e;
@@ -246,11 +252,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
                   color: Colors.red,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons.close,
-                  color: Colors.white,
-                  size: 16,
-                ),
+                child: const Icon(Icons.close, color: Colors.white, size: 16),
               ),
             ),
           ),
@@ -283,11 +285,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
                   color: Colors.red,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons.close,
-                  color: Colors.white,
-                  size: 16,
-                ),
+                child: const Icon(Icons.close, color: Colors.white, size: 16),
               ),
             ),
           ),
@@ -299,26 +297,16 @@ class _AddEventDialogState extends State<AddEventDialog> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.add_a_photo,
-              size: 50,
-              color: Colors.grey[400],
-            ),
+            Icon(Icons.add_a_photo, size: 50, color: Colors.grey[400]),
             const SizedBox(height: 10),
             Text(
               'Tap to add event image',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 16,
-              ),
+              style: TextStyle(color: Colors.grey[600], fontSize: 16),
             ),
             const SizedBox(height: 5),
             Text(
               kIsWeb ? 'Gallery' : 'Gallery or Camera',
-              style: TextStyle(
-                color: Colors.grey[500],
-                fontSize: 12,
-              ),
+              style: TextStyle(color: Colors.grey[500], fontSize: 12),
             ),
           ],
         ),
@@ -435,7 +423,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
                     );
                     if (date != null) {
                       _dateController.text =
-                          '${date.day}/${date.month}/${date.year}';
+                          '${date.year}/${date.month}/${date.day}';
                     }
                   },
                 ),
@@ -477,7 +465,9 @@ class _AddEventDialogState extends State<AddEventDialog> {
                   children: [
                     Expanded(
                       child: TextButton(
-                        onPressed: _isUploading ? null : () => Navigator.pop(context),
+                        onPressed: _isUploading
+                            ? null
+                            : () => Navigator.pop(context),
                         child: const Text('Cancel'),
                       ),
                     ),
@@ -495,8 +485,9 @@ class _AddEventDialogState extends State<AddEventDialog> {
                                 width: 16,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor:
-                                      AlwaysStoppedAnimation<Color>(Colors.white),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
                                 ),
                               )
                             : const Text('Add Event'),
