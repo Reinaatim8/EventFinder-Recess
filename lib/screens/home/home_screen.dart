@@ -275,36 +275,50 @@ class _HomeTabState extends State<HomeTab> {
 
   @override
   Widget build(BuildContext context) {
+    // Group filtered events by date
     Map<String, List<Event>> eventsByDate = {};
     for (var event in _filteredEvents) {
       eventsByDate.putIfAbsent(event.date, () => []).add(event);
     }
 
-    var sortedDates = eventsByDate.keys.toList()..sort();
+    // Sort dates in ascending order
+    var sortedDates = eventsByDate.keys.toList()
+      ..sort((a, b) {
+        try {
+          DateTime dateA = DateTime.parse(a);
+          DateTime dateB = DateTime.parse(b);
+          return dateA.compareTo(dateB);
+        } catch (e) {
+          return a.compareTo(b); // Fallback to string comparison if parsing fails
+        }
+      });
 
+    // Build event widgets for each date
     List<Widget> eventWidgets = [];
     for (var date in sortedDates) {
-      eventWidgets.add(
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-          child: Text(
-            date,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.black54,
-            ),
-          ),
-        ),
-      );
-      eventWidgets.addAll(
-        eventsByDate[date]!.asMap().entries.map(
-              (entry) => Padding(
-                padding: const EdgeInsets.only(bottom: 15, left: 20, right: 20),
-                child: _EventCard(event: entry.value, onTap: () {}),
+      if (eventsByDate[date]!.isNotEmpty) {
+        eventWidgets.add(
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+            child: Text(
+              date,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.black54,
               ),
             ),
-      );
+          ),
+        );
+        eventWidgets.addAll(
+          eventsByDate[date]!.asMap().entries.map(
+                (entry) => Padding(
+                  padding: const EdgeInsets.only(bottom: 15, left: 20, right: 20),
+                  child: _EventCard(event: entry.value, onTap: () {}),
+                ),
+              ),
+        );
+      }
     }
 
     return Scaffold(
