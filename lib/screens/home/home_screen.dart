@@ -15,8 +15,10 @@ import 'dart:typed_data';
 import 'addingevent.dart';
 import '../home/event_management_screen.dart';
 
-final GlobalKey<_BookingsTabState> bookingsTabKey =
-    GlobalKey<_BookingsTabState>();
+//final GlobalKey<_BookingsTabState> bookingsTabKey =
+    //GlobalKey<_BookingsTabState>();
+final GlobalKey<BookingsTabState> bookingsTabKey = GlobalKey<BookingsTabState>();
+
 
 class Event {
   final String id;

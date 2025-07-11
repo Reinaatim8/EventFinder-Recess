@@ -51,7 +51,8 @@ dependencies:
   
   # Web compatibility
   web: ^1.1.1
-
+  geolocator: ^9.0.2
+  geocoding: ^2.1.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
