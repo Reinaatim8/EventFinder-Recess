@@ -15,12 +15,13 @@ import 'dart:typed_data';
 import 'addingevent.dart';
 import '../home/event_management_screen.dart';
 
-//final GlobalKey<BookingsTabState> bookingsTabKey =
-//GlobalKey<BookingsTabState>();
-final GlobalKey bookingsTabKey = GlobalKey();
-//final GlobalKey<BookingsTabState> bookingsTabKey = GlobalKey<BookingsTabState>();
-//final GlobalKey bookingsTabKey = GlobalKey();
-//final GlobalKey<BookingsTabState> bookingsTabKey = GlobalKey<BookingsTabState>();
+// Note: Ensure 'geolocator' and 'geocoding' are added to pubspec.yaml:
+// dependencies:
+//   geolocator: ^10.1.0
+//   geocoding: ^2.1.0
+
+final GlobalKey<BookingsTabState> bookingsTabKey =
+    GlobalKey<BookingsTabState>();
 
 class Event {
   final String id;
@@ -222,13 +223,6 @@ class _HomeScreenState extends State<HomeScreen> {
     BookingsTab(key: bookingsTabKey),
     const ProfileScreen(),
   ];
-  Widget BookingsTab({required Key key}) {
-    // Return your bookings tab widget here
-    return Container(
-      key: key,
-      child: Center(child: Text('Bookings Tab Content')),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -862,7 +856,6 @@ class _EventCard extends StatelessWidget {
 
   Future<void> _trackView(BuildContext context) async {
     try {
-      // Request location permission
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
@@ -870,7 +863,6 @@ class _EventCard extends StatelessWidget {
       }
       if (permission == LocationPermission.deniedForever) return;
 
-      // Get location
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.medium,
       );
@@ -881,7 +873,6 @@ class _EventCard extends StatelessWidget {
       String? city = placemarks.isNotEmpty ? placemarks[0].locality : null;
       String? country = placemarks.isNotEmpty ? placemarks[0].country : null;
 
-      // Save view record
       await FirebaseFirestore.instance
           .collection('events')
           .doc(event.id)
@@ -908,15 +899,12 @@ class _EventCard extends StatelessWidget {
             builder: (context) => CheckoutScreen(
               total: event.price,
               onPaymentSuccess: () {
-                if (bookingsTabKey.currentState != null) {
-                  bookingsTabKey.currentState!.addBooking({
-                    //(bookingsTabKey.currentState as BookingsTabState).addBooking({
-                    'id': DateTime.now().millisecondsSinceEpoch,
-                    'event': event.title,
-                    'total': event.price,
-                    'paid': true,
-                  });
-                }
+                bookingsTabKey.currentState?.addBooking({
+                  'id': DateTime.now().millisecondsSinceEpoch,
+                  'event': event.title,
+                  'total': event.price,
+                  'paid': true,
+                });
               },
             ),
           ),
@@ -1103,6 +1091,130 @@ class _EventCard extends StatelessWidget {
       default:
         return Icons.event;
     }
+  }
+}
+
+class BookingsTab extends StatefulWidget {
+  const BookingsTab({Key? key}) : super(key: key);
+
+  @override
+  BookingsTabState createState() => BookingsTabState();
+}
+
+class BookingsTabState extends State<BookingsTab> {
+  List<Map<String, dynamic>> _bookings = [];
+
+  void addBooking(Map<String, dynamic> booking) {
+    setState(() {
+      _bookings.add(booking);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.grey[50],
+      appBar: AppBar(
+        title: const Text('My Bookings'),
+        backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Colors.white,
+      ),
+      body: _bookings.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.bookmark_border,
+                    size: 80,
+                    color: Colors.grey[400],
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'No bookings yet',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Your booked events will appear here',
+                    style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                  ),
+                ],
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _bookings.length,
+              itemBuilder: (context, index) {
+                final booking = _bookings[index];
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              booking['event'] ?? 'Unknown Event',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: booking['paid'] == true
+                                    ? Colors.green.withOpacity(0.1)
+                                    : Colors.orange.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(15),
+                              ),
+                              child: Text(
+                                booking['paid'] == true ? 'Paid' : 'Pending',
+                                style: TextStyle(
+                                  color: booking['paid'] == true
+                                      ? Colors.green
+                                      : Colors.orange,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Booking ID: ${booking['id']}',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Total: \$${booking['total']?.toStringAsFixed(2) ?? '0.00'}',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+    );
   }
 }
 
