@@ -93,7 +93,7 @@ class Booking {
   Booking({
     required this.eventId,
     required this.firstName,
-    final String lastName,
+    required String lastName,
     required this.email,
     required this.bookingDate,
     required this.total,
