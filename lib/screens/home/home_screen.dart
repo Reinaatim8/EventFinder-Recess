@@ -86,7 +86,7 @@ class _HomeScreenState extends State<HomeScreen> {
         SearchTab(events: events),
         BookingsTab(key: bookingsTabKey),
         const ProfileScreen(),
-        const FuturisticMapScreen(),
+        const MapScreen(),
       ];
 
   @override
