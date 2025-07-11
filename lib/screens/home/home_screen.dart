@@ -19,7 +19,6 @@ final GlobalKey<BookingsTabState> bookingsTabKey =
     GlobalKey<BookingsTabState>();
 //final GlobalKey<BookingsTabState> bookingsTabKey = GlobalKey<BookingsTabState>();
 
-
 class Event {
   final String id;
   final String title;
@@ -215,11 +214,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   List<Widget> _getScreens() => [
-        HomeTab(events: events, onAddEvent: _addEvent),
-        SearchTab(events: events),
-        BookingsTab(key: bookingsTabKey),
-        const ProfileScreen(),
-      ];
+    HomeTab(events: events, onAddEvent: _addEvent),
+    SearchTab(events: events),
+    BookingsTab(key: bookingsTabKey),
+    const ProfileScreen(),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -256,7 +255,7 @@ class HomeTab extends StatefulWidget {
   final Function(Event) onAddEvent;
 
   const HomeTab({Key? key, required this.events, required this.onAddEvent})
-      : super(key: key);
+    : super(key: key);
 
   @override
   State<HomeTab> createState() => _HomeTabState();
@@ -863,9 +862,12 @@ class _EventCard extends StatelessWidget {
 
       // Get location
       Position position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.medium);
+        desiredAccuracy: LocationAccuracy.medium,
+      );
       List<Placemark> placemarks = await placemarkFromCoordinates(
-          position.latitude, position.longitude);
+        position.latitude,
+        position.longitude,
+      );
       String? city = placemarks.isNotEmpty ? placemarks[0].locality : null;
       String? country = placemarks.isNotEmpty ? placemarks[0].country : null;
 
@@ -875,11 +877,11 @@ class _EventCard extends StatelessWidget {
           .doc(event.id)
           .collection('views')
           .add({
-        'eventId': event.id,
-        'timestamp': FieldValue.serverTimestamp(),
-        'city': city,
-        'country': country,
-      });
+            'eventId': event.id,
+            'timestamp': FieldValue.serverTimestamp(),
+            'city': city,
+            'country': country,
+          });
     } catch (e) {
       print('Error tracking view: $e');
     }
@@ -1215,4 +1217,71 @@ class _SearchTabState extends State<SearchTab> {
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
-                    children: _
+                    children: _categories.map((category) {
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8.0),
+                        child: _CategoryChip(
+                          label: category,
+                          isSelected: _selectedCategory == category,
+                          onTap: () {
+                            setState(() {
+                              _selectedCategory = category;
+                            });
+                            _filterEvents();
+                          },
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: _filteredEvents.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.search_off,
+                          size: 80,
+                          color: Colors.grey[400],
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          'No events found',
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: Colors.grey[600],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          'Try adjusting your search or filters',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _filteredEvents.length,
+                    itemBuilder: (context, index) {
+                      final event = _filteredEvents[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 15),
+                        child: _EventCard(event: event, onTap: () {}),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
