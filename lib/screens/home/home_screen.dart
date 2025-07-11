@@ -908,7 +908,8 @@ class _EventCard extends StatelessWidget {
               total: event.price,
               onPaymentSuccess: () {
                 if (bookingsTabKey.currentState != null) {
-                  bookingsTabKey.currentState!.addBooking({
+                  //bookingsTabKey.currentState!.addBooking({
+                  (bookingsTabKey.currentState as BookingsTabState).addBooking({
                     'id': DateTime.now().millisecondsSinceEpoch,
                     'event': event.title,
                     'total': event.price,
