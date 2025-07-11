@@ -28,12 +28,13 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Event> events = [];
   bool _isLoading = true;
 
+
   @override
   void initState() {
     super.initState();
     _fetchEvents();
   }
-
+//fetch events from firestore
   Future<void> _fetchEvents() async {
     setState(() {
       _isLoading = true;
@@ -80,9 +81,111 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
   }
+  // (iii) Track booking/payment status per event
+  final Map<String, String> _eventStatus = {};
+
+// (i) Show bottom sheet with event details and actions
+  void _showEventDetailsModal(Event event) {
+    showDialog(
+      context: context,
+      //shape: const RoundedRectangleBorder(
+       // borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      builder: (_) => AlertDialog (
+        title: Text(event.title),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(event.description),
+            const SizedBox(height: 20),
+            if (_eventStatus[event.id] != 'Reserved')
+        // return Padding(
+        //   padding: const EdgeInsets.all(20.0),
+        //   child: Column(
+        //     mainAxisSize: MainAxisSize.min,
+        //     children: [
+        //       Text(event.title,
+        //           style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        //       const SizedBox(height: 10),
+        //       Text(event.description),
+        //       const SizedBox(height: 20),
+        //       Row(
+        //         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        //         children: [
+                  ElevatedButton(
+                    onPressed: () {
+                      bookingsTabKey.currentState?.addBooking({
+                        'id': DateTime.now().millisecondsSinceEpoch,
+                        'event': event.title,
+                        'total': event.price,
+                        'paid': false,
+                      });
+                      setState(() {
+                        _eventStatus[event.id] = 'Reserved';
+                      });
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Event Reserved!'),
+                          backgroundColor: Colors.orange,
+                        ),
+                      );
+                    },
+                    child: const Text('Book Event'),
+                  ),
+                  if (_eventStatus[event.id] == 'Reserved')
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 8.0),
+                        child: Text(
+                        'Event Reserved',
+                        style: TextStyle(
+                         color: Colors.orange,
+                         fontWeight: FontWeight.bold,
+                         ),
+                      ),),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => CheckoutScreen(
+                            total: event.price,
+                            onPaymentSuccess: () {
+                              bookingsTabKey.currentState?.addBooking({
+                                'id': DateTime.now().millisecondsSinceEpoch,
+                                'event': event.title,
+                                'total': event.price,
+                                'paid': true,
+                              });
+                              setState(() {
+                                _eventStatus[event.id] = 'Paid';
+                              });
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                    child: const Text('Pay For Event'),
+                  ),
+                 TextButton(
+                     onPressed: () {
+                       Navigator.pop(context);
+                     },
+                  child: const Text(
+                   'Cancel',
+                       style: TextStyle(color: Colors.red),
+                 ),
+                 ),
+                ],
+              ),
+
+          ),
+        );
+  }
 
   List<Widget> _getScreens() => [
-        HomeTab(events: events, onAddEvent: _addEvent),
+        HomeTab(events: events, onAddEvent: _addEvent, onEventTap: _showEventDetailsModal, eventStatus: _eventStatus,),
         SearchTab(events: events),
         BookingsTab(key: bookingsTabKey),
         const ProfileScreen(),
@@ -135,8 +238,14 @@ class _HomeScreenState extends State<HomeScreen> {
 class HomeTab extends StatelessWidget {
   final List<Event> events;
   final Function(Event) onAddEvent;
-
-  const HomeTab({Key? key, required this.events, required this.onAddEvent})
+  final Function(Event) onEventTap; // (i) Used to trigger event details bottom sheet
+  final Map<String, String> eventStatus;
+  const HomeTab({Key? key,
+    required this.events,
+    required this.onAddEvent,
+    required this.onEventTap,
+    required this.eventStatus,
+  })
       : super(key: key);
 
   @override
@@ -167,7 +276,11 @@ class HomeTab extends StatelessWidget {
         eventsByDate[date]!.asMap().entries.map(
               (entry) => Padding(
                 padding: const EdgeInsets.only(bottom: 15, left: 20, right: 20),
-                child: _EventCard(event: entry.value, onTap: () {  },),
+                child: _EventCard(
+                  event: entry.value,
+                  onTap: () => onEventTap(entry.value),
+                  status: eventStatus[entry.value.id],
+                ),
               ),
             ),
       );
@@ -469,32 +582,16 @@ class _CategoryChip extends StatelessWidget {
 class _EventCard extends StatelessWidget {
   final Event event;
   final VoidCallback onTap;
+  final String? status;
 
-  const _EventCard({required this.event, required this.onTap});
+  const _EventCard({required this.event, required this.onTap, this.status});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => CheckoutScreen(
-              total: event.price,
-               onPaymentSuccess: () {
-                if (bookingsTabKey.currentState != null) {
-                  bookingsTabKey.currentState!.addBooking({
-                    'id': DateTime.now().millisecondsSinceEpoch,
-                    'event': event.title,
-                    'total': event.price,
-                    'paid': true,
-                  });
-                }
-              },
-            ),
-          ),
-        );
-      },
+        onTap: onTap,
+
+
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -599,9 +696,37 @@ class _EventCard extends StatelessWidget {
                                 ),
                               ],
                             ),
-                          ],
-                        ),
-                      ),
+                            if (status != null)
+                             Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                color: status == 'Paid'
+                                    ? Colors.green.withOpacity(0.2)
+                                    : Colors.orange.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(20),
+                             ),
+                              child: Text(
+                               status!,
+                               style: TextStyle(
+                                 color: status == 'Paid' ? Colors.green : Colors.orange,
+                                 fontWeight: FontWeight.bold,
+                                 fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                             ],),),
+                            // if (event.description.isNotEmpty)
+                            //   Padding(
+                            //     padding: const EdgeInsets.only(top: 8.0),
+                            //     child: Text(
+                            //       event.description,
+                            //       maxLines: 2,
+                            //       overflow: TextOverflow.ellipsis,
+                            //       style: TextStyle(color: Colors.grey[700]),
+                            //       ),
+                               // ),
+                                ],
+                              ),
+
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 6),
@@ -619,7 +744,7 @@ class _EventCard extends StatelessWidget {
                         ),
                       ),
                     ],
-                  ),
+                  ),),
                   if (event.description.isNotEmpty) ...[
                     const SizedBox(height: 12),
                     Text(
@@ -634,12 +759,12 @@ class _EventCard extends StatelessWidget {
                     ),
                   ],
                 ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+              ),)
+            );
+         // ],
+       // ),
+    //   ),
+    // );
   }
 
   IconData _getCategoryIcon(String category) {
@@ -861,17 +986,69 @@ class BookingsTab extends StatefulWidget {
 }
 
 class _BookingsTabState extends State<BookingsTab> {
-  List<Map<String, dynamic>> bookings = [
-    {'id': 1, 'event': 'Concert A', 'total': 50.0, 'paid': false},
-    {'id': 2, 'event': 'Festival B', 'total': 30.0, 'paid': false},
-    {'id': 3, 'event': 'Theatre C', 'total': 40.0, 'paid': true},
-  ];
+  List<Map<String, dynamic>> bookings = [];
 
-  void addBooking(Map<String, dynamic> booking) {
-    setState(() {
-      bookings.add(booking);
-    });
+  @override
+  void initState() {
+    super.initState();
+    _fetchBookings();
   }
+
+  void _fetchBookings() async {
+    final userId = Provider.of<AuthProvider>(context, listen: false).user?.uid;
+
+    if (userId == null) return;
+
+    try {
+      QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('bookings')
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      setState(() {
+        bookings = snapshot.docs
+            .map((doc) => doc.data() as Map<String, dynamic>)
+            .toList();
+      });
+    } catch (e) {
+      print("Error fetching bookings: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error fetching bookings'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+  void addBooking(Map<String, dynamic> booking) async {
+    final userId = Provider.of<AuthProvider>(context, listen: false).user?.uid;
+    // setState(() {
+    //   bookings.add(booking);
+    // });
+    if (userId == null) return;
+
+    try {
+      await FirebaseFirestore.instance.collection('bookings').add({
+        'userId': userId,
+        'event': booking['event'],
+        'price': booking['total'],
+        'paid': booking['paid'],
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      _fetchBookings();
+    } catch (e) {
+      print("Error saving booking: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error saving booking'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -881,14 +1058,16 @@ class _BookingsTabState extends State<BookingsTab> {
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
       ),
-      body: ListView.builder(
+      body: bookings.isEmpty
+          ? const Center(child: Text('No bookings yet.'))
+          : ListView.builder(
         itemCount: bookings.length,
         itemBuilder: (context, index) {
           final booking = bookings[index];
           return ListTile(
-            title: Text(booking['event']),
-            subtitle: Text('Total: €${booking['total']}'),
-            trailing: booking['paid']
+            title: Text(booking['event'] ?? ''),
+            subtitle: Text('Total: €${booking['price']}'),
+            trailing: booking['paid'] == true
                 ? const Text('Paid', style: TextStyle(color: Colors.green))
                 : ElevatedButton(
               child: const Text('Checkout'),
@@ -897,13 +1076,11 @@ class _BookingsTabState extends State<BookingsTab> {
                   context,
                   MaterialPageRoute(
                     builder: (_) => CheckoutScreen(
-                      total: booking['total'],
+                      total: booking['price'],
                       onPaymentSuccess: () {
-                        // Mark this booking as paid
                         setState(() {
                           bookings[index]['paid'] = true;
                         });
-                        // Show a success message
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('Payment Successful!'),
@@ -922,289 +1099,3 @@ class _BookingsTabState extends State<BookingsTab> {
     );
   }
 }
-// class CheckoutScreen extends StatefulWidget {
-//   final double total;
-//   final VoidCallback? onPaymentSuccess;
-//
-//   const CheckoutScreen({
-//     super.key,
-//     required this.total,
-//     this.onPaymentSuccess,
-//   });
-//
-//
-//   @override
-//   State<CheckoutScreen> createState() => _CheckoutScreenState();
-// }
-// enum PaymentNetwork { mtn, airtel }
-// class _CheckoutScreenState extends State<CheckoutScreen> {
-//   final _formKey = GlobalKey<FormState>();
-//   String firstName = '';
-//   String lastName = '';
-//   String email = '';
-//    bool subscribeOrganizer = true;
-//   bool subscribeUpdates = true;
-//   PaymentNetwork? _selectedNetwork;
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       appBar: AppBar(
-//         title: const Text(
-//           "Checkout Your Ticket",
-//           style: TextStyle(
-//               color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-//         ),
-//         centerTitle: true,
-//         backgroundColor: Colors.blueAccent,
-//       ),
-//       backgroundColor: Colors.white,
-//       body: SafeArea(
-//         child: SingleChildScrollView(
-//           padding: const EdgeInsets.all(20),
-//           child: Column(
-//             crossAxisAlignment: CrossAxisAlignment.start,
-//             children: [
-//               Card(
-//                 elevation: 3,
-//                 color: const Color.fromARGB(255, 212, 228, 245),
-//                 shape: RoundedRectangleBorder(
-//                     borderRadius: BorderRadius.circular(12)),
-//                 child: Padding(
-//                   padding: const EdgeInsets.all(16.0),
-//                   child: Column(
-//                     crossAxisAlignment: CrossAxisAlignment.start,
-//                     children: [
-//                       const Text("Billing Information",
-//                           style: TextStyle(
-//                               fontSize: 18, fontWeight: FontWeight.bold)),
-//                       const SizedBox(height: 10),
-//                       Form(
-//                         key: _formKey,
-//                         child: Column(
-//                           children: [
-//                             Row(
-//                               children: [
-//                                 Expanded(
-//                                   child: Card(
-//                                     color: Colors.white,
-//                                     elevation: 1,
-//                                     child: Padding(
-//                                       padding: const EdgeInsets.symmetric(
-//                                           horizontal: 8.0),
-//                                       child: TextFormField(
-//                                         decoration: const InputDecoration(
-//                                           labelText: "First Name *",
-//                                           border: InputBorder.none,
-//                                         ),
-//                                         onChanged: (val) => firstName = val,
-//                                         validator: (val) =>
-//                                             val!.isEmpty ? "Required" : null,
-//                                       ),
-//                                     ),
-//                                   ),
-//                                 ),
-//                                 const SizedBox(width: 10),
-//                                 Expanded(
-//                                   child: Card(
-//                                     color: Colors.white,
-//                                     elevation: 1,
-//                                     child: Padding(
-//                                       padding: const EdgeInsets.symmetric(
-//                                           horizontal: 8.0),
-//                                       child: TextFormField(
-//                                         decoration: const InputDecoration(
-//                                           labelText: "Surname *",
-//                                           border: InputBorder.none,
-//                                         ),
-//                                         onChanged: (val) => lastName = val,
-//                                         validator: (val) =>
-//                                             val!.isEmpty ? "Required" : null,
-//                                       ),
-//                                     ),
-//                                   ),
-//                                 ),
-//                               ],
-//                             ),
-//                             const SizedBox(height: 10),
-//                             Card(
-//                               color: Colors.white,
-//                               elevation: 1,
-//                               child: Padding(
-//                                 padding: const EdgeInsets.symmetric(
-//                                     horizontal: 8.0),
-//                                 child: TextFormField(
-//                                   decoration: const InputDecoration(
-//                                     labelText: "Email Address *",
-//                                     border: InputBorder.none,
-//                                   ),
-//                                   onChanged: (val) => email = val,
-//                                   validator: (val) =>
-//                                       val!.isEmpty ? "Required" : null,
-//                                 ),
-//                               ),
-//                             ),
-//                               const SizedBox(height: 10),
-//                       CheckboxListTile(
-//                       title: const Text("Keep me updated on more events and news from this organiser."),
-//                       value: subscribeOrganizer,
-//                       onChanged: (val) => setState(() => subscribeOrganizer = val!),
-//                     ),
-//                     CheckboxListTile(
-//                       title: const Text("Send me emails about the best events Happening nearby or online."),
-//                       value: subscribeUpdates,
-//                       onChanged: (val) => setState(() => subscribeUpdates = val!),
-//                     ),
-//                   ]),
-//                 ),
-//               ]),
-//             ),
-//               ),
-//               const SizedBox(height: 20),
-//               const Text("Mobile Money Payment",
-//                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-//               const SizedBox(height: 10),
-//               _buildNetworkCard(
-//                 value: PaymentNetwork.mtn,
-//                 title: "MTN Mobile Money",
-//                 image: "assets/images/mtn.jpg",
-//                 bgColor: Colors.yellow.shade100,
-//                 borderColor: Colors.orange,
-//               ),
-//               _buildNetworkCard(
-//                 value: PaymentNetwork.airtel,
-//                 title: "Airtel Money",
-//                 image: "assets/images/airtel.png",
-//                 bgColor: Colors.red.shade50,
-//                 borderColor: Colors.redAccent,
-//               ),
-//               const SizedBox(height: 40),
-//               ElevatedButton(
-//                 style: ElevatedButton.styleFrom(
-//                   minimumSize: const Size.fromHeight(50),
-//                   backgroundColor: Colors.blue,
-//                   shape: RoundedRectangleBorder(
-//                       borderRadius: BorderRadius.circular(12)),
-//                 ),
-//                 onPressed: () {
-//                   if (_formKey.currentState!.validate()) {
-//                     if (_selectedNetwork == null) {
-//                       ScaffoldMessenger.of(context).showSnackBar(
-//                         const SnackBar(
-//                             content: Text("Please select a payment network")),
-//                       );
-//                       return;
-//                     }
-//                     _openMobileMoneyDialog(_selectedNetwork!);
-//                   }
-//                 },
-//                 child: const Text("Book Ticket",
-//                     style: TextStyle(color: Colors.white, fontSize: 15)),
-//               ),
-//             ],
-//           ),
-//         ),
-//       ),
-//     );
-//   }
-//
-//   Widget _buildNetworkCard({
-//     required PaymentNetwork value,
-//     required String title,
-//     required String image,
-//     required Color bgColor,
-//     required Color borderColor,
-//   }) {
-//     final isSelected = _selectedNetwork == value;
-//     return GestureDetector(
-//       onTap: () => setState(() => _selectedNetwork = value),
-//       child: Card(
-//         color: bgColor,
-//         elevation: isSelected ? 4 : 1,
-//         shape: RoundedRectangleBorder(
-//           side: BorderSide(
-//             color: isSelected ? borderColor : Colors.grey.shade300,
-//             width: 1.5,
-//           ),
-//           borderRadius: BorderRadius.circular(12),
-//         ),
-//         child: Padding(
-//           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-//           child: Row(
-//             children: [
-//               ClipRRect(
-//                 borderRadius: BorderRadius.circular(6),
-//                 child: Image.asset(
-//                   image,
-//                   height: 30,
-//                   width: 50,
-//                   fit: BoxFit.contain,
-//                 ),
-//               ),
-//               const SizedBox(width: 16),
-//               Expanded(
-//                 child: Text(
-//                   title,
-//                   style: const TextStyle(
-//                       fontSize: 16, fontWeight: FontWeight.w500),
-//                 ),
-//               ),
-//               if (isSelected) Icon(Icons.check_circle, color: borderColor),
-//             ],
-//           ),
-//         ),
-//       ),
-//     );
-//   }
-//
-//   void _openMobileMoneyDialog(PaymentNetwork network) {
-//     String phone = '';
-//     String provider = network == PaymentNetwork.mtn ? 'MTN' : 'Airtel';
-//
-//     showDialog(
-//       context: context,
-//       builder: (_) => AlertDialog(
-//         title: Text("Pay with $provider Money"),
-//         content: TextFormField(
-//           decoration: const InputDecoration(labelText: "Phone Number"),
-//           onChanged: (val) => phone = val,
-//         ),
-//         actions: [
-//           TextButton(
-//             onPressed: () => Navigator.pop(context),
-//             child: const Text("Cancel"),
-//           ),
-//           ElevatedButton(
-//             onPressed: () {
-//               Navigator.pop(context);
-//               _showSuccessDialog();
-//             },
-//             child: const Text("Confirm Payment"),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-//
-//   void _showSuccessDialog() {
-//     showDialog(
-//       context: context,
-//       builder: (context) => AlertDialog(
-//         title: const Text("Booking Successful"),
-//         content:
-//             Text("You booked your ticket for €${widget.total.toStringAsFixed(2)}."),
-//         actions: [
-//           TextButton(
-//             onPressed: () {
-//               Navigator.popUntil(context, (route) => route.isFirst);
-//               if (widget.onPaymentSuccess != null) {
-//                 widget.onPaymentSuccess!();
-//               }
-//             },
-//             child: const Text("OK"),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-// }

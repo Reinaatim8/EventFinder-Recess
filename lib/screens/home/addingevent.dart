@@ -26,10 +26,12 @@ class _AddEventDialogState extends State<AddEventDialog> {
   final _descriptionController = TextEditingController();
   final _dateController = TextEditingController();
   final _locationController = TextEditingController();
+  final _priceController = TextEditingController();
   String _selectedCategory = 'Other';
   File? _selectedImage;
   Uint8List? _webImage;
   bool _isUploading = false;
+
   final ImagePicker _picker = ImagePicker();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   double? _latitude;
@@ -395,6 +397,26 @@ class _AddEventDialogState extends State<AddEventDialog> {
                 ),
                 const SizedBox(height: 15),
                 TextFormField(
+                  controller: _priceController,
+                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(
+                    labelText: 'Price',
+                    prefixIcon: Icon(Icons.attach_money),
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter a price';
+                    }
+                    if (double.tryParse(value) == null) {
+                      return 'Please enter a valid number';
+                    }
+                    return null;
+                  },
+                ),
+
+                const SizedBox(height: 15),
+                TextFormField(
                   controller: _dateController,
                   decoration: const InputDecoration(
                     labelText: 'Date *',
@@ -548,7 +570,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
           category: _selectedCategory,
           imageUrl: imageUrl,
           organizerId: organizerId,
-          price: double.tryParse(_descriptionController.text.trim()) ?? 0.0,
+          price: double.tryParse(_priceController.text.trim()) ?? 0.0,
         );
 
         await _saveEventToFirestore(event);

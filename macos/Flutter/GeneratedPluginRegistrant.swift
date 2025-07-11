@@ -11,6 +11,7 @@ import firebase_auth
 import firebase_core
 import firebase_storage
 import flutter_inappwebview_macos
+import path_provider_foundation
 import geolocator_apple
 import package_info_plus
 import webview_flutter_wkwebview
