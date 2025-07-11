@@ -31,7 +31,7 @@ class UserModel {
       emailVerified: map['emailVerified'] ?? false,
       createdAt: map['createdAt']?.toDate(),
       lastLoginAt: map['lastLoginAt']?.toDate(),
-      bio: map['bio'], // Fixed: Changed 'json' to 'map'
+      bio: map['bio'],
     );
   }
 
@@ -58,7 +58,7 @@ class UserModel {
     bool? emailVerified,
     DateTime? createdAt,
     DateTime? lastLoginAt,
-    String? bio, // Added bio parameter
+    String? bio,
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -69,7 +69,7 @@ class UserModel {
       emailVerified: emailVerified ?? this.emailVerified,
       createdAt: createdAt ?? this.createdAt,
       lastLoginAt: lastLoginAt ?? this.lastLoginAt,
-      bio: bio ?? this.bio, // Added bio handling
+      bio: bio ?? this.bio,
     );
   }
 }

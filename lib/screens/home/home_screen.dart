@@ -11,6 +11,7 @@ import 'package:flutter/foundation.dart';
 import 'dart:typed_data';
 import 'addingevent.dart';
 import '../home/event_management_screen.dart';
+import 'verification_screen.dart';
 
 final GlobalKey<_BookingsTabState> bookingsTabKey = GlobalKey<_BookingsTabState>();
 
@@ -24,6 +25,11 @@ class Event {
   final String? imageUrl;
   final String organizerId;
   final double price;
+  final String status;
+  final String? rejectionReason;
+  final Timestamp? approvedAt;
+  final Timestamp? rejectedAt;
+  final Timestamp? timestamp; // Added timestamp field
 
   Event({
     required this.id,
@@ -35,6 +41,11 @@ class Event {
     this.imageUrl,
     required this.organizerId,
     required this.price,
+    this.status = 'pending',
+    this.rejectionReason,
+    this.approvedAt,
+    this.rejectedAt,
+    this.timestamp, // Include in constructor
   });
 
   factory Event.fromFirestore(DocumentSnapshot doc) {
@@ -49,6 +60,11 @@ class Event {
       imageUrl: data['imageUrl'],
       organizerId: data['organizerId'] ?? '',
       price: (data['price'] ?? 0.0).toDouble(),
+      status: data['status'] ?? 'pending',
+      rejectionReason: data['rejectionReason'],
+      approvedAt: data['approvedAt'],
+      rejectedAt: data['rejectedAt'],
+      timestamp: data['timestamp'], // Map Firestore timestamp
     );
   }
 
@@ -63,7 +79,11 @@ class Event {
       'imageUrl': imageUrl,
       'organizerId': organizerId,
       'price': price,
-      'createdAt': FieldValue.serverTimestamp(),
+      'status': status,
+      'rejectionReason': rejectionReason,
+      'approvedAt': approvedAt,
+      'rejectedAt': rejectedAt,
+      'timestamp': timestamp ?? FieldValue.serverTimestamp(), // Use server timestamp if null
     };
   }
 }
@@ -91,8 +111,9 @@ class _HomeScreenState extends State<HomeScreen> {
       _isLoading = true;
     });
     try {
-      QuerySnapshot snapshot =
-          await FirebaseFirestore.instance.collection('events').get();
+      QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('events')
+          .get();
       setState(() {
         events = snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList();
         _isLoading = false;
@@ -118,10 +139,10 @@ class _HomeScreenState extends State<HomeScreen> {
           .collection('events')
           .doc(event.id)
           .set(event.toFirestore());
+      print('Event added to Firestore: ${event.id}, organizerId: ${event.organizerId}');
       setState(() {
         events.add(event);
       });
-      print('Event added to Firestore: ${event.id}, organizerId: ${event.organizerId}');
     } catch (e) {
       print('Error adding event: $e');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -188,6 +209,9 @@ class HomeTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context);
+    final isAdmin = authProvider.user?.email == 'kennedymutebi7@gmail.com';
+
     Map<String, List<Event>> eventsByDate = {};
     for (var event in events) {
       eventsByDate.putIfAbsent(event.date, () => []).add(event);
@@ -214,7 +238,7 @@ class HomeTab extends StatelessWidget {
         eventsByDate[date]!.asMap().entries.map(
               (entry) => Padding(
                 padding: const EdgeInsets.only(bottom: 15, left: 20, right: 20),
-                child: _EventCard(event: entry.value, onTap: () {  },),
+                child: _EventCard(event: entry.value, onTap: () {}),
               ),
             ),
       );
@@ -272,6 +296,30 @@ class HomeTab extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(width: 10),
+                              if (isAdmin)
+                                GestureDetector(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => const AdminScreen(),
+                                      ),
+                                    );
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Icon(
+                                      Icons.verified_user,
+                                      color: Theme.of(context).primaryColor,
+                                      size: 20,
+                                    ),
+                                  ),
+                                ),
+                              if (isAdmin) const SizedBox(width: 10),
                               GestureDetector(
                                 onTap: () {
                                   Navigator.pushNamed(context, '/profile');
@@ -509,6 +557,12 @@ class _EventCard extends StatelessWidget {
 
   const _EventCard({required this.event, required this.onTap});
 
+  String _formatTimestamp(Timestamp? timestamp) {
+    if (timestamp == null) return '';
+    final date = timestamp.toDate();
+    return '${date.day}/${date.month}/${date.year}';
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -518,7 +572,7 @@ class _EventCard extends StatelessWidget {
           MaterialPageRoute(
             builder: (context) => CheckoutScreen(
               total: event.price,
-               onPaymentSuccess: () {
+              onPaymentSuccess: () {
                 if (bookingsTabKey.currentState != null) {
                   bookingsTabKey.currentState!.addBooking({
                     'id': DateTime.now().millisecondsSinceEpoch,
@@ -670,6 +724,84 @@ class _EventCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
+                  const SizedBox(height: 12),
+                  // Verification Status
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: event.status == 'approved'
+                          ? Colors.green.withOpacity(0.1)
+                          : event.status == 'rejected'
+                              ? Colors.red.withOpacity(0.1)
+                              : Colors.grey.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              event.status == 'approved'
+                                  ? Icons.check_circle
+                                  : event.status == 'rejected'
+                                      ? Icons.cancel
+                                      : Icons.pending,
+                              color: event.status == 'approved'
+                                  ? Colors.green
+                                  : event.status == 'rejected'
+                                      ? Colors.red
+                                      : Colors.grey,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              event.status == 'approved'
+                                  ? 'Approved'
+                                  : event.status == 'rejected'
+                                      ? 'Rejected'
+                                      : 'Pending',
+                              style: TextStyle(
+                                color: event.status == 'approved'
+                                    ? Colors.green
+                                    : event.status == 'rejected'
+                                        ? Colors.red
+                                        : Colors.grey,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            if (event.status == 'approved' && event.approvedAt != null)
+                              Text(
+                                ' • ${_formatTimestamp(event.approvedAt)}',
+                                style: const TextStyle(
+                                  color: Colors.green,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            if (event.status == 'rejected' && event.rejectedAt != null)
+                              Text(
+                                ' • ${_formatTimestamp(event.rejectedAt)}',
+                                style: const TextStyle(
+                                  color: Colors.red,
+                                  fontSize: 12,
+                                ),
+                              ),
+                          ],
+                        ),
+                        if (event.status == 'rejected' && event.rejectionReason != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
+                              'Reason: ${event.rejectionReason}',
+                              style: const TextStyle(
+                                color: Colors.red,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -845,7 +977,7 @@ class _SearchTabState extends State<SearchTab> {
                     itemBuilder: (context, index) {
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 15),
-                        child: _EventCard(event: _filteredEvents[index], onTap: () {  },),
+                        child: _EventCard(event: _filteredEvents[index], onTap: () {}),
                       );
                     },
                   ),
@@ -928,31 +1060,29 @@ class _BookingsTabState extends State<BookingsTab> {
             trailing: booking['paid']
                 ? const Text('Paid', style: TextStyle(color: Colors.green))
                 : ElevatedButton(
-              child: const Text('Checkout'),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => CheckoutScreen(
-                      total: booking['total'],
-                      onPaymentSuccess: () {
-                        // Mark this booking as paid
-                        setState(() {
-                          bookings[index]['paid'] = true;
-                        });
-                        // Show a success message
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Payment Successful!'),
-                            backgroundColor: Colors.green,
+                    child: const Text('Checkout'),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => CheckoutScreen(
+                            total: booking['total'],
+                            onPaymentSuccess: () {
+                              setState(() {
+                                bookings[index]['paid'] = true;
+                              });
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Payment Successful!'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            },
                           ),
-                        );
-                      },
-                    ),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           );
         },
       ),
