@@ -15,9 +15,11 @@ import 'dart:typed_data';
 import 'addingevent.dart';
 import '../home/event_management_screen.dart';
 
-final GlobalKey<BookingsTabState> bookingsTabKey =
-    GlobalKey<BookingsTabState>();
+//final GlobalKey<BookingsTabState> bookingsTabKey =
+//GlobalKey<BookingsTabState>();
+final GlobalKey bookingsTabKey = GlobalKey();
 //final GlobalKey<BookingsTabState> bookingsTabKey = GlobalKey<BookingsTabState>();
+//final GlobalKey bookingsTabKey = GlobalKey();
 
 class Event {
   final String id;
@@ -219,6 +221,13 @@ class _HomeScreenState extends State<HomeScreen> {
     BookingsTab(key: bookingsTabKey),
     const ProfileScreen(),
   ];
+  Widget BookingsTab({required Key key}) {
+    // Return your bookings tab widget here
+    return Container(
+      key: key,
+      child: Center(child: Text('Bookings Tab Content')),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
