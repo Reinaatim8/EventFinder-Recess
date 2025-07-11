@@ -1190,9 +1190,20 @@ class _EventAnalyticsScreenState extends State<EventAnalyticsScreen> {
                         },
                       )
                       .toList()
-                    ..sort((a, b) => b['timestamp'].compareTo(a['timestamp']));
-              _activityFeed = _activityFeed.take(10).toList();
+                    //..sort((a, b) => b['timestamp'].compareTo(a['timestamp']));
+                    //_activityFeed = _activityFeed.take(10).toList();
+                    ..sort((a, b) {
+                      final aTime = a['timestamp'] as Timestamp?;
+                      final bTime = b['timestamp'] as Timestamp?;
 
+                      if (aTime == null && bTime == null) return 0;
+                      if (aTime == null) return 1;
+                      if (bTime == null) return -1;
+
+                      return bTime.compareTo(
+                        aTime,
+                      ); // Descending order (newest first)
+                    });
               _hourlyViews = {};
               _geoViews = {};
               for (var doc in snapshot.docs) {
