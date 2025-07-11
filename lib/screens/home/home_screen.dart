@@ -11,82 +11,10 @@ import 'package:flutter/foundation.dart';
 import 'dart:typed_data';
 import 'addingevent.dart';
 import '../home/event_management_screen.dart';
-import 'verification_screen.dart';
+import '../../models/event.dart';
+import '../map/map_screen.dart';
 
 final GlobalKey<_BookingsTabState> bookingsTabKey = GlobalKey<_BookingsTabState>();
-
-class Event {
-  final String id;
-  final String title;
-  final String description;
-  final String date;
-  final String location;
-  final String category;
-  final String? imageUrl;
-  final String organizerId;
-  final double price;
-  final String status;
-  final String? rejectionReason;
-  final Timestamp? approvedAt;
-  final Timestamp? rejectedAt;
-  final Timestamp? timestamp; // Added timestamp field
-
-  Event({
-    required this.id,
-    required this.title,
-    required this.description,
-    required this.date,
-    required this.location,
-    required this.category,
-    this.imageUrl,
-    required this.organizerId,
-    required this.price,
-    this.status = 'pending',
-    this.rejectionReason,
-    this.approvedAt,
-    this.rejectedAt,
-    this.timestamp, // Include in constructor
-  });
-
-  factory Event.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-    return Event(
-      id: doc.id,
-      title: data['title'] ?? '',
-      description: data['description'] ?? '',
-      date: data['date'] ?? '',
-      location: data['location'] ?? '',
-      category: data['category'] ?? 'Other',
-      imageUrl: data['imageUrl'],
-      organizerId: data['organizerId'] ?? '',
-      price: (data['price'] ?? 0.0).toDouble(),
-      status: data['status'] ?? 'pending',
-      rejectionReason: data['rejectionReason'],
-      approvedAt: data['approvedAt'],
-      rejectedAt: data['rejectedAt'],
-      timestamp: data['timestamp'], // Map Firestore timestamp
-    );
-  }
-
-  Map<String, dynamic> toFirestore() {
-    return {
-      'id': id,
-      'title': title,
-      'description': description,
-      'date': date,
-      'location': location,
-      'category': category,
-      'imageUrl': imageUrl,
-      'organizerId': organizerId,
-      'price': price,
-      'status': status,
-      'rejectionReason': rejectionReason,
-      'approvedAt': approvedAt,
-      'rejectedAt': rejectedAt,
-      'timestamp': timestamp ?? FieldValue.serverTimestamp(), // Use server timestamp if null
-    };
-  }
-}
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -100,20 +28,20 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Event> events = [];
   bool _isLoading = true;
 
+
   @override
   void initState() {
     super.initState();
     _fetchEvents();
   }
-
+//fetch events from firestore
   Future<void> _fetchEvents() async {
     setState(() {
       _isLoading = true;
     });
     try {
-      QuerySnapshot snapshot = await FirebaseFirestore.instance
-          .collection('events')
-          .get();
+      QuerySnapshot snapshot =
+          await FirebaseFirestore.instance.collection('events').get();
       setState(() {
         events = snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList();
         _isLoading = false;
@@ -139,10 +67,10 @@ class _HomeScreenState extends State<HomeScreen> {
           .collection('events')
           .doc(event.id)
           .set(event.toFirestore());
-      print('Event added to Firestore: ${event.id}, organizerId: ${event.organizerId}');
       setState(() {
         events.add(event);
       });
+      print('Event added to Firestore: ${event.id}, organizerId: ${event.organizerId}');
     } catch (e) {
       print('Error adding event: $e');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -153,12 +81,115 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
   }
+  // (iii) Track booking/payment status per event
+  final Map<String, String> _eventStatus = {};
+
+// (i) Show bottom sheet with event details and actions
+  void _showEventDetailsModal(Event event) {
+    showDialog(
+      context: context,
+      //shape: const RoundedRectangleBorder(
+       // borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      builder: (_) => AlertDialog (
+        title: Text(event.title),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(event.description),
+            const SizedBox(height: 20),
+            if (_eventStatus[event.id] != 'Reserved')
+        // return Padding(
+        //   padding: const EdgeInsets.all(20.0),
+        //   child: Column(
+        //     mainAxisSize: MainAxisSize.min,
+        //     children: [
+        //       Text(event.title,
+        //           style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        //       const SizedBox(height: 10),
+        //       Text(event.description),
+        //       const SizedBox(height: 20),
+        //       Row(
+        //         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        //         children: [
+                  ElevatedButton(
+                    onPressed: () {
+                      bookingsTabKey.currentState?.addBooking({
+                        'id': DateTime.now().millisecondsSinceEpoch,
+                        'event': event.title,
+                        'total': event.price,
+                        'paid': false,
+                      });
+                      setState(() {
+                        _eventStatus[event.id] = 'Reserved';
+                      });
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Event Reserved!'),
+                          backgroundColor: Colors.orange,
+                        ),
+                      );
+                    },
+                    child: const Text('Book Event'),
+                  ),
+                  if (_eventStatus[event.id] == 'Reserved')
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 8.0),
+                        child: Text(
+                        'Event Reserved',
+                        style: TextStyle(
+                         color: Colors.orange,
+                         fontWeight: FontWeight.bold,
+                         ),
+                      ),),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => CheckoutScreen(
+                            total: event.price,
+                            onPaymentSuccess: () {
+                              bookingsTabKey.currentState?.addBooking({
+                                'id': DateTime.now().millisecondsSinceEpoch,
+                                'event': event.title,
+                                'total': event.price,
+                                'paid': true,
+                              });
+                              setState(() {
+                                _eventStatus[event.id] = 'Paid';
+                              });
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                    child: const Text('Pay For Event'),
+                  ),
+                 TextButton(
+                     onPressed: () {
+                       Navigator.pop(context);
+                     },
+                  child: const Text(
+                   'Cancel',
+                       style: TextStyle(color: Colors.red),
+                 ),
+                 ),
+                ],
+              ),
+
+          ),
+        );
+  }
 
   List<Widget> _getScreens() => [
-        HomeTab(events: events, onAddEvent: _addEvent),
+        HomeTab(events: events, onAddEvent: _addEvent, onEventTap: _showEventDetailsModal, eventStatus: _eventStatus,),
         SearchTab(events: events),
         BookingsTab(key: bookingsTabKey),
         const ProfileScreen(),
+        const MapScreen(),
       ];
 
   @override
@@ -194,7 +225,11 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icon(Icons.person),
             label: 'Profile',
           ),
-        ],
+         BottomNavigationBarItem(
+           icon: Icon(Icons.map),
+           label: 'Map',
+         ),
+       ],
       ),
     );
   }
@@ -203,15 +238,18 @@ class _HomeScreenState extends State<HomeScreen> {
 class HomeTab extends StatelessWidget {
   final List<Event> events;
   final Function(Event) onAddEvent;
-
-  const HomeTab({Key? key, required this.events, required this.onAddEvent})
+  final Function(Event) onEventTap; // (i) Used to trigger event details bottom sheet
+  final Map<String, String> eventStatus;
+  const HomeTab({Key? key,
+    required this.events,
+    required this.onAddEvent,
+    required this.onEventTap,
+    required this.eventStatus,
+  })
       : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = Provider.of<AuthProvider>(context);
-    final isAdmin = authProvider.user?.email == 'kennedymutebi7@gmail.com';
-
     Map<String, List<Event>> eventsByDate = {};
     for (var event in events) {
       eventsByDate.putIfAbsent(event.date, () => []).add(event);
@@ -238,7 +276,11 @@ class HomeTab extends StatelessWidget {
         eventsByDate[date]!.asMap().entries.map(
               (entry) => Padding(
                 padding: const EdgeInsets.only(bottom: 15, left: 20, right: 20),
-                child: _EventCard(event: entry.value, onTap: () {}),
+                child: _EventCard(
+                  event: entry.value,
+                  onTap: () => onEventTap(entry.value),
+                  status: eventStatus[entry.value.id],
+                ),
               ),
             ),
       );
@@ -296,33 +338,14 @@ class HomeTab extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(width: 10),
-                              if (isAdmin)
-                                GestureDetector(
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => const AdminScreen(),
-                                      ),
-                                    );
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Icon(
-                                      Icons.verified_user,
-                                      color: Theme.of(context).primaryColor,
-                                      size: 20,
-                                    ),
-                                  ),
-                                ),
-                              if (isAdmin) const SizedBox(width: 10),
                               GestureDetector(
                                 onTap: () {
-                                  Navigator.pushNamed(context, '/profile');
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) =>
+                                            const ProfileScreen()),
+                                  );
                                 },
                                 child: CircleAvatar(
                                   radius: 20,
@@ -340,9 +363,12 @@ class HomeTab extends StatelessWidget {
                                       context,
                                       listen: false);
                                   if (authProvider.user != null) {
-                                    Navigator.pushNamed(
+                                    Navigator.push(
                                       context,
-                                      '/event-management',
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const EventManagementScreen(),
+                                      ),
                                     );
                                   } else {
                                     ScaffoldMessenger.of(context).showSnackBar(
@@ -398,10 +424,11 @@ class HomeTab extends StatelessWidget {
                           horizontal: 20, vertical: 15),
                     ),
                     onTap: () {
-                      Navigator.pushNamed(
+                      Navigator.push(
                         context,
-                        '/search',
-                        arguments: {'events': events},
+                        MaterialPageRoute(
+                          builder: (context) => SearchTab(events: events),
+                        ),
                       );
                     },
                   ),
@@ -523,10 +550,11 @@ class _CategoryChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        Navigator.pushNamed(
+        Navigator.push(
           context,
-          '/search',
-          arguments: {'events': events, 'category': label},
+          MaterialPageRoute(
+            builder: (context) => SearchTab(events: events),
+          ),
         );
       },
       child: Container(
@@ -554,38 +582,16 @@ class _CategoryChip extends StatelessWidget {
 class _EventCard extends StatelessWidget {
   final Event event;
   final VoidCallback onTap;
+  final String? status;
 
-  const _EventCard({required this.event, required this.onTap});
-
-  String _formatTimestamp(Timestamp? timestamp) {
-    if (timestamp == null) return '';
-    final date = timestamp.toDate();
-    return '${date.day}/${date.month}/${date.year}';
-  }
+  const _EventCard({required this.event, required this.onTap, this.status});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => CheckoutScreen(
-              total: event.price,
-              onPaymentSuccess: () {
-                if (bookingsTabKey.currentState != null) {
-                  bookingsTabKey.currentState!.addBooking({
-                    'id': DateTime.now().millisecondsSinceEpoch,
-                    'event': event.title,
-                    'total': event.price,
-                    'paid': true,
-                  });
-                }
-              },
-            ),
-          ),
-        );
-      },
+        onTap: onTap,
+
+
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -690,9 +696,37 @@ class _EventCard extends StatelessWidget {
                                 ),
                               ],
                             ),
-                          ],
-                        ),
-                      ),
+                            if (status != null)
+                             Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                color: status == 'Paid'
+                                    ? Colors.green.withOpacity(0.2)
+                                    : Colors.orange.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(20),
+                             ),
+                              child: Text(
+                               status!,
+                               style: TextStyle(
+                                 color: status == 'Paid' ? Colors.green : Colors.orange,
+                                 fontWeight: FontWeight.bold,
+                                 fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                             ],),),
+                            // if (event.description.isNotEmpty)
+                            //   Padding(
+                            //     padding: const EdgeInsets.only(top: 8.0),
+                            //     child: Text(
+                            //       event.description,
+                            //       maxLines: 2,
+                            //       overflow: TextOverflow.ellipsis,
+                            //       style: TextStyle(color: Colors.grey[700]),
+                            //       ),
+                               // ),
+                                ],
+                              ),
+
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 6),
@@ -710,7 +744,7 @@ class _EventCard extends StatelessWidget {
                         ),
                       ),
                     ],
-                  ),
+                  ),),
                   if (event.description.isNotEmpty) ...[
                     const SizedBox(height: 12),
                     Text(
@@ -724,91 +758,13 @@ class _EventCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
-                  const SizedBox(height: 12),
-                  // Verification Status
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: event.status == 'approved'
-                          ? Colors.green.withOpacity(0.1)
-                          : event.status == 'rejected'
-                              ? Colors.red.withOpacity(0.1)
-                              : Colors.grey.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              event.status == 'approved'
-                                  ? Icons.check_circle
-                                  : event.status == 'rejected'
-                                      ? Icons.cancel
-                                      : Icons.pending,
-                              color: event.status == 'approved'
-                                  ? Colors.green
-                                  : event.status == 'rejected'
-                                      ? Colors.red
-                                      : Colors.grey,
-                              size: 16,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              event.status == 'approved'
-                                  ? 'Approved'
-                                  : event.status == 'rejected'
-                                      ? 'Rejected'
-                                      : 'Pending',
-                              style: TextStyle(
-                                color: event.status == 'approved'
-                                    ? Colors.green
-                                    : event.status == 'rejected'
-                                        ? Colors.red
-                                        : Colors.grey,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            if (event.status == 'approved' && event.approvedAt != null)
-                              Text(
-                                ' • ${_formatTimestamp(event.approvedAt)}',
-                                style: const TextStyle(
-                                  color: Colors.green,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            if (event.status == 'rejected' && event.rejectedAt != null)
-                              Text(
-                                ' • ${_formatTimestamp(event.rejectedAt)}',
-                                style: const TextStyle(
-                                  color: Colors.red,
-                                  fontSize: 12,
-                                ),
-                              ),
-                          ],
-                        ),
-                        if (event.status == 'rejected' && event.rejectionReason != null)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 4),
-                            child: Text(
-                              'Reason: ${event.rejectionReason}',
-                              style: const TextStyle(
-                                color: Colors.red,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
                 ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+              ),)
+            );
+         // ],
+       // ),
+    //   ),
+    // );
   }
 
   IconData _getCategoryIcon(String category) {
@@ -977,7 +933,7 @@ class _SearchTabState extends State<SearchTab> {
                     itemBuilder: (context, index) {
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 15),
-                        child: _EventCard(event: _filteredEvents[index], onTap: () {}),
+                        child: _EventCard(event: _filteredEvents[index], onTap: () {  },),
                       );
                     },
                   ),
@@ -1030,17 +986,69 @@ class BookingsTab extends StatefulWidget {
 }
 
 class _BookingsTabState extends State<BookingsTab> {
-  List<Map<String, dynamic>> bookings = [
-    {'id': 1, 'event': 'Concert A', 'total': 50.0, 'paid': false},
-    {'id': 2, 'event': 'Festival B', 'total': 30.0, 'paid': false},
-    {'id': 3, 'event': 'Theatre C', 'total': 40.0, 'paid': true},
-  ];
+  List<Map<String, dynamic>> bookings = [];
 
-  void addBooking(Map<String, dynamic> booking) {
-    setState(() {
-      bookings.add(booking);
-    });
+  @override
+  void initState() {
+    super.initState();
+    _fetchBookings();
   }
+
+  void _fetchBookings() async {
+    final userId = Provider.of<AuthProvider>(context, listen: false).user?.uid;
+
+    if (userId == null) return;
+
+    try {
+      QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('bookings')
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      setState(() {
+        bookings = snapshot.docs
+            .map((doc) => doc.data() as Map<String, dynamic>)
+            .toList();
+      });
+    } catch (e) {
+      print("Error fetching bookings: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error fetching bookings'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+  void addBooking(Map<String, dynamic> booking) async {
+    final userId = Provider.of<AuthProvider>(context, listen: false).user?.uid;
+    // setState(() {
+    //   bookings.add(booking);
+    // });
+    if (userId == null) return;
+
+    try {
+      await FirebaseFirestore.instance.collection('bookings').add({
+        'userId': userId,
+        'event': booking['event'],
+        'price': booking['total'],
+        'paid': booking['paid'],
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      _fetchBookings();
+    } catch (e) {
+      print("Error saving booking: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error saving booking'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -1050,39 +1058,41 @@ class _BookingsTabState extends State<BookingsTab> {
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
       ),
-      body: ListView.builder(
+      body: bookings.isEmpty
+          ? const Center(child: Text('No bookings yet.'))
+          : ListView.builder(
         itemCount: bookings.length,
         itemBuilder: (context, index) {
           final booking = bookings[index];
           return ListTile(
-            title: Text(booking['event']),
-            subtitle: Text('Total: €${booking['total']}'),
-            trailing: booking['paid']
+            title: Text(booking['event'] ?? ''),
+            subtitle: Text('Total: €${booking['price']}'),
+            trailing: booking['paid'] == true
                 ? const Text('Paid', style: TextStyle(color: Colors.green))
                 : ElevatedButton(
-                    child: const Text('Checkout'),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => CheckoutScreen(
-                            total: booking['total'],
-                            onPaymentSuccess: () {
-                              setState(() {
-                                bookings[index]['paid'] = true;
-                              });
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Payment Successful!'),
-                                  backgroundColor: Colors.green,
-                                ),
-                              );
-                            },
+              child: const Text('Checkout'),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => CheckoutScreen(
+                      total: booking['price'],
+                      onPaymentSuccess: () {
+                        setState(() {
+                          bookings[index]['paid'] = true;
+                        });
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Payment Successful!'),
+                            backgroundColor: Colors.green,
                           ),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
+                );
+              },
+            ),
           );
         },
       ),
