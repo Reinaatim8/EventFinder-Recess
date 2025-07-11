@@ -1201,6 +1201,7 @@ class _EventAnalyticsScreenState extends State<EventAnalyticsScreen> {
                 _hourlyViews[hour] = (_hourlyViews[hour] ?? 0) + 1;
                 final geoKey =
                     '${view.city ?? 'Unknown'}, ${view.country ?? 'Unknown'}';
+
                 _geoViews[geoKey] = (_geoViews[geoKey] ?? 0) + 1;
               }
             });
