@@ -2,7 +2,71 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
-import '../../models/event.dart';
+import '../home/home_screen.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:intl/intl.dart';
+import '../../models/event.dart'; 
+
+// Placeholder Event model (replace with your actual Event model)
+// class Event {
+//   final String id;
+//   final String title;
+//   final String category;
+//   final String date;
+//   final String location;
+//   final String description;
+//   final String? imageUrl;
+//   final String organizerId;
+//   final double price;
+
+//    Event({
+//     required this.id,
+//     required this.title,
+//     required this.category,
+//     required this.date,
+//     required this.location,
+//     required this.description,
+//     this.imageUrl,
+//     required this.organizerId, 
+//     required this.price,
+//   });
+
+//   factory Event.fromFirestore(DocumentSnapshot doc) {
+//     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+//     return Event(
+//       id: doc.id,
+//       title: data['title'] ?? '',
+//       category: data['category'] ?? '',
+//       date: data['date'] ?? '',
+//       location: data['location'] ?? '',
+//       description: data['description'] ?? '',
+//       imageUrl: data['imageUrl'],
+//       organizerId: data['organizerId'] ?? '',
+//       price: (data['price'] as num).toDouble(),
+//     );
+//   }
+
+  get status => null;
+
+  get timestamp => null;
+
+  get rejectionReason => null;
+
+  get approvedAt => null;
+
+//   Map<String, dynamic> toFirestore() {
+//     return {
+//       'title': title,
+//       'category': category,
+//       'date': date,
+//       'location': location,
+//       'description': description,
+//       'imageUrl': imageUrl,
+//       'organizerId': organizerId,
+//       'price': price,
+//     };
+//   }
+// }
 
 // Booking model
 class Booking {

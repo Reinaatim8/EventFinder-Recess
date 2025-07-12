@@ -22,7 +22,7 @@ class HomeScreen extends StatefulWidget {
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
- Map<String, String> _eventStatus = {};
+ final Map<String, String> _eventStatus = {};
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
@@ -151,7 +151,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         context,
                         MaterialPageRoute(
                           builder: (_) => CheckoutScreen(
-                            total: double.tryParse(event.price as String) ?? 0.0,
+                            total: event.price is num ? event.price.toDouble() : double.tryParse(event.price.toString()) ?? 0.0,
+
                             onPaymentSuccess: () {
                               bookingsTabKey.currentState?.addBooking({
                                 'id': DateTime.now().millisecondsSinceEpoch,
@@ -234,6 +235,10 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+}
+
+extension on String {
+  toDouble() {}
 }
 
 class HomeTab extends StatelessWidget {
@@ -889,7 +894,8 @@ class _SearchTabState extends State<SearchTab> {
                   context,
                   MaterialPageRoute(
                     builder: (_) => CheckoutScreen(
-                      total: double.tryParse(event.price as String) ?? 0.0,
+                      total: event.price is num ? event.price.toDouble() : double.tryParse(event.price.toString()) ?? 0.0,
+
                       onPaymentSuccess: () {
                         bookingsTabKey.currentState?.addBooking({
                           'id': DateTime.now().millisecondsSinceEpoch,
@@ -1083,7 +1089,7 @@ class BookingsTab extends StatefulWidget {
 
 class _BookingsTabState extends State<BookingsTab> {
   List<Map<String, dynamic>> bookings = [];
-
+  Map<String, String> _eventStatus = {};
   @override
   void initState() {
     super.initState();
