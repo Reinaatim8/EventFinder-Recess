@@ -255,13 +255,14 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: ConvexAppBar(
         style: TabStyle.react, // other styles: fixedCircle, flip, reactCircle
         backgroundColor: Theme.of(context).primaryColor,
-        activeColor: Colors.purpleAccent,
-        color: Colors.white60,
+        activeColor: Colors.white,
+        color: Colors.white,
         items: const [
           TabItem(icon: Icons.home, title: 'Home'),
           TabItem(icon: Icons.search, title: 'Search'),
           TabItem(icon: Icons.bookmark, title: 'Bookings'),
           TabItem(icon: Icons.person, title: 'Profile'),
+          TabItem(icon: Icons.map, title: 'Map'),
         ],
         initialActiveIndex: _selectedIndex,
         onTap: (int index) {
@@ -932,7 +933,7 @@ class _SearchTabState extends State<SearchTab> {
                     'paid': false,
                   });
                   setState(() {
-                    _eventStatus[event.id] = 'Reserved';
+                    _eventStatus[event.id] = 'Event Reserved';
                   });
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -942,15 +943,15 @@ class _SearchTabState extends State<SearchTab> {
                     ),
                   );
                 },
-                child: const Text('Book Event'),
+                child: const Text('Book/Reserve an Event'),
               ),
             ] else ...[
               ElevatedButton(
                 onPressed: () {
                   // UNBOOK logic
-                  bookingsTabKey.currentState?.removeBookingByTitle(event.title); // You'll create this method next
+                  bookingsTabKey.currentState?.removeBookingByTitle(event.title);
                   setState(() {
-                    _eventStatus[event.id] = 'unbooked';
+                    _eventStatus[event.id] = 'Cancelled Reservation!';
                   });
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -960,8 +961,8 @@ class _SearchTabState extends State<SearchTab> {
                     ),
                   );
                 },
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                child: const Text('Unbook Event'),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.pink),
+                child: const Text('Cancel Reservation.'),
               ),
             ],
 
