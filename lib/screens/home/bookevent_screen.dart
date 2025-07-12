@@ -139,18 +139,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             ),
             onPressed: () {
               if (_formKey.currentState!.validate()) {
-                //handling free or unpriced events
-                if (widget.total == 0 || widget.total.isNaN) {
-                  Fluttertoast.showToast(
-                    msg: "🎉 This event is free! No payment required.",
-                    toastLength: Toast.LENGTH_LONG,
-                    gravity: ToastGravity.TOP,
-                    backgroundColor: Colors.blueAccent,
-                    textColor: Colors.white,
-                  );
-                  _showSuccessDialog(); // free event — skip payment
-                  return;
-                }
                 if (_selectedNetwork == null) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text("Please select a payment network")),
@@ -277,17 +265,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               ),
               ElevatedButton(
                 onPressed: () async {
-                    if (widget.total == 0.0 || widget.total.isNaN) {
-                      Fluttertoast.showToast(
-                        msg: "🎉 Free event! No payment needed.",
-                        toastLength: Toast.LENGTH_LONG,
-                        gravity: ToastGravity.TOP,
-                        backgroundColor: Colors.green,
-                        textColor: Colors.white,
-                      );
-                      _showSuccessDialog();
-                      return;
-                    }
                   if (_validatedPhone != null) {
                     final token = await getAccessToken();
                     if (token != null) {

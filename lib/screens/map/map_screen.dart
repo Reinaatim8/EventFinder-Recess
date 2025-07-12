@@ -762,7 +762,7 @@ class _MapScreenState extends State<MapScreen>
           backgroundColor: const Color(0xFF673AB7),
           child: const Icon(Icons.my_location, color: Colors.white),
         ),
-      ),//j
+      ),
     );
   }
 }

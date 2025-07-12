@@ -3,7 +3,6 @@ description: "A new Flutter project."
 publish_to: 'none'
 version: 1.0.0+1
 
-
 environment:
   sdk: ^3.8.1
 
@@ -39,7 +38,6 @@ dependencies:
   google_maps_flutter: ^2.2.5
   geocoding: ^4.0.0
   geolocator: ^14.0.2
-  flutter_map: ^6.1.0
 
   # Image Handling
   image_picker: ^1.1.2

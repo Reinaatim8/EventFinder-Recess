@@ -15,7 +15,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.event_locator_app"
-        minSdk = 23
+        minSdk = 21
         targetSdk = 34
         versionCode = flutter.versionCode
         versionName = flutter.versionName
