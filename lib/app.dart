@@ -11,7 +11,6 @@ import 'package:event_locator_app/screens/home/event_management_screen.dart'; //
 import 'package:event_locator_app/screens/auth/splash_screen.dart'; // Direct import (placeholder or actual)
 import 'package:event_locator_app/screens/home/addingevent.dart'; // Direct import (placeholder or actual)
 import 'package:event_locator_app/screens/home/home_screen.dart' as home_screen;
-import 'package:event_locator_app/screens/home/event_details_screen.dart';
 
 class LocalEventFinderApp extends StatelessWidget {
   const LocalEventFinderApp({Key? key}) : super(key: key);
