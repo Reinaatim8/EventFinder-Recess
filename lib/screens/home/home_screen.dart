@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'dart:io';
+//import 'package:image_picker/image_picker.dart';
+//import 'package:firebase_storage/firebase_storage.dart';
+//import 'dart:io';
 import '../../providers/auth_provider.dart';
 import '../profile/profile_screen.dart';
 import 'bookevent_screen.dart';
 import 'package:flutter/foundation.dart';
-import 'dart:typed_data';
+//import 'dart:typed_data';
 import 'addingevent.dart';
 import '../home/event_management_screen.dart';
 import '../../models/event.dart';
 import '../map/map_screen.dart';
+import 'package:convex_bottom_bar/convex_bottom_bar.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
@@ -28,6 +29,8 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   List<Event> events = [];
+  Set<String> bookedEventIds = {}; // Track which events the user has booked
+
   bool _isLoading = true;
 
 
@@ -97,6 +100,22 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
   }
+  void _toggleBooking(Event event) {
+    setState(() {
+      if (bookedEventIds.contains(event.id)) {
+        bookedEventIds.remove(event.id); // Unbook
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Unbooked: ${event.title}')),
+        );
+      } else {
+        bookedEventIds.add(event.id); // Book
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Booked: ${event.title}')),
+        );
+      }
+    });
+  }
+
 
   void _addEvent(Event event) async {
     try {
@@ -135,39 +154,50 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Text(event.description),
             const SizedBox(height: 20),
-            if (_eventStatus[event.id] != 'Reserved')
-                  ElevatedButton(
-                    onPressed: () {
-                      bookingsTabKey.currentState?.addBooking({
-                        'id': DateTime.now().millisecondsSinceEpoch,
-                        'event': event.title,
-                        'total': event.price,
-                        'paid': false,
-                      });
-                      setState(() {
-                        _eventStatus[event.id] = 'Reserved';
-                      });
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Event Reserved!'),
-                          backgroundColor: Colors.orange,
-                        ),
-                      );
-                    },
-                    child: const Text('Book Event'),
-                  ),
-                  if (_eventStatus[event.id] == 'Reserved')
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 8.0),
-                        child: Text(
-                        'Event Reserved',
-                        style: TextStyle(
-                         color: Colors.orange,
-                         fontWeight: FontWeight.bold,
-                         ),
-                      ),),
-                  ElevatedButton(
+            if (_eventStatus[event.id] != 'Reserved') ...[
+              ElevatedButton(
+                onPressed: () {
+                  bookingsTabKey.currentState?.addBooking({
+                    'id': DateTime.now().millisecondsSinceEpoch,
+                    'event': event.title,
+                    'total': event.price,
+                    'paid': false,
+                  });
+                  setState(() {
+                    _eventStatus[event.id] = 'Reserved';
+                  });
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Event Reserved!'),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                },
+                child: const Text('Book Event'),
+              ),
+            ] else ...[
+              ElevatedButton(
+                onPressed: () {
+                  // UNBOOK logic
+                  bookingsTabKey.currentState?.removeBookingByTitle(event.title); // You'll create this method next
+                  setState(() {
+                    _eventStatus[event.id] = 'unbooked';
+                  });
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Reservation canceled.'),
+                      backgroundColor: Colors.grey,
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                child: const Text('Unbook Event'),
+              ),
+            ],
+
+            ElevatedButton(
                     onPressed: () {
                       Navigator.pop(context);
                       Navigator.push(
@@ -222,38 +252,23 @@ class _HomeScreenState extends State<HomeScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _getScreens()[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: _selectedIndex,
-        onTap: (index) {
+      bottomNavigationBar: ConvexAppBar(
+        style: TabStyle.react, // other styles: fixedCircle, flip, reactCircle
+        backgroundColor: Theme.of(context).primaryColor,
+        activeColor: Colors.purpleAccent,
+        color: Colors.white60,
+        items: const [
+          TabItem(icon: Icons.home, title: 'Home'),
+          TabItem(icon: Icons.search, title: 'Search'),
+          TabItem(icon: Icons.bookmark, title: 'Bookings'),
+          TabItem(icon: Icons.person, title: 'Profile'),
+        ],
+        initialActiveIndex: _selectedIndex,
+        onTap: (int index) {
           setState(() {
             _selectedIndex = index;
           });
         },
-        selectedItemColor: Theme.of(context).primaryColor,
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.search),
-            label: 'Search',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.bookmark),
-            label: 'Bookings',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-         BottomNavigationBarItem(
-           icon: Icon(Icons.map),
-           label: 'Map',
-         ),
-       ],
       ),
     );
   }
@@ -278,14 +293,21 @@ class HomeTab extends StatelessWidget {
     List<Event> sortedEvents = [...events];
 
 // Optional: Sort by upcoming first (assumes `event.date` is ISO string like "2025-07-01")
-    sortedEvents.sort((a, b) => a.date.compareTo(b.date));
+   // sortedEvents.sort((a, b) => a.date.compareTo(b.date));
 
     List<Widget> eventWidgets = sortedEvents.map((event) {
+      final isBooked = eventStatus[event.id] == 'Booked'; // Getting booking state
       return Padding(
         padding: const EdgeInsets.only(bottom: 15, left: 20, right: 20),
         child: _EventCard(
           event: event,
-          onTap: () {}, // Replace if needed
+          onTap: () => onEventTap(event),
+            isBooked: eventStatus[event.id] == 'Reserved',
+            onBookToggle: () {
+              // Call _showEventDetailsModal(event) to handle booking/unbooking
+              onEventTap(event);
+            }, // will now toggle booking
+            status: eventStatus[event.id], // Replace if needed
         ),
       );
     }).toList();
@@ -587,8 +609,15 @@ class _EventCard extends StatelessWidget {
   final Event event;
   final VoidCallback onTap;
   final String? status;
+  final VoidCallback onBookToggle;
+  final bool isBooked;
 
-  const _EventCard({required this.event, required this.onTap, this.status});
+  const _EventCard({required this.event,
+    required this.onTap,
+    this.status,
+    required this.onBookToggle,
+    required this.isBooked,
+  });
    DateTime parseEventDate(String dateString) {
     try {
       // Expecting format: day/month/year e.g. "1/7/2025"
@@ -849,12 +878,13 @@ class _EventCard extends StatelessWidget {
 class SearchTab extends StatefulWidget {
   final List<Event> events;
 
+
   const SearchTab({Key? key, required this.events}) : super(key: key);
 
   @override
   State<SearchTab> createState() => _SearchTabState();
 }
-
+ Map<String, String> _eventStatus = {};
 class _SearchTabState extends State<SearchTab> {
   final _searchController = TextEditingController();
   String _selectedCategory = 'All';
@@ -880,6 +910,101 @@ class _SearchTabState extends State<SearchTab> {
     _filteredEvents = widget.events;
   }
 
+  void _showEventDetailsModal(Event event) {
+    showDialog(
+      context: context,
+
+      builder: (_) => AlertDialog (
+        title: Text(event.title),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(event.description),
+            const SizedBox(height: 20),
+            if (_eventStatus[event.id] != 'Reserved') ...[
+              ElevatedButton(
+                onPressed: () {
+                  bookingsTabKey.currentState?.addBooking({
+                    'id': DateTime.now().millisecondsSinceEpoch,
+                    'event': event.title,
+                    'total': event.price,
+                    'paid': false,
+                  });
+                  setState(() {
+                    _eventStatus[event.id] = 'Reserved';
+                  });
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Event Reserved!'),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                },
+                child: const Text('Book Event'),
+              ),
+            ] else ...[
+              ElevatedButton(
+                onPressed: () {
+                  // UNBOOK logic
+                  bookingsTabKey.currentState?.removeBookingByTitle(event.title); // You'll create this method next
+                  setState(() {
+                    _eventStatus[event.id] = 'unbooked';
+                  });
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Reservation canceled.'),
+                      backgroundColor: Colors.grey,
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                child: const Text('Unbook Event'),
+              ),
+            ],
+
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => CheckoutScreen(
+                      total: event.price,
+                      onPaymentSuccess: () {
+                        bookingsTabKey.currentState?.addBooking({
+                          'id': DateTime.now().millisecondsSinceEpoch,
+                          'event': event.title,
+                          'total': event.price,
+                          'paid': true,
+                        });
+                        setState(() {
+                          _eventStatus[event.id] = 'Paid';
+                        });
+                      },
+                    ),
+                  ),
+                );
+              },
+              child: const Text('Pay For Event'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        ),
+
+      ),
+    );
+  }
   void _filterEvents() {
     setState(() {
       _filteredEvents = widget.events.where((event) {
@@ -985,10 +1110,14 @@ class _SearchTabState extends State<SearchTab> {
                     padding: const EdgeInsets.all(16),
                     itemCount: _filteredEvents.length,
                     itemBuilder: (context, index) {
+                      final event = _filteredEvents[index];
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 15),
-                        child: _EventCard(event: _filteredEvents[index], onTap: () {  },),
-                      );
+                        child: _EventCard(event: _filteredEvents[index],
+                          onTap: () => _showEventDetailsModal(event),
+                           isBooked: _eventStatus[event.id] == 'Reserved',
+                           onBookToggle: () => _showEventDetailsModal(event),),
+                        );
                     },
                   ),
           ),
@@ -1041,7 +1170,7 @@ class BookingsTab extends StatefulWidget {
 
 class _BookingsTabState extends State<BookingsTab> {
   List<Map<String, dynamic>> bookings = [];
-
+  Map<String, String> _eventStatus = {};
   @override
   void initState() {
     super.initState();
@@ -1074,6 +1203,12 @@ class _BookingsTabState extends State<BookingsTab> {
       );
     }
   }
+  void removeBookingByTitle(String title) {
+    setState(() {
+      bookings.removeWhere((booking) => booking['event'] == title);
+    });
+  }
+
   void addBooking(Map<String, dynamic> booking) async {
     final userId = Provider.of<AuthProvider>(context, listen: false).user?.uid;
     // setState(() {
