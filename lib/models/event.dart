@@ -44,6 +44,14 @@ class Event {
     );
   }
 
+  get rejectionReason => null;
+
+  get status => null;
+
+  get approvedAt => null;
+
+  get timestamp => null;
+
   Map<String, dynamic> toFirestore() {
     return {
       'id': id,

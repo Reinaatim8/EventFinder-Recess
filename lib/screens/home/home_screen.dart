@@ -22,6 +22,7 @@ class HomeScreen extends StatefulWidget {
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
+ Map<String, String> _eventStatus = {};
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
@@ -150,7 +151,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         context,
                         MaterialPageRoute(
                           builder: (_) => CheckoutScreen(
-                            total: event.price,
+                            total: double.tryParse(event.price as String) ?? 0.0,
                             onPaymentSuccess: () {
                               bookingsTabKey.currentState?.addBooking({
                                 'id': DateTime.now().millisecondsSinceEpoch,
@@ -189,7 +190,7 @@ class _HomeScreenState extends State<HomeScreen> {
         SearchTab(events: events),
         BookingsTab(key: bookingsTabKey),
         const ProfileScreen(),
-        const MapScreen(),
+        //const MapScreen(),
       ];
 
   @override
@@ -800,7 +801,7 @@ class SearchTab extends StatefulWidget {
   @override
   State<SearchTab> createState() => _SearchTabState();
 }
-
+ //Map<String, String> _eventStatus = {};
 class _SearchTabState extends State<SearchTab> {
   final _searchController = TextEditingController();
   String _selectedCategory = 'All';
@@ -826,6 +827,101 @@ class _SearchTabState extends State<SearchTab> {
     _filteredEvents = widget.events;
   }
 
+  void _showEventDetailsModal(Event event) {
+    showDialog(
+      context: context,
+
+      builder: (_) => AlertDialog (
+        title: Text(event.title),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(event.description),
+            const SizedBox(height: 20),
+            if (_eventStatus[event.id] != 'Reserved') ...[
+              ElevatedButton(
+                onPressed: () {
+                  bookingsTabKey.currentState?.addBooking({
+                    'id': DateTime.now().millisecondsSinceEpoch,
+                    'event': event.title,
+                    'total': event.price,
+                    'paid': false,
+                  });
+                  setState(() {
+                    _eventStatus[event.id] = 'Event Reserved';
+                  });
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Event Reserved!'),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                },
+                child: const Text('Book/Reserve an Event'),
+              ),
+            ] else ...[
+              ElevatedButton(
+                onPressed: () {
+                  // UNBOOK logic
+                  bookingsTabKey.currentState?.removeBookingByTitle(event.title);
+                  setState(() {
+                    _eventStatus[event.id] = 'Cancelled Reservation!';
+                  });
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Reservation canceled.'),
+                      backgroundColor: Colors.grey,
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.pink),
+                child: const Text('Cancel Reservation.'),
+              ),
+            ],
+
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => CheckoutScreen(
+                      total: double.tryParse(event.price as String) ?? 0.0,
+                      onPaymentSuccess: () {
+                        bookingsTabKey.currentState?.addBooking({
+                          'id': DateTime.now().millisecondsSinceEpoch,
+                          'event': event.title,
+                          'total': event.price,
+                          'paid': true,
+                        });
+                        setState(() {
+                          _eventStatus[event.id] = 'Paid';
+                        });
+                      },
+                    ),
+                  ),
+                );
+              },
+              child: const Text('Pay For Event'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        ),
+
+      ),
+    );
+  }
   void _filterEvents() {
     setState(() {
       _filteredEvents = widget.events.where((event) {
@@ -1098,4 +1194,6 @@ class _BookingsTabState extends State<BookingsTab> {
       ),
     );
   }
+  
+  void removeBookingByTitle(String title) {}
 }
