@@ -13,6 +13,8 @@ import 'addingevent.dart';
 import '../home/event_management_screen.dart';
 import '../../models/event.dart';
 import '../map/map_screen.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
 final GlobalKey<_BookingsTabState> bookingsTabKey = GlobalKey<_BookingsTabState>();
 
@@ -34,6 +36,23 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _fetchEvents();
   }
+  //Parse date string for date format "1/7/2025"
+  DateTime parseEventDate(String input) {
+    try {
+      // Expecting input format like "1/7/2025" (dd/mm/yyyy)
+      final parts = input.split('/');
+      if (parts.length != 3) return DateTime(1900); // invalid format fallback
+
+      final day = int.tryParse(parts[0]) ?? 1;
+      final month = int.tryParse(parts[1]) ?? 1;
+      final year = int.tryParse(parts[2]) ?? 1900;
+
+      return DateTime(year, month, day); // Return DateTime object
+    } catch (e) {
+      print("Date parse error for '$input': $e");
+      return DateTime(1900); // fallback date
+    }
+  }
 //fetch events from firestore
   Future<void> _fetchEvents() async {
     setState(() {
@@ -45,34 +64,19 @@ class _HomeScreenState extends State<HomeScreen> {
 
       List<Event> fetchedEvents = snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList();
 
-      //Parse date string for date format "1/7/2025"
-      DateTime parseEventDate(String input) {
-        try {
-          // Expecting input format like "1/7/2025" (dd/mm/yyyy)
-          final parts = input.split('/');
-          if (parts.length != 3) return DateTime(1900); // invalid format fallback
-
-          final day = int.parse(parts[0]);
-          final month = int.parse(parts[1]);
-          final year = int.parse(parts[2]);
-
-          return DateTime(year, month, day); // Return DateTime object
-        } catch (e) {
-          print("Date parse error for '$input': $e");
-          return DateTime(1900); // fallback date
-        }
-      }
 
       // ✅ Sort: upcoming events first, past events last
       fetchedEvents.sort((a, b) {
-       DateTime aDate = parseEventDate(a.date);
-       DateTime bDate = parseEventDate(b.date);
-       bool aIsPast = aDate.isBefore(DateTime.now());
-       bool bIsPast = bDate.isBefore(DateTime.now());
 
-       if (aIsPast && !bIsPast) return 1;
-        if (!aIsPast && bIsPast) return -1;
-        return aDate.compareTo(bDate);
+        final aDate   = parseEventDate(a.date);
+        final bDate   = parseEventDate(b.date);
+
+        final aPast   = aDate.isBefore(DateTime.now());
+        final bPast   = bDate.isBefore(DateTime.now());
+
+        if (aPast && !bPast) return 1;  // put a after b
+        if (!aPast && bPast) return -1; // put a before b
+        return aDate.compareTo(bDate);  // both past or both future → natural order
       });
 
       setState(() {
@@ -270,41 +274,21 @@ class HomeTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Map<String, List<Event>> eventsByDate = {};
-    for (var event in events) {
-      eventsByDate.putIfAbsent(event.date, () => []).add(event);
-    }
 
-    var sortedDates = eventsByDate.keys.toList()..sort();
+    List<Event> sortedEvents = [...events];
 
-    List<Widget> eventWidgets = [];
-    for (var date in sortedDates) {
-      eventWidgets.add(
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-          child: Text(
-            date,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.black54,
-            ),
-          ),
+// Optional: Sort by upcoming first (assumes `event.date` is ISO string like "2025-07-01")
+    sortedEvents.sort((a, b) => a.date.compareTo(b.date));
+
+    List<Widget> eventWidgets = sortedEvents.map((event) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 15, left: 20, right: 20),
+        child: _EventCard(
+          event: event,
+          onTap: () {}, // Replace if needed
         ),
       );
-      eventWidgets.addAll(
-        eventsByDate[date]!.asMap().entries.map(
-              (entry) => Padding(
-                padding: const EdgeInsets.only(bottom: 15, left: 20, right: 20),
-                child: _EventCard(
-                  event: entry.value,
-                  onTap: () => onEventTap(entry.value),
-                  status: eventStatus[entry.value.id],
-                ),
-              ),
-            ),
-      );
-    }
+    }).toList();
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -629,7 +613,20 @@ class _EventCard extends StatelessWidget {
     final isPast = eventDate.isBefore(DateTime.now());
 
     return GestureDetector(
-      onTap: isPast ? null : onTap,
+      //onTap: isPast ? null : onTap,
+      onTap: () {
+        if (isPast) {
+          Fluttertoast.showToast(
+            msg: "Oops! Event Passed, Sorry!",
+            toastLength: Toast.LENGTH_LONG,
+            gravity: ToastGravity.CENTER,
+            backgroundColor: Colors.white,
+            textColor: Colors.red,
+          );
+        } else {
+          onTap?.call();
+        }
+      },
       child: Opacity(
         opacity: isPast ? 0.3 : 1.0,
         child: Container(
