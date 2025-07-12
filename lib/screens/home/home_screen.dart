@@ -41,7 +41,40 @@ class _HomeScreenState extends State<HomeScreen> {
     });
     try {
       QuerySnapshot snapshot =
-          await FirebaseFirestore.instance.collection('events').get();
+      await FirebaseFirestore.instance.collection('events').get();
+
+      List<Event> fetchedEvents = snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList();
+
+      //Parse date string for date format "1/7/2025"
+      DateTime parseEventDate(String input) {
+        try {
+          // Expecting input format like "1/7/2025" (dd/mm/yyyy)
+          final parts = input.split('/');
+          if (parts.length != 3) return DateTime(1900); // invalid format fallback
+
+          final day = int.parse(parts[0]);
+          final month = int.parse(parts[1]);
+          final year = int.parse(parts[2]);
+
+          return DateTime(year, month, day); // Return DateTime object
+        } catch (e) {
+          print("Date parse error for '$input': $e");
+          return DateTime(1900); // fallback date
+        }
+      }
+
+      // ✅ Sort: upcoming events first, past events last
+      fetchedEvents.sort((a, b) {
+       DateTime aDate = parseEventDate(a.date);
+       DateTime bDate = parseEventDate(b.date);
+       bool aIsPast = aDate.isBefore(DateTime.now());
+       bool bIsPast = bDate.isBefore(DateTime.now());
+
+       if (aIsPast && !bIsPast) return 1;
+        if (!aIsPast && bIsPast) return -1;
+        return aDate.compareTo(bDate);
+      });
+
       setState(() {
         events = snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList();
         _isLoading = false;
@@ -99,19 +132,6 @@ class _HomeScreenState extends State<HomeScreen> {
             Text(event.description),
             const SizedBox(height: 20),
             if (_eventStatus[event.id] != 'Reserved')
-        // return Padding(
-        //   padding: const EdgeInsets.all(20.0),
-        //   child: Column(
-        //     mainAxisSize: MainAxisSize.min,
-        //     children: [
-        //       Text(event.title,
-        //           style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-        //       const SizedBox(height: 10),
-        //       Text(event.description),
-        //       const SizedBox(height: 20),
-        //       Row(
-        //         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        //         children: [
                   ElevatedButton(
                     onPressed: () {
                       bookingsTabKey.currentState?.addBooking({
@@ -585,186 +605,223 @@ class _EventCard extends StatelessWidget {
   final String? status;
 
   const _EventCard({required this.event, required this.onTap, this.status});
+   DateTime parseEventDate(String dateString) {
+    try {
+      // Expecting format: day/month/year e.g. "1/7/2025"
+      final parts = dateString.split('/');
+      if (parts.length != 3) return DateTime.now(); // fallback
+
+      final day = int.tryParse(parts[0]) ?? 1;
+      final month = int.tryParse(parts[1]) ?? 1;
+      final year = int.tryParse(parts[2]) ?? DateTime.now().year;
+
+      return DateTime(year, month, day);
+    } catch (e) {
+      print('Error parsing date: $e');
+      return DateTime.now(); // fallback
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
+    final eventDate = parseEventDate(event.date);
+    final isPast = eventDate.isBefore(DateTime.now());
+
     return GestureDetector(
-        onTap: onTap,
-
-
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
-              spreadRadius: 1,
-              blurRadius: 5,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (event.imageUrl != null)
-              ClipRRect(
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(12),
-                  topRight: Radius.circular(12),
-                ),
-                child: Image.network(
-                  event.imageUrl!,
-                  height: 200,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      height: 200,
-                      color: Colors.grey[200],
-                      child: Icon(
-                        _getCategoryIcon(event.category),
-                        size: 60,
-                        color: Colors.grey[400],
-                      ),
-                    );
-                  },
-                ),
+      onTap: isPast ? null : onTap,
+      child: Opacity(
+        opacity: isPast ? 0.3 : 1.0,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withAlpha((0.4 * 255).toInt()),
+                spreadRadius: 1,
+                blurRadius: 5,
+                offset: const Offset(0, 2),
               ),
-            Padding(
-              padding: const EdgeInsets.all(15),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      if (event.imageUrl == null)
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).primaryColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (event.imageUrl != null)
+                ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(12),
+                    topRight: Radius.circular(12),
+                  ),
+                  child: ColorFiltered(
+                    colorFilter: isPast
+                        ? const ColorFilter.mode(Colors.grey, BlendMode.saturation)
+                        : const ColorFilter.mode(Colors.transparent, BlendMode.multiply),
+                    child: Image.network(
+                      event.imageUrl!,
+                      height: 200,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          height: 200,
+                          color: Colors.grey[200],
                           child: Icon(
                             _getCategoryIcon(event.category),
-                            color: Theme.of(context).primaryColor,
-                            size: 24,
+                            size: 60,
+                            color: Colors.grey[400],
                           ),
-                        ),
-                      if (event.imageUrl == null) const SizedBox(width: 15),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              event.title,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                              ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              Padding(
+                padding: const EdgeInsets.all(15),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (event.imageUrl == null)
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).primaryColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                Icon(Icons.calendar_today,
-                                    size: 16, color: Colors.grey[600]),
-                                const SizedBox(width: 5),
-                                Text(
-                                  event.date,
-                                  style: TextStyle(
-                                    color: Colors.grey[600],
-                                    fontSize: 14,
-                                  ),
+                            child: Icon(
+                              _getCategoryIcon(event.category),
+                              color: Theme.of(context).primaryColor,
+                              size: 24,
+                            ),
+                          ),
+                        if (event.imageUrl == null)
+                          const SizedBox(width: 15),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                event.title,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
                                 ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Icon(Icons.location_on,
-                                    size: 16, color: Colors.grey[600]),
-                                const SizedBox(width: 5),
-                                Expanded(
-                                  child: Text(
-                                    event.location,
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    event.date,
                                     style: TextStyle(
                                       color: Colors.grey[600],
                                       fontSize: 14,
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-                            if (status != null)
-                             Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                color: status == 'Paid'
-                                    ? Colors.green.withOpacity(0.2)
-                                    : Colors.orange.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(20),
-                             ),
-                              child: Text(
-                               status!,
-                               style: TextStyle(
-                                 color: status == 'Paid' ? Colors.green : Colors.orange,
-                                 fontWeight: FontWeight.bold,
-                                 fontSize: 12,
-                                  ),
-                                ),
-                              ),
-                             ],),),
-                            // if (event.description.isNotEmpty)
-                            //   Padding(
-                            //     padding: const EdgeInsets.only(top: 8.0),
-                            //     child: Text(
-                            //       event.description,
-                            //       maxLines: 2,
-                            //       overflow: TextOverflow.ellipsis,
-                            //       style: TextStyle(color: Colors.grey[700]),
-                            //       ),
-                               // ),
                                 ],
                               ),
-
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).primaryColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        child: Text(
-                          event.category,
-                          style: TextStyle(
-                            color: Theme.of(context).primaryColor,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
+                                  const SizedBox(width: 5),
+                                  Expanded(
+                                    child: Text(
+                                      event.location,
+                                      style: TextStyle(
+                                        color: Colors.grey[900],
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (status != null)
+                                Container(
+                                  margin: const EdgeInsets.only(top: 6),
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: status == 'Paid'
+                                        ? Colors.green.withOpacity(0.2)
+                                        : Colors.orange.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    status!,
+                                    style: TextStyle(
+                                      color: status == 'Paid' ? Colors.green : Colors.orange,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              if (isPast)
+                                Container(
+                                  margin: const EdgeInsets.only(top: 6),
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: const Text(
+                                    'Oops! Sorry Event Passed!',
+                                    style: TextStyle(
+                                      color: Colors.red,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              if (event.description.isNotEmpty)
+                                Column(
+                                  children: [
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      event.description,
+                                      style: TextStyle(
+                                        color: Colors.grey[700],
+                                        fontSize: 14,
+                                        height: 1.4,
+                                      ),
+                                      maxLines: 3,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                            ],
                           ),
                         ),
-                      ),
-                    ],
-                  ),),
-                  if (event.description.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      event.description,
-                      style: TextStyle(
-                        color: Colors.grey[700],
-                        fontSize: 14,
-                        height: 1.4,
-                      ),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
+                        const SizedBox(width: 10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).primaryColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                          child: Text(
+                            event.category,
+                            style: TextStyle(
+                              color: Theme.of(context).primaryColor,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
-                ],
-              ),)
-            );
-         // ],
-       // ),
-    //   ),
-    // );
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   IconData _getCategoryIcon(String category) {
