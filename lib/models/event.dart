@@ -15,6 +15,7 @@ class Event {
   final DateTime? approvedAt;      
   final double? latitude;
   final double? longitude;
+  final String? imageUrl;
 
   Event({
     required this.id,
@@ -28,9 +29,10 @@ class Event {
     this.status,
     this.timestamp,
     this.rejectionReason,
-    this.approvedAt, String? imageUrl,
+    this.approvedAt,
     this.latitude, 
     this.longitude,
+    this.imageUrl,
   });
 
   // Deserialize from Firestore
@@ -53,10 +55,11 @@ class Event {
       //  longitude: null,
       latitude: (data['latitude'] as num?)?.toDouble() ?? 0.0,
       longitude: (data['longitude'] as num?)?.toDouble() ?? 0.0,
+      imageUrl: data['imageUrl'],
     );
   }
 
-  get imageUrl => null;
+
 
   // get latitude => null;
 
