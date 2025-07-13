@@ -1,0 +1,839 @@
+-- Merging decision tree log ---
+application
+INJECTED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml:2:5-33:19
+INJECTED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml:2:5-33:19
+MERGED from [:flutter_inappwebview_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:13:5-46:19
+MERGED from [:flutter_inappwebview_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:13:5-46:19
+MERGED from [:firebase_auth] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_auth-5.6.2\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:7:5-13:19
+MERGED from [:firebase_auth] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_auth-5.6.2\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:7:5-13:19
+MERGED from [:cloud_firestore] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\cloud_firestore-5.6.11\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:7:5-13:19
+MERGED from [:cloud_firestore] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\cloud_firestore-5.6.11\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:7:5-13:19
+MERGED from [:firebase_storage] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_storage-12.4.9\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:7:5-13:19
+MERGED from [:firebase_storage] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_storage-12.4.9\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:7:5-13:19
+MERGED from [:firebase_core] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_core-3.15.1\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:7:5-13:19
+MERGED from [:firebase_core] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_core-3.15.1\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:7:5-13:19
+MERGED from [com.google.firebase:firebase-auth:23.2.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c9f52ecd3c1efbbf165743b1a9e2497d\transformed\jetified-firebase-auth-23.2.1\AndroidManifest.xml:28:5-73:19
+MERGED from [com.google.firebase:firebase-auth:23.2.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c9f52ecd3c1efbbf165743b1a9e2497d\transformed\jetified-firebase-auth-23.2.1\AndroidManifest.xml:28:5-73:19
+MERGED from [com.google.firebase:firebase-firestore:25.1.4] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\5582a58da308b067469ceb52d141a8ed\transformed\jetified-firebase-firestore-25.1.4\AndroidManifest.xml:13:5-24:19
+MERGED from [com.google.firebase:firebase-firestore:25.1.4] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\5582a58da308b067469ceb52d141a8ed\transformed\jetified-firebase-firestore-25.1.4\AndroidManifest.xml:13:5-24:19
+MERGED from [com.google.firebase:firebase-storage:21.0.2] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\833386b4b57ec1b2b8f6004e88400953\transformed\jetified-firebase-storage-21.0.2\AndroidManifest.xml:26:5-37:19
+MERGED from [com.google.firebase:firebase-storage:21.0.2] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\833386b4b57ec1b2b8f6004e88400953\transformed\jetified-firebase-storage-21.0.2\AndroidManifest.xml:26:5-37:19
+MERGED from [com.google.firebase:firebase-appcheck:18.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\cb1ec9cf40c9b22eb57da524d68e85c2\transformed\jetified-firebase-appcheck-18.0.0\AndroidManifest.xml:21:5-32:19
+MERGED from [com.google.firebase:firebase-appcheck:18.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\cb1ec9cf40c9b22eb57da524d68e85c2\transformed\jetified-firebase-appcheck-18.0.0\AndroidManifest.xml:21:5-32:19
+MERGED from [com.google.firebase:firebase-common-ktx:21.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\e612cb9f44c7e28a575e8fcb013adc77\transformed\jetified-firebase-common-ktx-21.0.0\AndroidManifest.xml:8:5-16:19
+MERGED from [com.google.firebase:firebase-common-ktx:21.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\e612cb9f44c7e28a575e8fcb013adc77\transformed\jetified-firebase-common-ktx-21.0.0\AndroidManifest.xml:8:5-16:19
+MERGED from [androidx.credentials:credentials-play-services-auth:1.2.0-rc01] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\9c1ec2ae266a357db6c78572cf62c40f\transformed\jetified-credentials-play-services-auth-1.2.0-rc01\AndroidManifest.xml:23:5-42:19
+MERGED from [androidx.credentials:credentials-play-services-auth:1.2.0-rc01] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\9c1ec2ae266a357db6c78572cf62c40f\transformed\jetified-credentials-play-services-auth-1.2.0-rc01\AndroidManifest.xml:23:5-42:19
+MERGED from [:image_picker_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_android-0.8.12+23\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:8:5-32:19
+MERGED from [:image_picker_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_android-0.8.12+23\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:8:5-32:19
+MERGED from [com.google.firebase:firebase-auth-interop:20.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\47b354a183efe39650e4dbaa4cd97fac\transformed\jetified-firebase-auth-interop-20.0.0\AndroidManifest.xml:7:5-8:19
+MERGED from [com.google.firebase:firebase-auth-interop:20.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\47b354a183efe39650e4dbaa4cd97fac\transformed\jetified-firebase-auth-interop-20.0.0\AndroidManifest.xml:7:5-8:19
+MERGED from [com.google.firebase:firebase-common:21.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\293cde33061f2f9f0602f7cff4980ece\transformed\jetified-firebase-common-21.0.0\AndroidManifest.xml:22:5-39:19
+MERGED from [com.google.firebase:firebase-common:21.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\293cde33061f2f9f0602f7cff4980ece\transformed\jetified-firebase-common-21.0.0\AndroidManifest.xml:22:5-39:19
+MERGED from [com.google.android.gms:play-services-auth:20.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\ba5b09a313c42abb0170d3ee7c995ce4\transformed\jetified-play-services-auth-20.7.0\AndroidManifest.xml:22:5-38:19
+MERGED from [com.google.android.gms:play-services-auth:20.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\ba5b09a313c42abb0170d3ee7c995ce4\transformed\jetified-play-services-auth-20.7.0\AndroidManifest.xml:22:5-38:19
+MERGED from [com.google.android.play:integrity:1.3.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\965862285f7b23b7d07309454eb25436\transformed\jetified-integrity-1.3.0\AndroidManifest.xml:5:5-6:19
+MERGED from [com.google.android.play:integrity:1.3.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\965862285f7b23b7d07309454eb25436\transformed\jetified-integrity-1.3.0\AndroidManifest.xml:5:5-6:19
+MERGED from [com.google.firebase:firebase-appcheck-interop:17.1.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\87c6b81b7998510746dbe482780a528d\transformed\jetified-firebase-appcheck-interop-17.1.0\AndroidManifest.xml:21:5-20
+MERGED from [com.google.firebase:firebase-appcheck-interop:17.1.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\87c6b81b7998510746dbe482780a528d\transformed\jetified-firebase-appcheck-interop-17.1.0\AndroidManifest.xml:21:5-20
+MERGED from [com.google.android.gms:play-services-fido:20.1.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\b0e559b50e916b3718b4f1acb6f13d05\transformed\jetified-play-services-fido-20.1.0\AndroidManifest.xml:7:5-8:19
+MERGED from [com.google.android.gms:play-services-fido:20.1.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\b0e559b50e916b3718b4f1acb6f13d05\transformed\jetified-play-services-fido-20.1.0\AndroidManifest.xml:7:5-8:19
+MERGED from [com.google.android.gms:play-services-base:18.1.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c389db2bd53ca2f4f6db5c2fd1f604df\transformed\jetified-play-services-base-18.1.0\AndroidManifest.xml:19:5-23:19
+MERGED from [com.google.android.gms:play-services-base:18.1.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c389db2bd53ca2f4f6db5c2fd1f604df\transformed\jetified-play-services-base-18.1.0\AndroidManifest.xml:19:5-23:19
+MERGED from [androidx.window:window:1.2.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\66cf04ec9c2d9614aa49b47e3bf3fc27\transformed\jetified-window-1.2.0\AndroidManifest.xml:22:5-29:19
+MERGED from [androidx.window:window:1.2.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\66cf04ec9c2d9614aa49b47e3bf3fc27\transformed\jetified-window-1.2.0\AndroidManifest.xml:22:5-29:19
+MERGED from [com.google.android.gms:play-services-tasks:18.2.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\8ecabf70163abc52a5eff3ab26b9bc99\transformed\jetified-play-services-tasks-18.2.0\AndroidManifest.xml:4:5-20
+MERGED from [com.google.android.gms:play-services-tasks:18.2.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\8ecabf70163abc52a5eff3ab26b9bc99\transformed\jetified-play-services-tasks-18.2.0\AndroidManifest.xml:4:5-20
+MERGED from [com.google.android.gms:play-services-basement:18.4.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\0de81c30645df87b65c711c14c1cf0f0\transformed\jetified-play-services-basement-18.4.0\AndroidManifest.xml:5:5-7:19
+MERGED from [com.google.android.gms:play-services-basement:18.4.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\0de81c30645df87b65c711c14c1cf0f0\transformed\jetified-play-services-basement-18.4.0\AndroidManifest.xml:5:5-7:19
+MERGED from [androidx.emoji2:emoji2:1.2.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\a68f9caa14184a44430d28858c5674c9\transformed\jetified-emoji2-1.2.0\AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.emoji2:emoji2:1.2.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\a68f9caa14184a44430d28858c5674c9\transformed\jetified-emoji2-1.2.0\AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.core:core:1.13.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\46f45c9c491e9c84bd296422558af08b\transformed\core-1.13.1\AndroidManifest.xml:28:5-89
+MERGED from [androidx.core:core:1.13.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\46f45c9c491e9c84bd296422558af08b\transformed\core-1.13.1\AndroidManifest.xml:28:5-89
+MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c36b2c75a3e2628c981be00d2f258c33\transformed\jetified-lifecycle-process-2.7.0\AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c36b2c75a3e2628c981be00d2f258c33\transformed\jetified-lifecycle-process-2.7.0\AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\4666399c9d5841a48c490295c2fbfc70\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:23:5-53:19
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\4666399c9d5841a48c490295c2fbfc70\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:23:5-53:19
+MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\dab46cb79aa6abf6afdf91953dc21b09\transformed\jetified-startup-runtime-1.1.1\AndroidManifest.xml:25:5-31:19
+MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\dab46cb79aa6abf6afdf91953dc21b09\transformed\jetified-startup-runtime-1.1.1\AndroidManifest.xml:25:5-31:19
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\797b6c21ea6018092b0dc46056d68f34\transformed\versionedparcelable-1.1.1\AndroidManifest.xml:24:5-25:19
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\797b6c21ea6018092b0dc46056d68f34\transformed\versionedparcelable-1.1.1\AndroidManifest.xml:24:5-25:19
+MERGED from [com.google.android.play:core-common:2.0.3] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\e6c64933010690d29b502fd5d3afbba7\transformed\jetified-core-common-2.0.3\AndroidManifest.xml:11:5-19:19
+MERGED from [com.google.android.play:core-common:2.0.3] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\e6c64933010690d29b502fd5d3afbba7\transformed\jetified-core-common-2.0.3\AndroidManifest.xml:11:5-19:19
+	android:extractNativeLibs
+		INJECTED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml
+	android:appComponentFactory
+		ADDED from [androidx.core:core:1.13.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\46f45c9c491e9c84bd296422558af08b\transformed\core-1.13.1\AndroidManifest.xml:28:18-86
+	android:label
+		ADDED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml:3:9-33
+	android:icon
+		ADDED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml:5:9-43
+	android:name
+		INJECTED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml
+		ADDED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml:4:9-42
+manifest
+ADDED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml:1:1-45:12
+INJECTED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml:1:1-45:12
+INJECTED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml:1:1-45:12
+INJECTED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml:1:1-45:12
+MERGED from [:flutter_inappwebview_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:2:1-48:12
+MERGED from [androidx.appcompat:appcompat-resources:1.6.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\ffecda79be21a4a9d5276b3a5af111cd\transformed\jetified-appcompat-resources-1.6.1\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.appcompat:appcompat:1.6.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\51153f5aee13dcbc8c6879529dad27ec\transformed\appcompat-1.6.1\AndroidManifest.xml:17:1-22:12
+MERGED from [:fluttertoast] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\fluttertoast-8.2.12\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:2:1-7:12
+MERGED from [:firebase_auth] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_auth-5.6.2\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:2:1-15:12
+MERGED from [:cloud_firestore] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\cloud_firestore-5.6.11\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:2:1-15:12
+MERGED from [:firebase_storage] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_storage-12.4.9\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:2:1-15:12
+MERGED from [:firebase_core] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_core-3.15.1\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:2:1-15:12
+MERGED from [com.google.firebase:firebase-auth:23.2.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c9f52ecd3c1efbbf165743b1a9e2497d\transformed\jetified-firebase-auth-23.2.1\AndroidManifest.xml:17:1-75:12
+MERGED from [com.google.firebase:firebase-firestore:25.1.4] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\5582a58da308b067469ceb52d141a8ed\transformed\jetified-firebase-firestore-25.1.4\AndroidManifest.xml:2:1-26:12
+MERGED from [com.google.firebase:firebase-storage:21.0.2] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\833386b4b57ec1b2b8f6004e88400953\transformed\jetified-firebase-storage-21.0.2\AndroidManifest.xml:15:1-39:12
+MERGED from [com.google.firebase:firebase-appcheck:18.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\cb1ec9cf40c9b22eb57da524d68e85c2\transformed\jetified-firebase-appcheck-18.0.0\AndroidManifest.xml:15:1-34:12
+MERGED from [com.google.firebase:firebase-common-ktx:21.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\e612cb9f44c7e28a575e8fcb013adc77\transformed\jetified-firebase-common-ktx-21.0.0\AndroidManifest.xml:2:1-18:12
+MERGED from [androidx.credentials:credentials:1.2.0-rc01] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c022f66eff8f1e4bb1f8a865318656c0\transformed\jetified-credentials-1.2.0-rc01\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.credentials:credentials-play-services-auth:1.2.0-rc01] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\9c1ec2ae266a357db6c78572cf62c40f\transformed\jetified-credentials-play-services-auth-1.2.0-rc01\AndroidManifest.xml:17:1-44:12
+MERGED from [com.google.android.libraries.identity.googleid:googleid:1.1.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\e130b3955a06810ef149d1b04a623cd6\transformed\jetified-googleid-1.1.0\AndroidManifest.xml:2:1-7:12
+MERGED from [:image_picker_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_android-0.8.12+23\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:2:1-34:12
+MERGED from [:flutter_plugin_android_lifecycle] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_plugin_android_lifecycle-2.0.28\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:2:1-7:12
+MERGED from [:path_provider_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\path_provider_android-2.2.17\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:2:1-7:12
+MERGED from [:permission_handler_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\permission_handler_android-12.1.0\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:2:1-7:12
+MERGED from [:sqflite_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\sqflite_android-2.4.1\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.webkit:webkit:1.12.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\556e8cd322f6d05dbf437961087f277a\transformed\webkit-1.12.0\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.browser:browser:1.8.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\cc070f256f85406345959f63ca7db49d\transformed\browser-1.8.0\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.swiperefreshlayout:swiperefreshlayout:1.1.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\33be213d95252dffa4f5b0c77ecc58a3\transformed\swiperefreshlayout-1.1.0\AndroidManifest.xml:17:1-24:12
+MERGED from [com.google.firebase:firebase-auth-interop:20.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\47b354a183efe39650e4dbaa4cd97fac\transformed\jetified-firebase-auth-interop-20.0.0\AndroidManifest.xml:2:1-10:12
+MERGED from [com.google.firebase:firebase-common:21.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\293cde33061f2f9f0602f7cff4980ece\transformed\jetified-firebase-common-21.0.0\AndroidManifest.xml:15:1-41:12
+MERGED from [com.google.android.gms:play-services-auth:20.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\ba5b09a313c42abb0170d3ee7c995ce4\transformed\jetified-play-services-auth-20.7.0\AndroidManifest.xml:17:1-40:12
+MERGED from [com.google.android.gms:play-services-auth-api-phone:18.0.2] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\17278c0541d0427ba6823a1b59c20d59\transformed\jetified-play-services-auth-api-phone-18.0.2\AndroidManifest.xml:2:1-7:12
+MERGED from [com.google.android.recaptcha:recaptcha:18.6.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\cbbd2936220be2e7254fe721db7cfc65\transformed\jetified-recaptcha-18.6.1\AndroidManifest.xml:2:1-11:12
+MERGED from [com.google.android.play:integrity:1.3.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\965862285f7b23b7d07309454eb25436\transformed\jetified-integrity-1.3.0\AndroidManifest.xml:2:1-7:12
+MERGED from [com.google.firebase:firebase-database-collection:18.0.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\cee0041839a8931246829ade501bbd24\transformed\jetified-firebase-database-collection-18.0.1\AndroidManifest.xml:2:1-9:12
+MERGED from [com.google.firebase:firebase-appcheck-interop:17.1.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\87c6b81b7998510746dbe482780a528d\transformed\jetified-firebase-appcheck-interop-17.1.0\AndroidManifest.xml:15:1-23:12
+MERGED from [com.google.android.gms:play-services-fido:20.1.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\b0e559b50e916b3718b4f1acb6f13d05\transformed\jetified-play-services-fido-20.1.0\AndroidManifest.xml:2:1-10:12
+MERGED from [com.google.android.gms:play-services-auth-base:18.0.4] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\06f4e767f69a547aaf5a02068383a6ff\transformed\jetified-play-services-auth-base-18.0.4\AndroidManifest.xml:2:1-7:12
+MERGED from [com.google.android.gms:play-services-base:18.1.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c389db2bd53ca2f4f6db5c2fd1f604df\transformed\jetified-play-services-base-18.1.0\AndroidManifest.xml:16:1-24:12
+MERGED from [androidx.window:window:1.2.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\66cf04ec9c2d9614aa49b47e3bf3fc27\transformed\jetified-window-1.2.0\AndroidManifest.xml:17:1-31:12
+MERGED from [androidx.window:window-java:1.2.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\640b5cb519f87fbaba9cd05756a11772\transformed\jetified-window-java-1.2.0\AndroidManifest.xml:17:1-21:12
+MERGED from [androidx.loader:loader:1.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\85361d1d20b8c6026d15e1e1435f5737\transformed\loader-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-livedata-core-ktx:2.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\d909ea7a682c15b5934a2029dd2787f9\transformed\jetified-lifecycle-livedata-core-ktx-2.7.0\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\74f73da62411e04e5f410cb4a7984196\transformed\lifecycle-livedata-core-2.7.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\af56ef89e4739e1d641792e76a4d5c03\transformed\lifecycle-viewmodel-2.7.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\8e5207eb4fa5d2bdb61e66cc0c629ca9\transformed\jetified-lifecycle-viewmodel-savedstate-2.7.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-livedata:2.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\854cdb3d0a158f15d9c1f65553ee978e\transformed\lifecycle-livedata-2.7.0\AndroidManifest.xml:17:1-22:12
+MERGED from [com.google.android.gms:play-services-tasks:18.2.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\8ecabf70163abc52a5eff3ab26b9bc99\transformed\jetified-play-services-tasks-18.2.0\AndroidManifest.xml:2:1-5:12
+MERGED from [com.google.android.gms:play-services-basement:18.4.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\0de81c30645df87b65c711c14c1cf0f0\transformed\jetified-play-services-basement-18.4.0\AndroidManifest.xml:2:1-9:12
+MERGED from [androidx.fragment:fragment:1.7.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\81aa3bbe90ad320abf02dbbabe05abd1\transformed\fragment-1.7.1\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.activity:activity:1.9.3] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\b03a7712fdb85d9f3b90758ee2e08c00\transformed\jetified-activity-1.9.3\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.drawerlayout:drawerlayout:1.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\da98bf95f3c19719a3eca734deb71dcd\transformed\drawerlayout-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.emoji2:emoji2-views-helper:1.2.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\982fbb61abf550c582d5ec18cf2c3579\transformed\jetified-emoji2-views-helper-1.2.0\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.emoji2:emoji2:1.2.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\a68f9caa14184a44430d28858c5674c9\transformed\jetified-emoji2-1.2.0\AndroidManifest.xml:17:1-35:12
+MERGED from [androidx.core:core-ktx:1.13.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\ce8bc7b452e0565ee5a6f512402d52d9\transformed\jetified-core-ktx-1.13.1\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.viewpager:viewpager:1.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\cf988116291d4e915264bdd40afef832\transformed\viewpager-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.vectordrawable:vectordrawable-animated:1.1.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\54b4e145522969fcfc3a49697b1569ce\transformed\vectordrawable-animated-1.1.0\AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.vectordrawable:vectordrawable:1.1.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\da43f14783d9713dde329617b73801ca\transformed\vectordrawable-1.1.0\AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.customview:customview:1.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\b16c1a047e73d2df0ba6daf8dceb7ebf\transformed\customview-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.core:core:1.13.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\46f45c9c491e9c84bd296422558af08b\transformed\core-1.13.1\AndroidManifest.xml:17:1-30:12
+MERGED from [androidx.lifecycle:lifecycle-runtime:2.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\e607621aec3d87ef45008b98326e9b0d\transformed\lifecycle-runtime-2.7.0\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c36b2c75a3e2628c981be00d2f258c33\transformed\jetified-lifecycle-process-2.7.0\AndroidManifest.xml:17:1-35:12
+MERGED from [androidx.savedstate:savedstate:1.2.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\83d7433d6632c4bcf632c06d7db8a7a3\transformed\jetified-savedstate-1.2.1\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.annotation:annotation-experimental:1.4.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\3e00bb98a6af1df8e9120516400f59d2\transformed\jetified-annotation-experimental-1.4.0\AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.exifinterface:exifinterface:1.3.7] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\7b28e344fac9d0432f4acb55d74a566e\transformed\exifinterface-1.3.7\AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\4666399c9d5841a48c490295c2fbfc70\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:17:1-55:12
+MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\dab46cb79aa6abf6afdf91953dc21b09\transformed\jetified-startup-runtime-1.1.1\AndroidManifest.xml:17:1-33:12
+MERGED from [androidx.tracing:tracing:1.2.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\2291f3b200cf308de649efd6378438f5\transformed\jetified-tracing-1.2.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\797b6c21ea6018092b0dc46056d68f34\transformed\versionedparcelable-1.1.1\AndroidManifest.xml:17:1-27:12
+MERGED from [androidx.interpolator:interpolator:1.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\2cc606542682129f6f735b78457b4347\transformed\interpolator-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.cursoradapter:cursoradapter:1.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\20870e2ab01f45e94fd92f244e5ce290\transformed\cursoradapter-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.localbroadcastmanager:localbroadcastmanager:1.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\9741793d16119353db1f8b691dbdf22d\transformed\localbroadcastmanager-1.0.0\AndroidManifest.xml:17:1-22:12
+MERGED from [com.google.firebase:firebase-components:18.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\b4745ac1c6d1a8034ea7418bd55ce843\transformed\jetified-firebase-components-18.0.0\AndroidManifest.xml:15:1-20:12
+MERGED from [androidx.arch.core:core-runtime:2.2.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\27aa9805cb1b93540c7e04555813aca1\transformed\core-runtime-2.2.0\AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.window.extensions.core:core:1.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\fab2311cba570e36925e7f0b74e6bd86\transformed\jetified-core-1.0.0\AndroidManifest.xml:2:1-7:12
+MERGED from [com.getkeepsafe.relinker:relinker:1.4.5] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\6f0d537b3915e4bfe6a41ca41de2ad2b\transformed\jetified-relinker-1.4.5\AndroidManifest.xml:2:1-7:12
+MERGED from [io.grpc:grpc-android:1.62.2] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\79ef5503fe577516fdf8d77b61bd1c0a\transformed\jetified-grpc-android-1.62.2\AndroidManifest.xml:2:1-9:12
+MERGED from [com.google.firebase:protolite-well-known-types:18.0.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\f656ad07d2092bdfbc2a9589798d556b\transformed\jetified-protolite-well-known-types-18.0.1\AndroidManifest.xml:2:1-7:12
+MERGED from [com.google.android.play:core-common:2.0.3] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\e6c64933010690d29b502fd5d3afbba7\transformed\jetified-core-common-2.0.3\AndroidManifest.xml:2:1-21:12
+	package
+		INJECTED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml
+	android:versionName
+		INJECTED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml
+	android:versionCode
+		INJECTED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml
+	xmlns:android
+		ADDED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml:1:11-69
+queries
+ADDED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml:39:5-44:15
+MERGED from [:flutter_inappwebview_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:7:5-11:15
+MERGED from [:flutter_inappwebview_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:7:5-11:15
+intent#action:name:android.intent.action.PROCESS_TEXT+data:mimeType:text/plain
+ADDED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml:40:9-43:18
+action#android.intent.action.PROCESS_TEXT
+ADDED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml:41:13-72
+	android:name
+		ADDED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml:41:21-70
+data
+ADDED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml:42:13-50
+	android:mimeType
+		ADDED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml:42:19-48
+activity#com.example.temp_fix.MainActivity
+ADDED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml:6:9-27:20
+	android:launchMode
+		ADDED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml:9:13-43
+	android:hardwareAccelerated
+		ADDED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml:13:13-47
+	android:windowSoftInputMode
+		ADDED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml:14:13-55
+	android:exported
+		ADDED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml:8:13-36
+	android:configChanges
+		ADDED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml:12:13-163
+	android:theme
+		ADDED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml:11:13-47
+	android:taskAffinity
+		ADDED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml:10:13-36
+	android:name
+		ADDED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml:7:13-41
+meta-data#io.flutter.embedding.android.NormalTheme
+ADDED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml:19:13-22:17
+	android:resource
+		ADDED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml:21:15-52
+	android:name
+		ADDED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml:20:15-70
+intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
+ADDED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml:23:13-26:29
+action#android.intent.action.MAIN
+ADDED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml:24:17-68
+	android:name
+		ADDED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml:24:25-66
+category#android.intent.category.LAUNCHER
+ADDED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml:25:17-76
+	android:name
+		ADDED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml:25:27-74
+meta-data#flutterEmbedding
+ADDED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml:30:9-32:33
+	android:value
+		ADDED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml:32:13-30
+	android:name
+		ADDED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml:31:13-44
+uses-sdk
+INJECTED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml
+INJECTED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml
+MERGED from [:flutter_inappwebview_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:5:5-44
+MERGED from [:flutter_inappwebview_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:5:5-44
+MERGED from [androidx.appcompat:appcompat-resources:1.6.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\ffecda79be21a4a9d5276b3a5af111cd\transformed\jetified-appcompat-resources-1.6.1\AndroidManifest.xml:20:5-44
+MERGED from [androidx.appcompat:appcompat-resources:1.6.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\ffecda79be21a4a9d5276b3a5af111cd\transformed\jetified-appcompat-resources-1.6.1\AndroidManifest.xml:20:5-44
+MERGED from [androidx.appcompat:appcompat:1.6.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\51153f5aee13dcbc8c6879529dad27ec\transformed\appcompat-1.6.1\AndroidManifest.xml:20:5-44
+MERGED from [androidx.appcompat:appcompat:1.6.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\51153f5aee13dcbc8c6879529dad27ec\transformed\appcompat-1.6.1\AndroidManifest.xml:20:5-44
+MERGED from [:fluttertoast] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\fluttertoast-8.2.12\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:5:5-44
+MERGED from [:fluttertoast] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\fluttertoast-8.2.12\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:5:5-44
+MERGED from [:firebase_auth] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_auth-5.6.2\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:5:5-44
+MERGED from [:firebase_auth] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_auth-5.6.2\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:5:5-44
+MERGED from [:cloud_firestore] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\cloud_firestore-5.6.11\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:5:5-44
+MERGED from [:cloud_firestore] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\cloud_firestore-5.6.11\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:5:5-44
+MERGED from [:firebase_storage] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_storage-12.4.9\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:5:5-44
+MERGED from [:firebase_storage] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_storage-12.4.9\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:5:5-44
+MERGED from [:firebase_core] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_core-3.15.1\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:5:5-44
+MERGED from [:firebase_core] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_core-3.15.1\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:5:5-44
+MERGED from [com.google.firebase:firebase-auth:23.2.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c9f52ecd3c1efbbf165743b1a9e2497d\transformed\jetified-firebase-auth-23.2.1\AndroidManifest.xml:21:5-23:151
+MERGED from [com.google.firebase:firebase-auth:23.2.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c9f52ecd3c1efbbf165743b1a9e2497d\transformed\jetified-firebase-auth-23.2.1\AndroidManifest.xml:21:5-23:151
+MERGED from [com.google.firebase:firebase-firestore:25.1.4] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\5582a58da308b067469ceb52d141a8ed\transformed\jetified-firebase-firestore-25.1.4\AndroidManifest.xml:6:5-44
+MERGED from [com.google.firebase:firebase-firestore:25.1.4] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\5582a58da308b067469ceb52d141a8ed\transformed\jetified-firebase-firestore-25.1.4\AndroidManifest.xml:6:5-44
+MERGED from [com.google.firebase:firebase-storage:21.0.2] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\833386b4b57ec1b2b8f6004e88400953\transformed\jetified-firebase-storage-21.0.2\AndroidManifest.xml:19:5-44
+MERGED from [com.google.firebase:firebase-storage:21.0.2] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\833386b4b57ec1b2b8f6004e88400953\transformed\jetified-firebase-storage-21.0.2\AndroidManifest.xml:19:5-44
+MERGED from [com.google.firebase:firebase-appcheck:18.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\cb1ec9cf40c9b22eb57da524d68e85c2\transformed\jetified-firebase-appcheck-18.0.0\AndroidManifest.xml:18:5-44
+MERGED from [com.google.firebase:firebase-appcheck:18.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\cb1ec9cf40c9b22eb57da524d68e85c2\transformed\jetified-firebase-appcheck-18.0.0\AndroidManifest.xml:18:5-44
+MERGED from [com.google.firebase:firebase-common-ktx:21.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\e612cb9f44c7e28a575e8fcb013adc77\transformed\jetified-firebase-common-ktx-21.0.0\AndroidManifest.xml:5:5-44
+MERGED from [com.google.firebase:firebase-common-ktx:21.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\e612cb9f44c7e28a575e8fcb013adc77\transformed\jetified-firebase-common-ktx-21.0.0\AndroidManifest.xml:5:5-44
+MERGED from [androidx.credentials:credentials:1.2.0-rc01] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c022f66eff8f1e4bb1f8a865318656c0\transformed\jetified-credentials-1.2.0-rc01\AndroidManifest.xml:5:5-44
+MERGED from [androidx.credentials:credentials:1.2.0-rc01] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c022f66eff8f1e4bb1f8a865318656c0\transformed\jetified-credentials-1.2.0-rc01\AndroidManifest.xml:5:5-44
+MERGED from [androidx.credentials:credentials-play-services-auth:1.2.0-rc01] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\9c1ec2ae266a357db6c78572cf62c40f\transformed\jetified-credentials-play-services-auth-1.2.0-rc01\AndroidManifest.xml:21:5-44
+MERGED from [androidx.credentials:credentials-play-services-auth:1.2.0-rc01] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\9c1ec2ae266a357db6c78572cf62c40f\transformed\jetified-credentials-play-services-auth-1.2.0-rc01\AndroidManifest.xml:21:5-44
+MERGED from [com.google.android.libraries.identity.googleid:googleid:1.1.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\e130b3955a06810ef149d1b04a623cd6\transformed\jetified-googleid-1.1.0\AndroidManifest.xml:5:5-44
+MERGED from [com.google.android.libraries.identity.googleid:googleid:1.1.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\e130b3955a06810ef149d1b04a623cd6\transformed\jetified-googleid-1.1.0\AndroidManifest.xml:5:5-44
+MERGED from [:image_picker_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_android-0.8.12+23\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:6:5-44
+MERGED from [:image_picker_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_android-0.8.12+23\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:6:5-44
+MERGED from [:flutter_plugin_android_lifecycle] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_plugin_android_lifecycle-2.0.28\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:5:5-44
+MERGED from [:flutter_plugin_android_lifecycle] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_plugin_android_lifecycle-2.0.28\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:5:5-44
+MERGED from [:path_provider_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\path_provider_android-2.2.17\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:5:5-44
+MERGED from [:path_provider_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\path_provider_android-2.2.17\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:5:5-44
+MERGED from [:permission_handler_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\permission_handler_android-12.1.0\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:5:5-44
+MERGED from [:permission_handler_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\permission_handler_android-12.1.0\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:5:5-44
+MERGED from [:sqflite_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\sqflite_android-2.4.1\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:5:5-44
+MERGED from [:sqflite_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\sqflite_android-2.4.1\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:5:5-44
+MERGED from [androidx.webkit:webkit:1.12.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\556e8cd322f6d05dbf437961087f277a\transformed\webkit-1.12.0\AndroidManifest.xml:5:5-44
+MERGED from [androidx.webkit:webkit:1.12.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\556e8cd322f6d05dbf437961087f277a\transformed\webkit-1.12.0\AndroidManifest.xml:5:5-44
+MERGED from [androidx.browser:browser:1.8.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\cc070f256f85406345959f63ca7db49d\transformed\browser-1.8.0\AndroidManifest.xml:5:5-44
+MERGED from [androidx.browser:browser:1.8.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\cc070f256f85406345959f63ca7db49d\transformed\browser-1.8.0\AndroidManifest.xml:5:5-44
+MERGED from [androidx.swiperefreshlayout:swiperefreshlayout:1.1.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\33be213d95252dffa4f5b0c77ecc58a3\transformed\swiperefreshlayout-1.1.0\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.swiperefreshlayout:swiperefreshlayout:1.1.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\33be213d95252dffa4f5b0c77ecc58a3\transformed\swiperefreshlayout-1.1.0\AndroidManifest.xml:20:5-22:41
+MERGED from [com.google.firebase:firebase-auth-interop:20.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\47b354a183efe39650e4dbaa4cd97fac\transformed\jetified-firebase-auth-interop-20.0.0\AndroidManifest.xml:5:5-44
+MERGED from [com.google.firebase:firebase-auth-interop:20.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\47b354a183efe39650e4dbaa4cd97fac\transformed\jetified-firebase-auth-interop-20.0.0\AndroidManifest.xml:5:5-44
+MERGED from [com.google.firebase:firebase-common:21.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\293cde33061f2f9f0602f7cff4980ece\transformed\jetified-firebase-common-21.0.0\AndroidManifest.xml:19:5-44
+MERGED from [com.google.firebase:firebase-common:21.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\293cde33061f2f9f0602f7cff4980ece\transformed\jetified-firebase-common-21.0.0\AndroidManifest.xml:19:5-44
+MERGED from [com.google.android.gms:play-services-auth:20.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\ba5b09a313c42abb0170d3ee7c995ce4\transformed\jetified-play-services-auth-20.7.0\AndroidManifest.xml:20:5-44
+MERGED from [com.google.android.gms:play-services-auth:20.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\ba5b09a313c42abb0170d3ee7c995ce4\transformed\jetified-play-services-auth-20.7.0\AndroidManifest.xml:20:5-44
+MERGED from [com.google.android.gms:play-services-auth-api-phone:18.0.2] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\17278c0541d0427ba6823a1b59c20d59\transformed\jetified-play-services-auth-api-phone-18.0.2\AndroidManifest.xml:5:5-44
+MERGED from [com.google.android.gms:play-services-auth-api-phone:18.0.2] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\17278c0541d0427ba6823a1b59c20d59\transformed\jetified-play-services-auth-api-phone-18.0.2\AndroidManifest.xml:5:5-44
+MERGED from [com.google.android.recaptcha:recaptcha:18.6.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\cbbd2936220be2e7254fe721db7cfc65\transformed\jetified-recaptcha-18.6.1\AndroidManifest.xml:5:5-44
+MERGED from [com.google.android.recaptcha:recaptcha:18.6.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\cbbd2936220be2e7254fe721db7cfc65\transformed\jetified-recaptcha-18.6.1\AndroidManifest.xml:5:5-44
+MERGED from [com.google.android.play:integrity:1.3.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\965862285f7b23b7d07309454eb25436\transformed\jetified-integrity-1.3.0\AndroidManifest.xml:4:5-44
+MERGED from [com.google.android.play:integrity:1.3.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\965862285f7b23b7d07309454eb25436\transformed\jetified-integrity-1.3.0\AndroidManifest.xml:4:5-44
+MERGED from [com.google.firebase:firebase-database-collection:18.0.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\cee0041839a8931246829ade501bbd24\transformed\jetified-firebase-database-collection-18.0.1\AndroidManifest.xml:5:5-7:41
+MERGED from [com.google.firebase:firebase-database-collection:18.0.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\cee0041839a8931246829ade501bbd24\transformed\jetified-firebase-database-collection-18.0.1\AndroidManifest.xml:5:5-7:41
+MERGED from [com.google.firebase:firebase-appcheck-interop:17.1.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\87c6b81b7998510746dbe482780a528d\transformed\jetified-firebase-appcheck-interop-17.1.0\AndroidManifest.xml:18:5-44
+MERGED from [com.google.firebase:firebase-appcheck-interop:17.1.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\87c6b81b7998510746dbe482780a528d\transformed\jetified-firebase-appcheck-interop-17.1.0\AndroidManifest.xml:18:5-44
+MERGED from [com.google.android.gms:play-services-fido:20.1.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\b0e559b50e916b3718b4f1acb6f13d05\transformed\jetified-play-services-fido-20.1.0\AndroidManifest.xml:5:5-44
+MERGED from [com.google.android.gms:play-services-fido:20.1.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\b0e559b50e916b3718b4f1acb6f13d05\transformed\jetified-play-services-fido-20.1.0\AndroidManifest.xml:5:5-44
+MERGED from [com.google.android.gms:play-services-auth-base:18.0.4] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\06f4e767f69a547aaf5a02068383a6ff\transformed\jetified-play-services-auth-base-18.0.4\AndroidManifest.xml:5:5-44
+MERGED from [com.google.android.gms:play-services-auth-base:18.0.4] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\06f4e767f69a547aaf5a02068383a6ff\transformed\jetified-play-services-auth-base-18.0.4\AndroidManifest.xml:5:5-44
+MERGED from [com.google.android.gms:play-services-base:18.1.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c389db2bd53ca2f4f6db5c2fd1f604df\transformed\jetified-play-services-base-18.1.0\AndroidManifest.xml:18:5-43
+MERGED from [com.google.android.gms:play-services-base:18.1.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c389db2bd53ca2f4f6db5c2fd1f604df\transformed\jetified-play-services-base-18.1.0\AndroidManifest.xml:18:5-43
+MERGED from [androidx.window:window:1.2.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\66cf04ec9c2d9614aa49b47e3bf3fc27\transformed\jetified-window-1.2.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.window:window:1.2.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\66cf04ec9c2d9614aa49b47e3bf3fc27\transformed\jetified-window-1.2.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.window:window-java:1.2.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\640b5cb519f87fbaba9cd05756a11772\transformed\jetified-window-java-1.2.0\AndroidManifest.xml:19:5-44
+MERGED from [androidx.window:window-java:1.2.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\640b5cb519f87fbaba9cd05756a11772\transformed\jetified-window-java-1.2.0\AndroidManifest.xml:19:5-44
+MERGED from [androidx.loader:loader:1.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\85361d1d20b8c6026d15e1e1435f5737\transformed\loader-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.loader:loader:1.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\85361d1d20b8c6026d15e1e1435f5737\transformed\loader-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core-ktx:2.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\d909ea7a682c15b5934a2029dd2787f9\transformed\jetified-lifecycle-livedata-core-ktx-2.7.0\AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core-ktx:2.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\d909ea7a682c15b5934a2029dd2787f9\transformed\jetified-lifecycle-livedata-core-ktx-2.7.0\AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\74f73da62411e04e5f410cb4a7984196\transformed\lifecycle-livedata-core-2.7.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\74f73da62411e04e5f410cb4a7984196\transformed\lifecycle-livedata-core-2.7.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\af56ef89e4739e1d641792e76a4d5c03\transformed\lifecycle-viewmodel-2.7.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel:2.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\af56ef89e4739e1d641792e76a4d5c03\transformed\lifecycle-viewmodel-2.7.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\8e5207eb4fa5d2bdb61e66cc0c629ca9\transformed\jetified-lifecycle-viewmodel-savedstate-2.7.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate:2.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\8e5207eb4fa5d2bdb61e66cc0c629ca9\transformed\jetified-lifecycle-viewmodel-savedstate-2.7.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata:2.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\854cdb3d0a158f15d9c1f65553ee978e\transformed\lifecycle-livedata-2.7.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata:2.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\854cdb3d0a158f15d9c1f65553ee978e\transformed\lifecycle-livedata-2.7.0\AndroidManifest.xml:20:5-44
+MERGED from [com.google.android.gms:play-services-tasks:18.2.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\8ecabf70163abc52a5eff3ab26b9bc99\transformed\jetified-play-services-tasks-18.2.0\AndroidManifest.xml:3:5-44
+MERGED from [com.google.android.gms:play-services-tasks:18.2.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\8ecabf70163abc52a5eff3ab26b9bc99\transformed\jetified-play-services-tasks-18.2.0\AndroidManifest.xml:3:5-44
+MERGED from [com.google.android.gms:play-services-basement:18.4.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\0de81c30645df87b65c711c14c1cf0f0\transformed\jetified-play-services-basement-18.4.0\AndroidManifest.xml:3:5-44
+MERGED from [com.google.android.gms:play-services-basement:18.4.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\0de81c30645df87b65c711c14c1cf0f0\transformed\jetified-play-services-basement-18.4.0\AndroidManifest.xml:3:5-44
+MERGED from [androidx.fragment:fragment:1.7.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\81aa3bbe90ad320abf02dbbabe05abd1\transformed\fragment-1.7.1\AndroidManifest.xml:5:5-44
+MERGED from [androidx.fragment:fragment:1.7.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\81aa3bbe90ad320abf02dbbabe05abd1\transformed\fragment-1.7.1\AndroidManifest.xml:5:5-44
+MERGED from [androidx.activity:activity:1.9.3] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\b03a7712fdb85d9f3b90758ee2e08c00\transformed\jetified-activity-1.9.3\AndroidManifest.xml:20:5-44
+MERGED from [androidx.activity:activity:1.9.3] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\b03a7712fdb85d9f3b90758ee2e08c00\transformed\jetified-activity-1.9.3\AndroidManifest.xml:20:5-44
+MERGED from [androidx.drawerlayout:drawerlayout:1.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\da98bf95f3c19719a3eca734deb71dcd\transformed\drawerlayout-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.drawerlayout:drawerlayout:1.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\da98bf95f3c19719a3eca734deb71dcd\transformed\drawerlayout-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.emoji2:emoji2-views-helper:1.2.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\982fbb61abf550c582d5ec18cf2c3579\transformed\jetified-emoji2-views-helper-1.2.0\AndroidManifest.xml:5:5-44
+MERGED from [androidx.emoji2:emoji2-views-helper:1.2.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\982fbb61abf550c582d5ec18cf2c3579\transformed\jetified-emoji2-views-helper-1.2.0\AndroidManifest.xml:5:5-44
+MERGED from [androidx.emoji2:emoji2:1.2.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\a68f9caa14184a44430d28858c5674c9\transformed\jetified-emoji2-1.2.0\AndroidManifest.xml:21:5-44
+MERGED from [androidx.emoji2:emoji2:1.2.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\a68f9caa14184a44430d28858c5674c9\transformed\jetified-emoji2-1.2.0\AndroidManifest.xml:21:5-44
+MERGED from [androidx.core:core-ktx:1.13.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\ce8bc7b452e0565ee5a6f512402d52d9\transformed\jetified-core-ktx-1.13.1\AndroidManifest.xml:5:5-44
+MERGED from [androidx.core:core-ktx:1.13.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\ce8bc7b452e0565ee5a6f512402d52d9\transformed\jetified-core-ktx-1.13.1\AndroidManifest.xml:5:5-44
+MERGED from [androidx.viewpager:viewpager:1.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\cf988116291d4e915264bdd40afef832\transformed\viewpager-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.viewpager:viewpager:1.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\cf988116291d4e915264bdd40afef832\transformed\viewpager-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.vectordrawable:vectordrawable-animated:1.1.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\54b4e145522969fcfc3a49697b1569ce\transformed\vectordrawable-animated-1.1.0\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.vectordrawable:vectordrawable-animated:1.1.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\54b4e145522969fcfc3a49697b1569ce\transformed\vectordrawable-animated-1.1.0\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.vectordrawable:vectordrawable:1.1.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\da43f14783d9713dde329617b73801ca\transformed\vectordrawable-1.1.0\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.vectordrawable:vectordrawable:1.1.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\da43f14783d9713dde329617b73801ca\transformed\vectordrawable-1.1.0\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.customview:customview:1.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\b16c1a047e73d2df0ba6daf8dceb7ebf\transformed\customview-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.customview:customview:1.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\b16c1a047e73d2df0ba6daf8dceb7ebf\transformed\customview-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.core:core:1.13.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\46f45c9c491e9c84bd296422558af08b\transformed\core-1.13.1\AndroidManifest.xml:20:5-44
+MERGED from [androidx.core:core:1.13.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\46f45c9c491e9c84bd296422558af08b\transformed\core-1.13.1\AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime:2.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\e607621aec3d87ef45008b98326e9b0d\transformed\lifecycle-runtime-2.7.0\AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime:2.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\e607621aec3d87ef45008b98326e9b0d\transformed\lifecycle-runtime-2.7.0\AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c36b2c75a3e2628c981be00d2f258c33\transformed\jetified-lifecycle-process-2.7.0\AndroidManifest.xml:21:5-44
+MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c36b2c75a3e2628c981be00d2f258c33\transformed\jetified-lifecycle-process-2.7.0\AndroidManifest.xml:21:5-44
+MERGED from [androidx.savedstate:savedstate:1.2.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\83d7433d6632c4bcf632c06d7db8a7a3\transformed\jetified-savedstate-1.2.1\AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate:1.2.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\83d7433d6632c4bcf632c06d7db8a7a3\transformed\jetified-savedstate-1.2.1\AndroidManifest.xml:20:5-44
+MERGED from [androidx.annotation:annotation-experimental:1.4.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\3e00bb98a6af1df8e9120516400f59d2\transformed\jetified-annotation-experimental-1.4.0\AndroidManifest.xml:5:5-44
+MERGED from [androidx.annotation:annotation-experimental:1.4.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\3e00bb98a6af1df8e9120516400f59d2\transformed\jetified-annotation-experimental-1.4.0\AndroidManifest.xml:5:5-44
+MERGED from [androidx.exifinterface:exifinterface:1.3.7] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\7b28e344fac9d0432f4acb55d74a566e\transformed\exifinterface-1.3.7\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.exifinterface:exifinterface:1.3.7] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\7b28e344fac9d0432f4acb55d74a566e\transformed\exifinterface-1.3.7\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\4666399c9d5841a48c490295c2fbfc70\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:21:5-44
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\4666399c9d5841a48c490295c2fbfc70\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:21:5-44
+MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\dab46cb79aa6abf6afdf91953dc21b09\transformed\jetified-startup-runtime-1.1.1\AndroidManifest.xml:21:5-23:41
+MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\dab46cb79aa6abf6afdf91953dc21b09\transformed\jetified-startup-runtime-1.1.1\AndroidManifest.xml:21:5-23:41
+MERGED from [androidx.tracing:tracing:1.2.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\2291f3b200cf308de649efd6378438f5\transformed\jetified-tracing-1.2.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.tracing:tracing:1.2.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\2291f3b200cf308de649efd6378438f5\transformed\jetified-tracing-1.2.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\797b6c21ea6018092b0dc46056d68f34\transformed\versionedparcelable-1.1.1\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\797b6c21ea6018092b0dc46056d68f34\transformed\versionedparcelable-1.1.1\AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.interpolator:interpolator:1.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\2cc606542682129f6f735b78457b4347\transformed\interpolator-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.interpolator:interpolator:1.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\2cc606542682129f6f735b78457b4347\transformed\interpolator-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.cursoradapter:cursoradapter:1.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\20870e2ab01f45e94fd92f244e5ce290\transformed\cursoradapter-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.cursoradapter:cursoradapter:1.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\20870e2ab01f45e94fd92f244e5ce290\transformed\cursoradapter-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.localbroadcastmanager:localbroadcastmanager:1.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\9741793d16119353db1f8b691dbdf22d\transformed\localbroadcastmanager-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.localbroadcastmanager:localbroadcastmanager:1.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\9741793d16119353db1f8b691dbdf22d\transformed\localbroadcastmanager-1.0.0\AndroidManifest.xml:20:5-44
+MERGED from [com.google.firebase:firebase-components:18.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\b4745ac1c6d1a8034ea7418bd55ce843\transformed\jetified-firebase-components-18.0.0\AndroidManifest.xml:18:5-44
+MERGED from [com.google.firebase:firebase-components:18.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\b4745ac1c6d1a8034ea7418bd55ce843\transformed\jetified-firebase-components-18.0.0\AndroidManifest.xml:18:5-44
+MERGED from [androidx.arch.core:core-runtime:2.2.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\27aa9805cb1b93540c7e04555813aca1\transformed\core-runtime-2.2.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.arch.core:core-runtime:2.2.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\27aa9805cb1b93540c7e04555813aca1\transformed\core-runtime-2.2.0\AndroidManifest.xml:20:5-44
+MERGED from [androidx.window.extensions.core:core:1.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\fab2311cba570e36925e7f0b74e6bd86\transformed\jetified-core-1.0.0\AndroidManifest.xml:5:5-44
+MERGED from [androidx.window.extensions.core:core:1.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\fab2311cba570e36925e7f0b74e6bd86\transformed\jetified-core-1.0.0\AndroidManifest.xml:5:5-44
+MERGED from [com.getkeepsafe.relinker:relinker:1.4.5] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\6f0d537b3915e4bfe6a41ca41de2ad2b\transformed\jetified-relinker-1.4.5\AndroidManifest.xml:5:5-43
+MERGED from [com.getkeepsafe.relinker:relinker:1.4.5] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\6f0d537b3915e4bfe6a41ca41de2ad2b\transformed\jetified-relinker-1.4.5\AndroidManifest.xml:5:5-43
+MERGED from [io.grpc:grpc-android:1.62.2] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\79ef5503fe577516fdf8d77b61bd1c0a\transformed\jetified-grpc-android-1.62.2\AndroidManifest.xml:5:5-44
+MERGED from [io.grpc:grpc-android:1.62.2] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\79ef5503fe577516fdf8d77b61bd1c0a\transformed\jetified-grpc-android-1.62.2\AndroidManifest.xml:5:5-44
+MERGED from [com.google.firebase:protolite-well-known-types:18.0.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\f656ad07d2092bdfbc2a9589798d556b\transformed\jetified-protolite-well-known-types-18.0.1\AndroidManifest.xml:5:5-44
+MERGED from [com.google.firebase:protolite-well-known-types:18.0.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\f656ad07d2092bdfbc2a9589798d556b\transformed\jetified-protolite-well-known-types-18.0.1\AndroidManifest.xml:5:5-44
+MERGED from [com.google.android.play:core-common:2.0.3] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\e6c64933010690d29b502fd5d3afbba7\transformed\jetified-core-common-2.0.3\AndroidManifest.xml:7:5-9:41
+MERGED from [com.google.android.play:core-common:2.0.3] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\e6c64933010690d29b502fd5d3afbba7\transformed\jetified-core-common-2.0.3\AndroidManifest.xml:7:5-9:41
+	tools:overrideLibrary
+		ADDED from [com.google.firebase:firebase-auth:23.2.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c9f52ecd3c1efbbf165743b1a9e2497d\transformed\jetified-firebase-auth-23.2.1\AndroidManifest.xml:23:9-148
+	android:targetSdkVersion
+		INJECTED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from C:\Users\KENEDDY\event_locator_app_new\android\app\src\main\AndroidManifest.xml
+intent#action:name:android.support.customtabs.action.CustomTabsService
+ADDED from [:flutter_inappwebview_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:8:9-10:18
+action#android.support.customtabs.action.CustomTabsService
+ADDED from [:flutter_inappwebview_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:9:13-90
+	android:name
+		ADDED from [:flutter_inappwebview_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:9:21-87
+activity#com.pichillilorenzo.flutter_inappwebview_android.in_app_browser.InAppBrowserActivity
+ADDED from [:flutter_inappwebview_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:14:9-18:47
+	android:exported
+		ADDED from [:flutter_inappwebview_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:17:13-37
+	android:configChanges
+		ADDED from [:flutter_inappwebview_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:16:13-137
+	android:theme
+		ADDED from [:flutter_inappwebview_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:18:13-44
+	android:name
+		ADDED from [:flutter_inappwebview_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:15:13-112
+activity#com.pichillilorenzo.flutter_inappwebview_android.chrome_custom_tabs.ChromeCustomTabsActivity
+ADDED from [:flutter_inappwebview_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:19:9-22:55
+	android:exported
+		ADDED from [:flutter_inappwebview_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:21:13-37
+	android:theme
+		ADDED from [:flutter_inappwebview_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:22:13-52
+	android:name
+		ADDED from [:flutter_inappwebview_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:20:13-120
+activity#com.pichillilorenzo.flutter_inappwebview_android.chrome_custom_tabs.TrustedWebActivity
+ADDED from [:flutter_inappwebview_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:23:9-26:55
+	android:exported
+		ADDED from [:flutter_inappwebview_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:25:13-37
+	android:theme
+		ADDED from [:flutter_inappwebview_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:26:13-52
+	android:name
+		ADDED from [:flutter_inappwebview_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:24:13-114
+activity#com.pichillilorenzo.flutter_inappwebview_android.chrome_custom_tabs.ChromeCustomTabsActivitySingleInstance
+ADDED from [:flutter_inappwebview_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:27:9-31:55
+	android:launchMode
+		ADDED from [:flutter_inappwebview_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:30:13-48
+	android:exported
+		ADDED from [:flutter_inappwebview_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:29:13-37
+	android:theme
+		ADDED from [:flutter_inappwebview_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:31:13-52
+	android:name
+		ADDED from [:flutter_inappwebview_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:28:13-134
+activity#com.pichillilorenzo.flutter_inappwebview_android.chrome_custom_tabs.TrustedWebActivitySingleInstance
+ADDED from [:flutter_inappwebview_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:32:9-36:55
+	android:launchMode
+		ADDED from [:flutter_inappwebview_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:35:13-48
+	android:exported
+		ADDED from [:flutter_inappwebview_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:34:13-37
+	android:theme
+		ADDED from [:flutter_inappwebview_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:36:13-52
+	android:name
+		ADDED from [:flutter_inappwebview_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:33:13-128
+receiver#com.pichillilorenzo.flutter_inappwebview_android.chrome_custom_tabs.ActionBroadcastReceiver
+ADDED from [:flutter_inappwebview_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:38:9-41:40
+	android:enabled
+		ADDED from [:flutter_inappwebview_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:40:13-35
+	android:exported
+		ADDED from [:flutter_inappwebview_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:41:13-37
+	android:name
+		ADDED from [:flutter_inappwebview_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:39:13-119
+meta-data#io.flutter.embedded_views_preview
+ADDED from [:flutter_inappwebview_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:43:9-45:36
+	android:value
+		ADDED from [:flutter_inappwebview_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:45:13-33
+	android:name
+		ADDED from [:flutter_inappwebview_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\flutter_inappwebview_android-1.1.3\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:44:13-61
+service#com.google.firebase.components.ComponentDiscoveryService
+ADDED from [:firebase_auth] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_auth-5.6.2\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:8:9-12:19
+MERGED from [:cloud_firestore] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\cloud_firestore-5.6.11\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:8:9-12:19
+MERGED from [:cloud_firestore] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\cloud_firestore-5.6.11\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:8:9-12:19
+MERGED from [:firebase_storage] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_storage-12.4.9\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:8:9-12:19
+MERGED from [:firebase_storage] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_storage-12.4.9\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:8:9-12:19
+MERGED from [:firebase_core] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_core-3.15.1\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:8:9-12:19
+MERGED from [:firebase_core] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_core-3.15.1\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:8:9-12:19
+MERGED from [com.google.firebase:firebase-auth:23.2.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c9f52ecd3c1efbbf165743b1a9e2497d\transformed\jetified-firebase-auth-23.2.1\AndroidManifest.xml:66:9-72:19
+MERGED from [com.google.firebase:firebase-auth:23.2.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c9f52ecd3c1efbbf165743b1a9e2497d\transformed\jetified-firebase-auth-23.2.1\AndroidManifest.xml:66:9-72:19
+MERGED from [com.google.firebase:firebase-firestore:25.1.4] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\5582a58da308b067469ceb52d141a8ed\transformed\jetified-firebase-firestore-25.1.4\AndroidManifest.xml:14:9-23:19
+MERGED from [com.google.firebase:firebase-firestore:25.1.4] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\5582a58da308b067469ceb52d141a8ed\transformed\jetified-firebase-firestore-25.1.4\AndroidManifest.xml:14:9-23:19
+MERGED from [com.google.firebase:firebase-storage:21.0.2] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\833386b4b57ec1b2b8f6004e88400953\transformed\jetified-firebase-storage-21.0.2\AndroidManifest.xml:27:9-36:19
+MERGED from [com.google.firebase:firebase-storage:21.0.2] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\833386b4b57ec1b2b8f6004e88400953\transformed\jetified-firebase-storage-21.0.2\AndroidManifest.xml:27:9-36:19
+MERGED from [com.google.firebase:firebase-appcheck:18.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\cb1ec9cf40c9b22eb57da524d68e85c2\transformed\jetified-firebase-appcheck-18.0.0\AndroidManifest.xml:22:9-31:19
+MERGED from [com.google.firebase:firebase-appcheck:18.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\cb1ec9cf40c9b22eb57da524d68e85c2\transformed\jetified-firebase-appcheck-18.0.0\AndroidManifest.xml:22:9-31:19
+MERGED from [com.google.firebase:firebase-common-ktx:21.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\e612cb9f44c7e28a575e8fcb013adc77\transformed\jetified-firebase-common-ktx-21.0.0\AndroidManifest.xml:9:9-15:19
+MERGED from [com.google.firebase:firebase-common-ktx:21.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\e612cb9f44c7e28a575e8fcb013adc77\transformed\jetified-firebase-common-ktx-21.0.0\AndroidManifest.xml:9:9-15:19
+MERGED from [com.google.firebase:firebase-common:21.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\293cde33061f2f9f0602f7cff4980ece\transformed\jetified-firebase-common-21.0.0\AndroidManifest.xml:30:9-38:19
+MERGED from [com.google.firebase:firebase-common:21.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\293cde33061f2f9f0602f7cff4980ece\transformed\jetified-firebase-common-21.0.0\AndroidManifest.xml:30:9-38:19
+	android:exported
+		ADDED from [com.google.firebase:firebase-auth:23.2.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c9f52ecd3c1efbbf165743b1a9e2497d\transformed\jetified-firebase-auth-23.2.1\AndroidManifest.xml:68:13-37
+	tools:targetApi
+		ADDED from [com.google.firebase:firebase-common:21.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\293cde33061f2f9f0602f7cff4980ece\transformed\jetified-firebase-common-21.0.0\AndroidManifest.xml:34:13-32
+	android:directBootAware
+		ADDED from [com.google.firebase:firebase-common:21.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\293cde33061f2f9f0602f7cff4980ece\transformed\jetified-firebase-common-21.0.0\AndroidManifest.xml:32:13-43
+	android:name
+		ADDED from [:firebase_auth] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_auth-5.6.2\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:8:18-89
+meta-data#com.google.firebase.components:io.flutter.plugins.firebase.auth.FlutterFirebaseAuthRegistrar
+ADDED from [:firebase_auth] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_auth-5.6.2\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:9:13-11:85
+	android:value
+		ADDED from [:firebase_auth] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_auth-5.6.2\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:11:17-82
+	android:name
+		ADDED from [:firebase_auth] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_auth-5.6.2\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:10:17-124
+meta-data#com.google.firebase.components:io.flutter.plugins.firebase.firestore.FlutterFirebaseFirestoreRegistrar
+ADDED from [:cloud_firestore] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\cloud_firestore-5.6.11\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:9:13-11:85
+	android:value
+		ADDED from [:cloud_firestore] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\cloud_firestore-5.6.11\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:11:17-82
+	android:name
+		ADDED from [:cloud_firestore] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\cloud_firestore-5.6.11\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:10:17-134
+meta-data#com.google.firebase.components:io.flutter.plugins.firebase.storage.FlutterFirebaseAppRegistrar
+ADDED from [:firebase_storage] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_storage-12.4.9\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:9:13-11:85
+	android:value
+		ADDED from [:firebase_storage] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_storage-12.4.9\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:11:17-82
+	android:name
+		ADDED from [:firebase_storage] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_storage-12.4.9\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:10:17-126
+meta-data#com.google.firebase.components:io.flutter.plugins.firebase.core.FlutterFirebaseCoreRegistrar
+ADDED from [:firebase_core] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_core-3.15.1\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:9:13-11:85
+	android:value
+		ADDED from [:firebase_core] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_core-3.15.1\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:11:17-82
+	android:name
+		ADDED from [:firebase_core] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\firebase_core-3.15.1\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:10:17-124
+uses-permission#android.permission.INTERNET
+ADDED from [com.google.firebase:firebase-auth:23.2.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c9f52ecd3c1efbbf165743b1a9e2497d\transformed\jetified-firebase-auth-23.2.1\AndroidManifest.xml:25:5-67
+MERGED from [com.google.firebase:firebase-firestore:25.1.4] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\5582a58da308b067469ceb52d141a8ed\transformed\jetified-firebase-firestore-25.1.4\AndroidManifest.xml:11:5-67
+MERGED from [com.google.firebase:firebase-firestore:25.1.4] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\5582a58da308b067469ceb52d141a8ed\transformed\jetified-firebase-firestore-25.1.4\AndroidManifest.xml:11:5-67
+MERGED from [com.google.firebase:firebase-storage:21.0.2] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\833386b4b57ec1b2b8f6004e88400953\transformed\jetified-firebase-storage-21.0.2\AndroidManifest.xml:24:5-67
+MERGED from [com.google.firebase:firebase-storage:21.0.2] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\833386b4b57ec1b2b8f6004e88400953\transformed\jetified-firebase-storage-21.0.2\AndroidManifest.xml:24:5-67
+MERGED from [com.google.android.recaptcha:recaptcha:18.6.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\cbbd2936220be2e7254fe721db7cfc65\transformed\jetified-recaptcha-18.6.1\AndroidManifest.xml:7:5-67
+MERGED from [com.google.android.recaptcha:recaptcha:18.6.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\cbbd2936220be2e7254fe721db7cfc65\transformed\jetified-recaptcha-18.6.1\AndroidManifest.xml:7:5-67
+	android:name
+		ADDED from [com.google.firebase:firebase-auth:23.2.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c9f52ecd3c1efbbf165743b1a9e2497d\transformed\jetified-firebase-auth-23.2.1\AndroidManifest.xml:25:22-64
+uses-permission#android.permission.ACCESS_NETWORK_STATE
+ADDED from [com.google.firebase:firebase-auth:23.2.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c9f52ecd3c1efbbf165743b1a9e2497d\transformed\jetified-firebase-auth-23.2.1\AndroidManifest.xml:26:5-79
+MERGED from [com.google.firebase:firebase-firestore:25.1.4] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\5582a58da308b067469ceb52d141a8ed\transformed\jetified-firebase-firestore-25.1.4\AndroidManifest.xml:10:5-79
+MERGED from [com.google.firebase:firebase-firestore:25.1.4] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\5582a58da308b067469ceb52d141a8ed\transformed\jetified-firebase-firestore-25.1.4\AndroidManifest.xml:10:5-79
+MERGED from [com.google.firebase:firebase-storage:21.0.2] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\833386b4b57ec1b2b8f6004e88400953\transformed\jetified-firebase-storage-21.0.2\AndroidManifest.xml:23:5-79
+MERGED from [com.google.firebase:firebase-storage:21.0.2] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\833386b4b57ec1b2b8f6004e88400953\transformed\jetified-firebase-storage-21.0.2\AndroidManifest.xml:23:5-79
+MERGED from [com.google.android.recaptcha:recaptcha:18.6.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\cbbd2936220be2e7254fe721db7cfc65\transformed\jetified-recaptcha-18.6.1\AndroidManifest.xml:8:5-79
+MERGED from [com.google.android.recaptcha:recaptcha:18.6.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\cbbd2936220be2e7254fe721db7cfc65\transformed\jetified-recaptcha-18.6.1\AndroidManifest.xml:8:5-79
+MERGED from [io.grpc:grpc-android:1.62.2] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\79ef5503fe577516fdf8d77b61bd1c0a\transformed\jetified-grpc-android-1.62.2\AndroidManifest.xml:7:5-79
+MERGED from [io.grpc:grpc-android:1.62.2] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\79ef5503fe577516fdf8d77b61bd1c0a\transformed\jetified-grpc-android-1.62.2\AndroidManifest.xml:7:5-79
+	android:name
+		ADDED from [com.google.firebase:firebase-auth:23.2.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c9f52ecd3c1efbbf165743b1a9e2497d\transformed\jetified-firebase-auth-23.2.1\AndroidManifest.xml:26:22-76
+activity#com.google.firebase.auth.internal.GenericIdpActivity
+ADDED from [com.google.firebase:firebase-auth:23.2.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c9f52ecd3c1efbbf165743b1a9e2497d\transformed\jetified-firebase-auth-23.2.1\AndroidManifest.xml:29:9-46:20
+	android:excludeFromRecents
+		ADDED from [com.google.firebase:firebase-auth:23.2.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c9f52ecd3c1efbbf165743b1a9e2497d\transformed\jetified-firebase-auth-23.2.1\AndroidManifest.xml:31:13-46
+	android:launchMode
+		ADDED from [com.google.firebase:firebase-auth:23.2.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c9f52ecd3c1efbbf165743b1a9e2497d\transformed\jetified-firebase-auth-23.2.1\AndroidManifest.xml:33:13-44
+	android:exported
+		ADDED from [com.google.firebase:firebase-auth:23.2.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c9f52ecd3c1efbbf165743b1a9e2497d\transformed\jetified-firebase-auth-23.2.1\AndroidManifest.xml:32:13-36
+	android:theme
+		ADDED from [com.google.firebase:firebase-auth:23.2.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c9f52ecd3c1efbbf165743b1a9e2497d\transformed\jetified-firebase-auth-23.2.1\AndroidManifest.xml:34:13-72
+	android:name
+		ADDED from [com.google.firebase:firebase-auth:23.2.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c9f52ecd3c1efbbf165743b1a9e2497d\transformed\jetified-firebase-auth-23.2.1\AndroidManifest.xml:30:13-80
+intent-filter#action:name:android.intent.action.VIEW+category:name:android.intent.category.BROWSABLE+category:name:android.intent.category.DEFAULT+data:host:firebase.auth+data:path:/+data:scheme:genericidp
+ADDED from [com.google.firebase:firebase-auth:23.2.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c9f52ecd3c1efbbf165743b1a9e2497d\transformed\jetified-firebase-auth-23.2.1\AndroidManifest.xml:35:13-45:29
+action#android.intent.action.VIEW
+ADDED from [com.google.firebase:firebase-auth:23.2.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c9f52ecd3c1efbbf165743b1a9e2497d\transformed\jetified-firebase-auth-23.2.1\AndroidManifest.xml:36:17-69
+	android:name
+		ADDED from [com.google.firebase:firebase-auth:23.2.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c9f52ecd3c1efbbf165743b1a9e2497d\transformed\jetified-firebase-auth-23.2.1\AndroidManifest.xml:36:25-66
+category#android.intent.category.DEFAULT
+ADDED from [com.google.firebase:firebase-auth:23.2.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c9f52ecd3c1efbbf165743b1a9e2497d\transformed\jetified-firebase-auth-23.2.1\AndroidManifest.xml:38:17-76
+	android:name
+		ADDED from [com.google.firebase:firebase-auth:23.2.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c9f52ecd3c1efbbf165743b1a9e2497d\transformed\jetified-firebase-auth-23.2.1\AndroidManifest.xml:38:27-73
+category#android.intent.category.BROWSABLE
+ADDED from [com.google.firebase:firebase-auth:23.2.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c9f52ecd3c1efbbf165743b1a9e2497d\transformed\jetified-firebase-auth-23.2.1\AndroidManifest.xml:39:17-78
+	android:name
+		ADDED from [com.google.firebase:firebase-auth:23.2.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c9f52ecd3c1efbbf165743b1a9e2497d\transformed\jetified-firebase-auth-23.2.1\AndroidManifest.xml:39:27-75
+activity#com.google.firebase.auth.internal.RecaptchaActivity
+ADDED from [com.google.firebase:firebase-auth:23.2.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c9f52ecd3c1efbbf165743b1a9e2497d\transformed\jetified-firebase-auth-23.2.1\AndroidManifest.xml:47:9-64:20
+	android:excludeFromRecents
+		ADDED from [com.google.firebase:firebase-auth:23.2.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c9f52ecd3c1efbbf165743b1a9e2497d\transformed\jetified-firebase-auth-23.2.1\AndroidManifest.xml:49:13-46
+	android:launchMode
+		ADDED from [com.google.firebase:firebase-auth:23.2.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c9f52ecd3c1efbbf165743b1a9e2497d\transformed\jetified-firebase-auth-23.2.1\AndroidManifest.xml:51:13-44
+	android:exported
+		ADDED from [com.google.firebase:firebase-auth:23.2.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c9f52ecd3c1efbbf165743b1a9e2497d\transformed\jetified-firebase-auth-23.2.1\AndroidManifest.xml:50:13-36
+	android:theme
+		ADDED from [com.google.firebase:firebase-auth:23.2.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c9f52ecd3c1efbbf165743b1a9e2497d\transformed\jetified-firebase-auth-23.2.1\AndroidManifest.xml:52:13-72
+	android:name
+		ADDED from [com.google.firebase:firebase-auth:23.2.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c9f52ecd3c1efbbf165743b1a9e2497d\transformed\jetified-firebase-auth-23.2.1\AndroidManifest.xml:48:13-79
+intent-filter#action:name:android.intent.action.VIEW+category:name:android.intent.category.BROWSABLE+category:name:android.intent.category.DEFAULT+data:host:firebase.auth+data:path:/+data:scheme:recaptcha
+ADDED from [com.google.firebase:firebase-auth:23.2.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c9f52ecd3c1efbbf165743b1a9e2497d\transformed\jetified-firebase-auth-23.2.1\AndroidManifest.xml:53:13-63:29
+meta-data#com.google.firebase.components:com.google.firebase.auth.FirebaseAuthRegistrar
+ADDED from [com.google.firebase:firebase-auth:23.2.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c9f52ecd3c1efbbf165743b1a9e2497d\transformed\jetified-firebase-auth-23.2.1\AndroidManifest.xml:69:13-71:85
+	android:value
+		ADDED from [com.google.firebase:firebase-auth:23.2.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c9f52ecd3c1efbbf165743b1a9e2497d\transformed\jetified-firebase-auth-23.2.1\AndroidManifest.xml:71:17-82
+	android:name
+		ADDED from [com.google.firebase:firebase-auth:23.2.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c9f52ecd3c1efbbf165743b1a9e2497d\transformed\jetified-firebase-auth-23.2.1\AndroidManifest.xml:70:17-109
+meta-data#com.google.firebase.components:com.google.firebase.firestore.FirebaseFirestoreKtxRegistrar
+ADDED from [com.google.firebase:firebase-firestore:25.1.4] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\5582a58da308b067469ceb52d141a8ed\transformed\jetified-firebase-firestore-25.1.4\AndroidManifest.xml:17:13-19:85
+	android:value
+		ADDED from [com.google.firebase:firebase-firestore:25.1.4] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\5582a58da308b067469ceb52d141a8ed\transformed\jetified-firebase-firestore-25.1.4\AndroidManifest.xml:19:17-82
+	android:name
+		ADDED from [com.google.firebase:firebase-firestore:25.1.4] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\5582a58da308b067469ceb52d141a8ed\transformed\jetified-firebase-firestore-25.1.4\AndroidManifest.xml:18:17-122
+meta-data#com.google.firebase.components:com.google.firebase.firestore.FirestoreRegistrar
+ADDED from [com.google.firebase:firebase-firestore:25.1.4] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\5582a58da308b067469ceb52d141a8ed\transformed\jetified-firebase-firestore-25.1.4\AndroidManifest.xml:20:13-22:85
+	android:value
+		ADDED from [com.google.firebase:firebase-firestore:25.1.4] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\5582a58da308b067469ceb52d141a8ed\transformed\jetified-firebase-firestore-25.1.4\AndroidManifest.xml:22:17-82
+	android:name
+		ADDED from [com.google.firebase:firebase-firestore:25.1.4] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\5582a58da308b067469ceb52d141a8ed\transformed\jetified-firebase-firestore-25.1.4\AndroidManifest.xml:21:17-111
+meta-data#com.google.firebase.components:com.google.firebase.storage.FirebaseStorageKtxRegistrar
+ADDED from [com.google.firebase:firebase-storage:21.0.2] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\833386b4b57ec1b2b8f6004e88400953\transformed\jetified-firebase-storage-21.0.2\AndroidManifest.xml:30:13-32:85
+	android:value
+		ADDED from [com.google.firebase:firebase-storage:21.0.2] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\833386b4b57ec1b2b8f6004e88400953\transformed\jetified-firebase-storage-21.0.2\AndroidManifest.xml:32:17-82
+	android:name
+		ADDED from [com.google.firebase:firebase-storage:21.0.2] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\833386b4b57ec1b2b8f6004e88400953\transformed\jetified-firebase-storage-21.0.2\AndroidManifest.xml:31:17-118
+meta-data#com.google.firebase.components:com.google.firebase.storage.StorageRegistrar
+ADDED from [com.google.firebase:firebase-storage:21.0.2] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\833386b4b57ec1b2b8f6004e88400953\transformed\jetified-firebase-storage-21.0.2\AndroidManifest.xml:33:13-35:85
+	android:value
+		ADDED from [com.google.firebase:firebase-storage:21.0.2] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\833386b4b57ec1b2b8f6004e88400953\transformed\jetified-firebase-storage-21.0.2\AndroidManifest.xml:35:17-82
+	android:name
+		ADDED from [com.google.firebase:firebase-storage:21.0.2] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\833386b4b57ec1b2b8f6004e88400953\transformed\jetified-firebase-storage-21.0.2\AndroidManifest.xml:34:17-107
+meta-data#com.google.firebase.components:com.google.firebase.appcheck.FirebaseAppCheckKtxRegistrar
+ADDED from [com.google.firebase:firebase-appcheck:18.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\cb1ec9cf40c9b22eb57da524d68e85c2\transformed\jetified-firebase-appcheck-18.0.0\AndroidManifest.xml:25:13-27:85
+	android:value
+		ADDED from [com.google.firebase:firebase-appcheck:18.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\cb1ec9cf40c9b22eb57da524d68e85c2\transformed\jetified-firebase-appcheck-18.0.0\AndroidManifest.xml:27:17-82
+	android:name
+		ADDED from [com.google.firebase:firebase-appcheck:18.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\cb1ec9cf40c9b22eb57da524d68e85c2\transformed\jetified-firebase-appcheck-18.0.0\AndroidManifest.xml:26:17-120
+meta-data#com.google.firebase.components:com.google.firebase.appcheck.FirebaseAppCheckRegistrar
+ADDED from [com.google.firebase:firebase-appcheck:18.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\cb1ec9cf40c9b22eb57da524d68e85c2\transformed\jetified-firebase-appcheck-18.0.0\AndroidManifest.xml:28:13-30:85
+	android:value
+		ADDED from [com.google.firebase:firebase-appcheck:18.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\cb1ec9cf40c9b22eb57da524d68e85c2\transformed\jetified-firebase-appcheck-18.0.0\AndroidManifest.xml:30:17-82
+	android:name
+		ADDED from [com.google.firebase:firebase-appcheck:18.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\cb1ec9cf40c9b22eb57da524d68e85c2\transformed\jetified-firebase-appcheck-18.0.0\AndroidManifest.xml:29:17-117
+meta-data#com.google.firebase.components:com.google.firebase.ktx.FirebaseCommonLegacyRegistrar
+ADDED from [com.google.firebase:firebase-common-ktx:21.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\e612cb9f44c7e28a575e8fcb013adc77\transformed\jetified-firebase-common-ktx-21.0.0\AndroidManifest.xml:12:13-14:85
+	android:value
+		ADDED from [com.google.firebase:firebase-common-ktx:21.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\e612cb9f44c7e28a575e8fcb013adc77\transformed\jetified-firebase-common-ktx-21.0.0\AndroidManifest.xml:14:17-82
+	android:name
+		ADDED from [com.google.firebase:firebase-common-ktx:21.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\e612cb9f44c7e28a575e8fcb013adc77\transformed\jetified-firebase-common-ktx-21.0.0\AndroidManifest.xml:13:17-116
+service#androidx.credentials.playservices.CredentialProviderMetadataHolder
+ADDED from [androidx.credentials:credentials-play-services-auth:1.2.0-rc01] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\9c1ec2ae266a357db6c78572cf62c40f\transformed\jetified-credentials-play-services-auth-1.2.0-rc01\AndroidManifest.xml:24:9-32:19
+	android:enabled
+		ADDED from [androidx.credentials:credentials-play-services-auth:1.2.0-rc01] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\9c1ec2ae266a357db6c78572cf62c40f\transformed\jetified-credentials-play-services-auth-1.2.0-rc01\AndroidManifest.xml:26:13-35
+	android:exported
+		ADDED from [androidx.credentials:credentials-play-services-auth:1.2.0-rc01] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\9c1ec2ae266a357db6c78572cf62c40f\transformed\jetified-credentials-play-services-auth-1.2.0-rc01\AndroidManifest.xml:27:13-37
+	tools:ignore
+		ADDED from [androidx.credentials:credentials-play-services-auth:1.2.0-rc01] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\9c1ec2ae266a357db6c78572cf62c40f\transformed\jetified-credentials-play-services-auth-1.2.0-rc01\AndroidManifest.xml:28:13-60
+	android:name
+		ADDED from [androidx.credentials:credentials-play-services-auth:1.2.0-rc01] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\9c1ec2ae266a357db6c78572cf62c40f\transformed\jetified-credentials-play-services-auth-1.2.0-rc01\AndroidManifest.xml:25:13-94
+meta-data#androidx.credentials.CREDENTIAL_PROVIDER_KEY
+ADDED from [androidx.credentials:credentials-play-services-auth:1.2.0-rc01] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\9c1ec2ae266a357db6c78572cf62c40f\transformed\jetified-credentials-play-services-auth-1.2.0-rc01\AndroidManifest.xml:29:13-31:104
+	android:value
+		ADDED from [androidx.credentials:credentials-play-services-auth:1.2.0-rc01] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\9c1ec2ae266a357db6c78572cf62c40f\transformed\jetified-credentials-play-services-auth-1.2.0-rc01\AndroidManifest.xml:31:17-101
+	android:name
+		ADDED from [androidx.credentials:credentials-play-services-auth:1.2.0-rc01] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\9c1ec2ae266a357db6c78572cf62c40f\transformed\jetified-credentials-play-services-auth-1.2.0-rc01\AndroidManifest.xml:30:17-76
+activity#androidx.credentials.playservices.HiddenActivity
+ADDED from [androidx.credentials:credentials-play-services-auth:1.2.0-rc01] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\9c1ec2ae266a357db6c78572cf62c40f\transformed\jetified-credentials-play-services-auth-1.2.0-rc01\AndroidManifest.xml:34:9-41:20
+	android:fitsSystemWindows
+		ADDED from [androidx.credentials:credentials-play-services-auth:1.2.0-rc01] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\9c1ec2ae266a357db6c78572cf62c40f\transformed\jetified-credentials-play-services-auth-1.2.0-rc01\AndroidManifest.xml:39:13-45
+	android:enabled
+		ADDED from [androidx.credentials:credentials-play-services-auth:1.2.0-rc01] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\9c1ec2ae266a357db6c78572cf62c40f\transformed\jetified-credentials-play-services-auth-1.2.0-rc01\AndroidManifest.xml:37:13-35
+	android:exported
+		ADDED from [androidx.credentials:credentials-play-services-auth:1.2.0-rc01] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\9c1ec2ae266a357db6c78572cf62c40f\transformed\jetified-credentials-play-services-auth-1.2.0-rc01\AndroidManifest.xml:38:13-37
+	android:configChanges
+		ADDED from [androidx.credentials:credentials-play-services-auth:1.2.0-rc01] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\9c1ec2ae266a357db6c78572cf62c40f\transformed\jetified-credentials-play-services-auth-1.2.0-rc01\AndroidManifest.xml:36:13-87
+	android:theme
+		ADDED from [androidx.credentials:credentials-play-services-auth:1.2.0-rc01] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\9c1ec2ae266a357db6c78572cf62c40f\transformed\jetified-credentials-play-services-auth-1.2.0-rc01\AndroidManifest.xml:40:13-48
+	android:name
+		ADDED from [androidx.credentials:credentials-play-services-auth:1.2.0-rc01] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\9c1ec2ae266a357db6c78572cf62c40f\transformed\jetified-credentials-play-services-auth-1.2.0-rc01\AndroidManifest.xml:35:13-76
+provider#io.flutter.plugins.imagepicker.ImagePickerFileProvider
+ADDED from [:image_picker_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_android-0.8.12+23\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:9:9-17:20
+	android:grantUriPermissions
+		ADDED from [:image_picker_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_android-0.8.12+23\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:13:13-47
+	android:authorities
+		ADDED from [:image_picker_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_android-0.8.12+23\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:11:13-74
+	android:exported
+		ADDED from [:image_picker_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_android-0.8.12+23\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:12:13-37
+	android:name
+		ADDED from [:image_picker_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_android-0.8.12+23\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:10:13-82
+meta-data#android.support.FILE_PROVIDER_PATHS
+ADDED from [:image_picker_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_android-0.8.12+23\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:14:13-16:75
+	android:resource
+		ADDED from [:image_picker_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_android-0.8.12+23\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:16:17-72
+	android:name
+		ADDED from [:image_picker_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_android-0.8.12+23\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:15:17-67
+service#com.google.android.gms.metadata.ModuleDependencies
+ADDED from [:image_picker_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_android-0.8.12+23\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:19:9-31:19
+	android:enabled
+		ADDED from [:image_picker_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_android-0.8.12+23\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:21:13-36
+	android:exported
+		ADDED from [:image_picker_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_android-0.8.12+23\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:22:13-37
+	tools:ignore
+		ADDED from [:image_picker_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_android-0.8.12+23\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:23:13-40
+	android:name
+		ADDED from [:image_picker_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_android-0.8.12+23\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:20:13-78
+intent-filter#action:name:com.google.android.gms.metadata.MODULE_DEPENDENCIES
+ADDED from [:image_picker_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_android-0.8.12+23\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:24:13-26:29
+action#com.google.android.gms.metadata.MODULE_DEPENDENCIES
+ADDED from [:image_picker_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_android-0.8.12+23\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:25:17-94
+	android:name
+		ADDED from [:image_picker_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_android-0.8.12+23\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:25:25-91
+meta-data#photopicker_activity:0:required
+ADDED from [:image_picker_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_android-0.8.12+23\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:28:13-30:36
+	android:value
+		ADDED from [:image_picker_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_android-0.8.12+23\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:30:17-33
+	android:name
+		ADDED from [:image_picker_android] C:\Users\KENEDDY\AppData\Local\Pub\Cache\hosted\pub.dev\image_picker_android-0.8.12+23\android\build\intermediates\merged_manifest\release\processReleaseManifest\AndroidManifest.xml:29:17-63
+provider#com.google.firebase.provider.FirebaseInitProvider
+ADDED from [com.google.firebase:firebase-common:21.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\293cde33061f2f9f0602f7cff4980ece\transformed\jetified-firebase-common-21.0.0\AndroidManifest.xml:23:9-28:39
+	android:authorities
+		ADDED from [com.google.firebase:firebase-common:21.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\293cde33061f2f9f0602f7cff4980ece\transformed\jetified-firebase-common-21.0.0\AndroidManifest.xml:25:13-72
+	android:exported
+		ADDED from [com.google.firebase:firebase-common:21.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\293cde33061f2f9f0602f7cff4980ece\transformed\jetified-firebase-common-21.0.0\AndroidManifest.xml:27:13-37
+	android:directBootAware
+		ADDED from [com.google.firebase:firebase-common:21.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\293cde33061f2f9f0602f7cff4980ece\transformed\jetified-firebase-common-21.0.0\AndroidManifest.xml:26:13-43
+	android:initOrder
+		ADDED from [com.google.firebase:firebase-common:21.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\293cde33061f2f9f0602f7cff4980ece\transformed\jetified-firebase-common-21.0.0\AndroidManifest.xml:28:13-36
+	android:name
+		ADDED from [com.google.firebase:firebase-common:21.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\293cde33061f2f9f0602f7cff4980ece\transformed\jetified-firebase-common-21.0.0\AndroidManifest.xml:24:13-77
+meta-data#com.google.firebase.components:com.google.firebase.FirebaseCommonKtxRegistrar
+ADDED from [com.google.firebase:firebase-common:21.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\293cde33061f2f9f0602f7cff4980ece\transformed\jetified-firebase-common-21.0.0\AndroidManifest.xml:35:13-37:85
+	android:value
+		ADDED from [com.google.firebase:firebase-common:21.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\293cde33061f2f9f0602f7cff4980ece\transformed\jetified-firebase-common-21.0.0\AndroidManifest.xml:37:17-82
+	android:name
+		ADDED from [com.google.firebase:firebase-common:21.0.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\293cde33061f2f9f0602f7cff4980ece\transformed\jetified-firebase-common-21.0.0\AndroidManifest.xml:36:17-109
+activity#com.google.android.gms.auth.api.signin.internal.SignInHubActivity
+ADDED from [com.google.android.gms:play-services-auth:20.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\ba5b09a313c42abb0170d3ee7c995ce4\transformed\jetified-play-services-auth-20.7.0\AndroidManifest.xml:23:9-27:75
+	android:excludeFromRecents
+		ADDED from [com.google.android.gms:play-services-auth:20.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\ba5b09a313c42abb0170d3ee7c995ce4\transformed\jetified-play-services-auth-20.7.0\AndroidManifest.xml:25:13-46
+	android:exported
+		ADDED from [com.google.android.gms:play-services-auth:20.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\ba5b09a313c42abb0170d3ee7c995ce4\transformed\jetified-play-services-auth-20.7.0\AndroidManifest.xml:26:13-37
+	android:theme
+		ADDED from [com.google.android.gms:play-services-auth:20.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\ba5b09a313c42abb0170d3ee7c995ce4\transformed\jetified-play-services-auth-20.7.0\AndroidManifest.xml:27:13-72
+	android:name
+		ADDED from [com.google.android.gms:play-services-auth:20.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\ba5b09a313c42abb0170d3ee7c995ce4\transformed\jetified-play-services-auth-20.7.0\AndroidManifest.xml:24:13-93
+service#com.google.android.gms.auth.api.signin.RevocationBoundService
+ADDED from [com.google.android.gms:play-services-auth:20.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\ba5b09a313c42abb0170d3ee7c995ce4\transformed\jetified-play-services-auth-20.7.0\AndroidManifest.xml:33:9-37:51
+	android:exported
+		ADDED from [com.google.android.gms:play-services-auth:20.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\ba5b09a313c42abb0170d3ee7c995ce4\transformed\jetified-play-services-auth-20.7.0\AndroidManifest.xml:35:13-36
+	android:visibleToInstantApps
+		ADDED from [com.google.android.gms:play-services-auth:20.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\ba5b09a313c42abb0170d3ee7c995ce4\transformed\jetified-play-services-auth-20.7.0\AndroidManifest.xml:37:13-48
+	android:permission
+		ADDED from [com.google.android.gms:play-services-auth:20.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\ba5b09a313c42abb0170d3ee7c995ce4\transformed\jetified-play-services-auth-20.7.0\AndroidManifest.xml:36:13-107
+	android:name
+		ADDED from [com.google.android.gms:play-services-auth:20.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\ba5b09a313c42abb0170d3ee7c995ce4\transformed\jetified-play-services-auth-20.7.0\AndroidManifest.xml:34:13-89
+uses-permission#com.google.android.providers.gsf.permission.READ_GSERVICES
+ADDED from [com.google.android.recaptcha:recaptcha:18.6.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\cbbd2936220be2e7254fe721db7cfc65\transformed\jetified-recaptcha-18.6.1\AndroidManifest.xml:9:5-98
+	android:name
+		ADDED from [com.google.android.recaptcha:recaptcha:18.6.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\cbbd2936220be2e7254fe721db7cfc65\transformed\jetified-recaptcha-18.6.1\AndroidManifest.xml:9:22-95
+activity#com.google.android.gms.common.api.GoogleApiActivity
+ADDED from [com.google.android.gms:play-services-base:18.1.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c389db2bd53ca2f4f6db5c2fd1f604df\transformed\jetified-play-services-base-18.1.0\AndroidManifest.xml:20:9-22:45
+	android:exported
+		ADDED from [com.google.android.gms:play-services-base:18.1.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c389db2bd53ca2f4f6db5c2fd1f604df\transformed\jetified-play-services-base-18.1.0\AndroidManifest.xml:22:19-43
+	android:theme
+		ADDED from [com.google.android.gms:play-services-base:18.1.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c389db2bd53ca2f4f6db5c2fd1f604df\transformed\jetified-play-services-base-18.1.0\AndroidManifest.xml:21:19-78
+	android:name
+		ADDED from [com.google.android.gms:play-services-base:18.1.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c389db2bd53ca2f4f6db5c2fd1f604df\transformed\jetified-play-services-base-18.1.0\AndroidManifest.xml:20:19-85
+uses-library#androidx.window.extensions
+ADDED from [androidx.window:window:1.2.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\66cf04ec9c2d9614aa49b47e3bf3fc27\transformed\jetified-window-1.2.0\AndroidManifest.xml:23:9-25:40
+	android:required
+		ADDED from [androidx.window:window:1.2.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\66cf04ec9c2d9614aa49b47e3bf3fc27\transformed\jetified-window-1.2.0\AndroidManifest.xml:25:13-37
+	android:name
+		ADDED from [androidx.window:window:1.2.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\66cf04ec9c2d9614aa49b47e3bf3fc27\transformed\jetified-window-1.2.0\AndroidManifest.xml:24:13-54
+uses-library#androidx.window.sidecar
+ADDED from [androidx.window:window:1.2.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\66cf04ec9c2d9614aa49b47e3bf3fc27\transformed\jetified-window-1.2.0\AndroidManifest.xml:26:9-28:40
+	android:required
+		ADDED from [androidx.window:window:1.2.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\66cf04ec9c2d9614aa49b47e3bf3fc27\transformed\jetified-window-1.2.0\AndroidManifest.xml:28:13-37
+	android:name
+		ADDED from [androidx.window:window:1.2.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\66cf04ec9c2d9614aa49b47e3bf3fc27\transformed\jetified-window-1.2.0\AndroidManifest.xml:27:13-51
+meta-data#com.google.android.gms.version
+ADDED from [com.google.android.gms:play-services-basement:18.4.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\0de81c30645df87b65c711c14c1cf0f0\transformed\jetified-play-services-basement-18.4.0\AndroidManifest.xml:6:9-122
+	android:value
+		ADDED from [com.google.android.gms:play-services-basement:18.4.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\0de81c30645df87b65c711c14c1cf0f0\transformed\jetified-play-services-basement-18.4.0\AndroidManifest.xml:6:66-119
+	android:name
+		ADDED from [com.google.android.gms:play-services-basement:18.4.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\0de81c30645df87b65c711c14c1cf0f0\transformed\jetified-play-services-basement-18.4.0\AndroidManifest.xml:6:20-65
+provider#androidx.startup.InitializationProvider
+ADDED from [androidx.emoji2:emoji2:1.2.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\a68f9caa14184a44430d28858c5674c9\transformed\jetified-emoji2-1.2.0\AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c36b2c75a3e2628c981be00d2f258c33\transformed\jetified-lifecycle-process-2.7.0\AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.lifecycle:lifecycle-process:2.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c36b2c75a3e2628c981be00d2f258c33\transformed\jetified-lifecycle-process-2.7.0\AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\4666399c9d5841a48c490295c2fbfc70\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\4666399c9d5841a48c490295c2fbfc70\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\dab46cb79aa6abf6afdf91953dc21b09\transformed\jetified-startup-runtime-1.1.1\AndroidManifest.xml:26:9-30:34
+MERGED from [androidx.startup:startup-runtime:1.1.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\dab46cb79aa6abf6afdf91953dc21b09\transformed\jetified-startup-runtime-1.1.1\AndroidManifest.xml:26:9-30:34
+	tools:node
+		ADDED from [androidx.emoji2:emoji2:1.2.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\a68f9caa14184a44430d28858c5674c9\transformed\jetified-emoji2-1.2.0\AndroidManifest.xml:28:13-31
+	android:authorities
+		ADDED from [androidx.emoji2:emoji2:1.2.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\a68f9caa14184a44430d28858c5674c9\transformed\jetified-emoji2-1.2.0\AndroidManifest.xml:26:13-68
+	android:exported
+		ADDED from [androidx.emoji2:emoji2:1.2.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\a68f9caa14184a44430d28858c5674c9\transformed\jetified-emoji2-1.2.0\AndroidManifest.xml:27:13-37
+	android:name
+		ADDED from [androidx.emoji2:emoji2:1.2.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\a68f9caa14184a44430d28858c5674c9\transformed\jetified-emoji2-1.2.0\AndroidManifest.xml:25:13-67
+meta-data#androidx.emoji2.text.EmojiCompatInitializer
+ADDED from [androidx.emoji2:emoji2:1.2.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\a68f9caa14184a44430d28858c5674c9\transformed\jetified-emoji2-1.2.0\AndroidManifest.xml:29:13-31:52
+	android:value
+		ADDED from [androidx.emoji2:emoji2:1.2.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\a68f9caa14184a44430d28858c5674c9\transformed\jetified-emoji2-1.2.0\AndroidManifest.xml:31:17-49
+	android:name
+		ADDED from [androidx.emoji2:emoji2:1.2.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\a68f9caa14184a44430d28858c5674c9\transformed\jetified-emoji2-1.2.0\AndroidManifest.xml:30:17-75
+permission#${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.13.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\46f45c9c491e9c84bd296422558af08b\transformed\core-1.13.1\AndroidManifest.xml:22:5-24:47
+	android:protectionLevel
+		ADDED from [androidx.core:core:1.13.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\46f45c9c491e9c84bd296422558af08b\transformed\core-1.13.1\AndroidManifest.xml:24:9-44
+	android:name
+		ADDED from [androidx.core:core:1.13.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\46f45c9c491e9c84bd296422558af08b\transformed\core-1.13.1\AndroidManifest.xml:23:9-81
+permission#com.example.temp_fix.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.13.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\46f45c9c491e9c84bd296422558af08b\transformed\core-1.13.1\AndroidManifest.xml:22:5-24:47
+	android:protectionLevel
+		ADDED from [androidx.core:core:1.13.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\46f45c9c491e9c84bd296422558af08b\transformed\core-1.13.1\AndroidManifest.xml:24:9-44
+	android:name
+		ADDED from [androidx.core:core:1.13.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\46f45c9c491e9c84bd296422558af08b\transformed\core-1.13.1\AndroidManifest.xml:23:9-81
+uses-permission#${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.13.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\46f45c9c491e9c84bd296422558af08b\transformed\core-1.13.1\AndroidManifest.xml:26:5-97
+	android:name
+		ADDED from [androidx.core:core:1.13.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\46f45c9c491e9c84bd296422558af08b\transformed\core-1.13.1\AndroidManifest.xml:26:22-94
+uses-permission#com.example.temp_fix.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.13.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\46f45c9c491e9c84bd296422558af08b\transformed\core-1.13.1\AndroidManifest.xml:26:5-97
+	android:name
+		ADDED from [androidx.core:core:1.13.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\46f45c9c491e9c84bd296422558af08b\transformed\core-1.13.1\AndroidManifest.xml:26:22-94
+meta-data#androidx.lifecycle.ProcessLifecycleInitializer
+ADDED from [androidx.lifecycle:lifecycle-process:2.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c36b2c75a3e2628c981be00d2f258c33\transformed\jetified-lifecycle-process-2.7.0\AndroidManifest.xml:29:13-31:52
+	android:value
+		ADDED from [androidx.lifecycle:lifecycle-process:2.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c36b2c75a3e2628c981be00d2f258c33\transformed\jetified-lifecycle-process-2.7.0\AndroidManifest.xml:31:17-49
+	android:name
+		ADDED from [androidx.lifecycle:lifecycle-process:2.7.0] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\c36b2c75a3e2628c981be00d2f258c33\transformed\jetified-lifecycle-process-2.7.0\AndroidManifest.xml:30:17-78
+meta-data#androidx.profileinstaller.ProfileInstallerInitializer
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\4666399c9d5841a48c490295c2fbfc70\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:29:13-31:52
+	android:value
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\4666399c9d5841a48c490295c2fbfc70\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:31:17-49
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\4666399c9d5841a48c490295c2fbfc70\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:30:17-85
+receiver#androidx.profileinstaller.ProfileInstallReceiver
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\4666399c9d5841a48c490295c2fbfc70\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:34:9-52:20
+	android:enabled
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\4666399c9d5841a48c490295c2fbfc70\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:37:13-35
+	android:exported
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\4666399c9d5841a48c490295c2fbfc70\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:38:13-36
+	android:permission
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\4666399c9d5841a48c490295c2fbfc70\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:39:13-57
+	android:directBootAware
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\4666399c9d5841a48c490295c2fbfc70\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:36:13-44
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\4666399c9d5841a48c490295c2fbfc70\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:35:13-76
+intent-filter#action:name:androidx.profileinstaller.action.INSTALL_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\4666399c9d5841a48c490295c2fbfc70\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:40:13-42:29
+action#androidx.profileinstaller.action.INSTALL_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\4666399c9d5841a48c490295c2fbfc70\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:41:17-91
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\4666399c9d5841a48c490295c2fbfc70\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:41:25-88
+intent-filter#action:name:androidx.profileinstaller.action.SKIP_FILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\4666399c9d5841a48c490295c2fbfc70\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:43:13-45:29
+action#androidx.profileinstaller.action.SKIP_FILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\4666399c9d5841a48c490295c2fbfc70\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:44:17-85
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\4666399c9d5841a48c490295c2fbfc70\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:44:25-82
+intent-filter#action:name:androidx.profileinstaller.action.SAVE_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\4666399c9d5841a48c490295c2fbfc70\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:46:13-48:29
+action#androidx.profileinstaller.action.SAVE_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\4666399c9d5841a48c490295c2fbfc70\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:47:17-88
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\4666399c9d5841a48c490295c2fbfc70\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:47:25-85
+intent-filter#action:name:androidx.profileinstaller.action.BENCHMARK_OPERATION
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\4666399c9d5841a48c490295c2fbfc70\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:49:13-51:29
+action#androidx.profileinstaller.action.BENCHMARK_OPERATION
+ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\4666399c9d5841a48c490295c2fbfc70\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:50:17-95
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.3.1] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\4666399c9d5841a48c490295c2fbfc70\transformed\jetified-profileinstaller-1.3.1\AndroidManifest.xml:50:25-92
+activity#com.google.android.play.core.common.PlayCoreDialogWrapperActivity
+ADDED from [com.google.android.play:core-common:2.0.3] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\e6c64933010690d29b502fd5d3afbba7\transformed\jetified-core-common-2.0.3\AndroidManifest.xml:14:9-18:65
+	android:stateNotNeeded
+		ADDED from [com.google.android.play:core-common:2.0.3] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\e6c64933010690d29b502fd5d3afbba7\transformed\jetified-core-common-2.0.3\AndroidManifest.xml:17:13-42
+	android:exported
+		ADDED from [com.google.android.play:core-common:2.0.3] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\e6c64933010690d29b502fd5d3afbba7\transformed\jetified-core-common-2.0.3\AndroidManifest.xml:16:13-37
+	android:theme
+		ADDED from [com.google.android.play:core-common:2.0.3] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\e6c64933010690d29b502fd5d3afbba7\transformed\jetified-core-common-2.0.3\AndroidManifest.xml:18:13-62
+	android:name
+		ADDED from [com.google.android.play:core-common:2.0.3] C:\Users\KENEDDY\.gradle\caches\8.12\transforms\e6c64933010690d29b502fd5d3afbba7\transformed\jetified-core-common-2.0.3\AndroidManifest.xml:15:13-93
