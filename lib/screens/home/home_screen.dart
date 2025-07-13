@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart' show FirebaseAuth;
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
@@ -13,6 +14,7 @@ import 'addingevent.dart';
 import '../home/event_management_screen.dart';
 import '../../models/event.dart';
 import '../map/map_screen.dart';
+import 'package:convex_bottom_bar/convex_bottom_bar.dart';
 
 final GlobalKey<_BookingsTabState> bookingsTabKey = GlobalKey<_BookingsTabState>();
 
@@ -28,12 +30,31 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   List<Event> events = [];
   bool _isLoading = true;
+  Set<String> bookedEventIds = {};
 
 
   @override
   void initState() {
     super.initState();
     _fetchEvents();
+    _loadBookedEvents();
+  }
+  //Parse date string for date format "1/7/2025"
+  DateTime parseEventDate(String input) {
+    try {
+      // Expecting input format like "1/7/2025" (dd/mm/yyyy)
+      final parts = input.split('/');
+      if (parts.length != 3) return DateTime(1900); // invalid format fallback
+
+      final day = int.tryParse(parts[0]) ?? 1;
+      final month = int.tryParse(parts[1]) ?? 1;
+      final year = int.tryParse(parts[2]) ?? 1900;
+
+      return DateTime(year, month, day); // Return DateTime object
+    } catch (e) {
+      print("Date parse error for '$input': $e");
+      return DateTime(1900); // fallback date
+    }
   }
 //fetch events from firestore
   Future<void> _fetchEvents() async {
@@ -43,8 +64,23 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       QuerySnapshot snapshot =
           await FirebaseFirestore.instance.collection('events').get();
+          List<Event> fetchedEvents = snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList();
+          // ✅ Sort: upcoming events first, past events last
+          fetchedEvents.sort((a, b) {
+
+            final aDate   = parseEventDate(a.date);
+            final bDate   = parseEventDate(b.date);
+
+            final aPast   = aDate.isBefore(DateTime.now());
+            final bPast   = bDate.isBefore(DateTime.now());
+
+            if (aPast && !bPast) return 1;  // put a after b
+            if (!aPast && bPast) return -1; // put a before b
+            return aDate.compareTo(bDate);  // both past or both future → natural order
+          });
       setState(() {
-        events = snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList();
+        // events = snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList();
+        events = fetchedEvents;
         _isLoading = false;
       });
       print('Fetched ${events.length} events');
@@ -61,6 +97,71 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
   }
+  Future<void> _bookEvent(String eventId) async {
+   final userId = FirebaseAuth.instance.currentUser?.uid;
+  if (userId == null) return;
+
+  final bookingRef = FirebaseFirestore.instance
+      .collection('bookings')
+      .doc('$userId-$eventId'); // unique composite ID
+
+  final bookingDoc = await bookingRef.get();
+
+  if (bookingDoc.exists) {
+    // ❌ Unbook
+    await bookingRef.delete();
+    setState(() {
+      bookedEventIds.remove(eventId);
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Event Reservation Cancelled')),
+    );
+  } else {
+    // ✅ Book
+    await bookingRef.set({
+      'userId': userId,
+      'eventId': eventId,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+    setState(() {
+      bookedEventIds.add(eventId);
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Event Reservation Successful')),
+    );
+  }
+}
+Future<void> _loadBookedEvents() async {
+  final userId = FirebaseAuth.instance.currentUser?.uid;
+  if (userId == null) return;
+
+  final snapshot = await FirebaseFirestore.instance
+      .collection('bookings')
+      .where('userId', isEqualTo: userId)
+      .get();
+
+  setState(() {
+    bookedEventIds = snapshot.docs.map((doc) => doc['eventId'] as String).toSet();
+  });
+}
+
+
+  void _toggleBooking(Event event) {
+  setState(() {
+    if (bookedEventIds.contains(event.id)) {
+      bookedEventIds.remove(event.id); // Unbook
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Reservation Cancelled: ${event.title}')),
+      );
+    } else {
+      bookedEventIds.add(event.id); // Book
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Reservation: ${event.title}')),
+      );
+    }
+  });
+}
+
 
   void _addEvent(Event event) async {
     try {
@@ -89,8 +190,6 @@ class _HomeScreenState extends State<HomeScreen> {
   void _showEventDetailsModal(Event event) {
     showDialog(
       context: context,
-      //shape: const RoundedRectangleBorder(
-       // borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       builder: (_) => AlertDialog (
         title: Text(event.title),
         content: Column(
@@ -99,51 +198,49 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Text(event.description),
             const SizedBox(height: 20),
-            if (_eventStatus[event.id] != 'Reserved')
-        // return Padding(
-        //   padding: const EdgeInsets.all(20.0),
-        //   child: Column(
-        //     mainAxisSize: MainAxisSize.min,
-        //     children: [
-        //       Text(event.title,
-        //           style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-        //       const SizedBox(height: 10),
-        //       Text(event.description),
-        //       const SizedBox(height: 20),
-        //       Row(
-        //         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        //         children: [
-                  ElevatedButton(
-                    onPressed: () {
-                      bookingsTabKey.currentState?.addBooking({
-                        'id': DateTime.now().millisecondsSinceEpoch,
-                        'event': event.title,
-                        'total': event.price,
-                        'paid': false,
-                      });
-                      setState(() {
-                        _eventStatus[event.id] = 'Reserved';
-                      });
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Event Reserved!'),
-                          backgroundColor: Colors.orange,
-                        ),
-                      );
-                    },
-                    child: const Text('Book Event'),
-                  ),
-                  if (_eventStatus[event.id] == 'Reserved')
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 8.0),
-                        child: Text(
-                        'Event Reserved',
-                        style: TextStyle(
-                         color: Colors.orange,
-                         fontWeight: FontWeight.bold,
-                         ),
-                      ),),
+                  if (_eventStatus[event.id] != 'Reserved') ...[
+                    ElevatedButton(
+                      onPressed: () {
+                        bookingsTabKey.currentState?.addBooking({
+                          'id': DateTime.now().millisecondsSinceEpoch,
+                          'event': event.title,
+                          'total': event.price,
+                          'paid': false,
+                        });
+                        setState(() {
+                          _eventStatus[event.id] = 'Reserved';
+                        });
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Event Reserved!'),
+                            backgroundColor: Colors.orange,
+                          ),
+                        );
+                      },
+                      child: const Text('Book Event'),
+                    ),
+                  ] else ...[
+                    ElevatedButton(
+                      onPressed: () {
+                        // UNBOOK logic
+                        bookingsTabKey.currentState?.removeBookingByTitle(event.title); // You'll create this method next
+                        setState(() {
+                          _eventStatus[event.id] = 'unbooked';
+                        });
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Reservation canceled.'),
+                            backgroundColor: Colors.grey,
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color.fromARGB(255, 246, 105, 50)),
+                      child: const Text('Cancel Reseravtion'),
+                    ),
+                  ],
+
                   ElevatedButton(
                     onPressed: () {
                       Navigator.pop(context);
@@ -187,11 +284,17 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   List<Widget> _getScreens() => [
-        HomeTab(events: events, onAddEvent: _addEvent, onEventTap: _showEventDetailsModal, eventStatus: _eventStatus,),
-        SearchTab(events: events),
+        HomeTab(events: events, 
+        onAddEvent: _addEvent,
+         onEventTap: _showEventDetailsModal,
+        eventStatus: _eventStatus,),
+        SearchTab(events: events,
+        eventStatus: _eventStatus,
+        onEventTap: _showEventDetailsModal,
+        ),
         BookingsTab(key: bookingsTabKey),
         const ProfileScreen(),
-        //const MapScreen(),
+        const MapScreen(),
       ];
 
   @override
@@ -200,39 +303,26 @@ class _HomeScreenState extends State<HomeScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _getScreens()[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: _selectedIndex,
-        onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
-        selectedItemColor: Theme.of(context).primaryColor,
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.search),
-            label: 'Search',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.bookmark),
-            label: 'Bookings',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-         BottomNavigationBarItem(
-           icon: Icon(Icons.map),
-           label: 'Map',
-         ),
-       ],
-      ),
+       bottomNavigationBar: ConvexAppBar(
+              style: TabStyle.react, // other styles: fixedCircle, flip, reactCircle
+              backgroundColor: Theme.of(context).primaryColor,
+              activeColor: Colors.white,
+              color: Colors.white60,
+              items: const [
+                TabItem(icon: Icons.home, title: 'Home'),
+                TabItem(icon: Icons.search, title: 'Search'),
+                TabItem(icon: Icons.bookmark, title: 'Bookings'),
+                TabItem(icon: Icons.person, title: 'Profile'),
+                TabItem(icon: Icons.map, title: 'Map'),
+              ],
+              initialActiveIndex: _selectedIndex,
+              onTap: (int index) {
+                setState(() {
+                  _selectedIndex = index;
+                });
+              },
+            ),
+
     );
   }
 }
@@ -246,6 +336,7 @@ class HomeTab extends StatelessWidget {
   final Function(Event) onAddEvent;
   final Function(Event) onEventTap; // (i) Used to trigger event details bottom sheet
   final Map<String, String> eventStatus;
+  
   const HomeTab({Key? key,
     required this.events,
     required this.onAddEvent,
@@ -253,44 +344,25 @@ class HomeTab extends StatelessWidget {
     required this.eventStatus,
   })
       : super(key: key);
+      
+        get isBooked => null;
 
   @override
   Widget build(BuildContext context) {
-    Map<String, List<Event>> eventsByDate = {};
-    for (var event in events) {
-      eventsByDate.putIfAbsent(event.date, () => []).add(event);
-    }
-
-    var sortedDates = eventsByDate.keys.toList()..sort();
-
-    List<Widget> eventWidgets = [];
-    for (var date in sortedDates) {
-      eventWidgets.add(
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-          child: Text(
-            date,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.black54,
-            ),
+        List<Widget> eventWidgets = events.map(
+          (event) => Padding(
+            padding: const EdgeInsets.only(bottom: 15, left: 20, right: 20),
+            child: _EventCard(event: event,
+             onTap: () => onEventTap(event), 
+             status: eventStatus[event.id],
+             isBooked: eventStatus[event.id] == 'Reserved',
+             onBookToggle: () {
+             // Call _showEventDetailsModal(event) to handle booking/unbooking
+             onEventTap(event);
+  },),
           ),
-        ),
-      );
-      eventWidgets.addAll(
-        eventsByDate[date]!.asMap().entries.map(
-              (entry) => Padding(
-                padding: const EdgeInsets.only(bottom: 15, left: 20, right: 20),
-                child: _EventCard(
-                  event: entry.value,
-                  onTap: () => onEventTap(entry.value),
-                  status: eventStatus[entry.value.id],
-                ),
-              ),
-            ),
-      );
-    }
+        ).toList();
+
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -433,7 +505,9 @@ class HomeTab extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => SearchTab(events: events),
+                          builder: (context) => SearchTab(events: events,
+                          onEventTap: onEventTap, 
+                           eventStatus: _eventStatus,          ),
                         ),
                       );
                     },
@@ -447,27 +521,27 @@ class HomeTab extends StatelessWidget {
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      _CategoryChip(label: 'All', isSelected: true, events: events),
+                      _CategoryChip(label: 'All', isSelected: true, events: events,onEventTap: onEventTap),
                       const SizedBox(width: 10),
-                      _CategoryChip(label: 'Concert', events: events),
+                      _CategoryChip(label: 'Concert', events: events,onEventTap: onEventTap),
                       const SizedBox(width: 10),
-                      _CategoryChip(label: 'Conference', events: events),
+                      _CategoryChip(label: 'Conference', events: events,onEventTap: onEventTap),
                       const SizedBox(width: 10),
-                      _CategoryChip(label: 'Workshop', events: events),
+                      _CategoryChip(label: 'Workshop', events: events,onEventTap: onEventTap),
                       const SizedBox(width: 10),
-                      _CategoryChip(label: 'Sports', events: events),
+                      _CategoryChip(label: 'Sports', events: events,onEventTap: onEventTap),
                       const SizedBox(width: 10),
-                      _CategoryChip(label: 'Festival', events: events),
+                      _CategoryChip(label: 'Festival', events: events,onEventTap: onEventTap),
                       const SizedBox(width: 10),
-                      _CategoryChip(label: 'Networking', events: events),
+                      _CategoryChip(label: 'Networking', events: events,onEventTap: onEventTap),
                       const SizedBox(width: 10),
-                      _CategoryChip(label: 'Exhibition', events: events),
+                      _CategoryChip(label: 'Exhibition', events: events,onEventTap: onEventTap),
                       const SizedBox(width: 10),
-                      _CategoryChip(label: 'Theater', events: events),
+                      _CategoryChip(label: 'Theater', events: events,onEventTap: onEventTap),
                       const SizedBox(width: 10),
-                      _CategoryChip(label: 'Comedy', events: events),
+                      _CategoryChip(label: 'Comedy', events: events,onEventTap: onEventTap),
                       const SizedBox(width: 10),
-                      _CategoryChip(label: 'Other', events: events),
+                      _CategoryChip(label: 'Other', events: events,onEventTap: onEventTap),
                     ],
                   ),
                 ),
@@ -545,10 +619,12 @@ class _CategoryChip extends StatelessWidget {
   final String label;
   final bool isSelected;
   final List<Event> events;
+  final Function(Event) onEventTap;
 
   const _CategoryChip({
     required this.label,
     this.isSelected = false,
+    required this.onEventTap,
     required this.events,
   });
 
@@ -559,7 +635,9 @@ class _CategoryChip extends StatelessWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => SearchTab(events: events),
+            builder: (context) => SearchTab(events: events,
+            onEventTap: onEventTap, 
+           eventStatus: _eventStatus, ),
           ),
         );
       },
@@ -589,8 +667,11 @@ class _EventCard extends StatelessWidget {
   final Event event;
   final VoidCallback onTap;
   final String? status;
+  final VoidCallback onBookToggle;
+  final bool isBooked;
 
-  const _EventCard({required this.event, required this.onTap, this.status});
+  const _EventCard({required this.event, required this.onTap, this.status, required this.onBookToggle,
+    required this.isBooked,});
 
   @override
   Widget build(BuildContext context) {
@@ -720,16 +801,7 @@ class _EventCard extends StatelessWidget {
                                 ),
                               ),
                              ],),),
-                            // if (event.description.isNotEmpty)
-                            //   Padding(
-                            //     padding: const EdgeInsets.only(top: 8.0),
-                            //     child: Text(
-                            //       event.description,
-                            //       maxLines: 2,
-                            //       overflow: TextOverflow.ellipsis,
-                            //       style: TextStyle(color: Colors.grey[700]),
-                            //       ),
-                               // ),
+                          
                                 ],
                               ),
 
@@ -800,8 +872,12 @@ class _EventCard extends StatelessWidget {
 
 class SearchTab extends StatefulWidget {
   final List<Event> events;
+  final Function(Event) onEventTap;
+  final Map<String, String> eventStatus;
 
-  const SearchTab({Key? key, required this.events}) : super(key: key);
+  const SearchTab({Key? key, required this.events,required this.onEventTap,
+    required this.eventStatus,
+}) : super(key: key);
 
   @override
   State<SearchTab> createState() => _SearchTabState();
@@ -811,6 +887,21 @@ class _SearchTabState extends State<SearchTab> {
   final _searchController = TextEditingController();
   String _selectedCategory = 'All';
   List<Event> _filteredEvents = [];
+  DateTime parseEventDate(String input) {
+    try {
+      final parts = input.split('/');
+      if (parts.length != 3) return DateTime(1900);
+
+      final day = int.tryParse(parts[0]) ?? 1;
+      final month = int.tryParse(parts[1]) ?? 1;
+      final year = int.tryParse(parts[2]) ?? 1900;
+
+      return DateTime(year, month, day);
+    } catch (e) {
+      print("Date parse error for '$input': $e");
+      return DateTime(1900);
+    }
+  }
 
   final List<String> _categories = [
     'All',
@@ -944,6 +1035,18 @@ class _SearchTabState extends State<SearchTab> {
             _selectedCategory == 'All' || event.category == _selectedCategory;
         return matchesSearch && matchesCategory;
       }).toList();
+          // ✅ Sort upcoming events first
+        _filteredEvents.sort((a, b) {
+          final aDate = parseEventDate(a.date);
+          final bDate = parseEventDate(b.date);
+
+          final aPast = aDate.isBefore(DateTime.now());
+          final bPast = bDate.isBefore(DateTime.now());
+
+          if (aPast && !bPast) return 1;
+          if (!aPast && bPast) return -1;
+          return aDate.compareTo(bDate);
+        });
     });
   }
 
@@ -1033,9 +1136,14 @@ class _SearchTabState extends State<SearchTab> {
                     padding: const EdgeInsets.all(16),
                     itemCount: _filteredEvents.length,
                     itemBuilder: (context, index) {
+                      final event = _filteredEvents[index];
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 15),
-                        child: _EventCard(event: _filteredEvents[index], onTap: () {  },),
+                        child: _EventCard(
+                          event: event,
+                           onTap: () => _showEventDetailsModal(event),
+                           isBooked: _eventStatus[event.id] == 'Reserved',
+                            onBookToggle: ()=> _showEventDetailsModal(event),),
                       );
                     },
                   ),
