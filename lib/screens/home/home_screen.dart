@@ -975,12 +975,12 @@ class _SearchTabState extends State<SearchTab> {
                     _eventStatus[event.id] = 'Event Reserved';
                   });
                   Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Event Reserved!'),
+                  Fluttertoast.showToast(msg: "Event Reservation Successful!",
+                      toastLength: Toast.LENGTH_LONG,
+                      gravity: ToastGravity.CENTER,
                       backgroundColor: Colors.orange,
-                    ),
-                  );
+                      textColor: Colors.white,
+                      fontSize: 19.0,);
                 },
                 child: const Text('Book/Reserve an Event'),
               ),
@@ -993,12 +993,12 @@ class _SearchTabState extends State<SearchTab> {
                     _eventStatus[event.id] = 'Cancelled Reservation!';
                   });
                   Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Reservation canceled.'),
-                      backgroundColor: Colors.grey,
-                    ),
-                  );
+                  Fluttertoast.showToast(msg: "Event Reservation Cancelled!",
+                    toastLength: Toast.LENGTH_LONG,
+                    gravity: ToastGravity.CENTER,
+                    backgroundColor: Colors.pink,
+                    textColor: Colors.white,
+                    fontSize: 19.0,);
                 },
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.pink),
                 child: const Text('Cancel Reservation.'),
