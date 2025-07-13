@@ -1,3 +1,5 @@
+import 'package:event_locator_app/models/event.dart';
+import 'package:event_locator_app/screens/home/event_management_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
@@ -578,7 +580,7 @@ class _AdminEventCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
-                  'Approved: ${_formatTimestamp(event.approvedAt)}',
+                  'Approved: ${_formatTimestamp(event.approvedAt as Timestamp?)}',
                   style: const TextStyle(
                     color: Colors.green,
                     fontSize: 12,

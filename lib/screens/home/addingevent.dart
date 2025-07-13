@@ -1,3 +1,5 @@
+import 'package:event_locator_app/models/event.dart';
+import 'package:event_locator_app/screens/home/event_management_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -7,7 +9,9 @@ import 'package:flutter/foundation.dart';
 import 'dart:io';
 import 'dart:typed_data';
 import '../../providers/auth_provider.dart';
-import 'home_screen.dart';
+import '../../models/event.dart';
+import '../map/location_picker_screen.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class AddEventDialog extends StatefulWidget {
   final Function(Event) onAddEvent;
@@ -32,6 +36,8 @@ class _AddEventDialogState extends State<AddEventDialog> {
 
   final ImagePicker _picker = ImagePicker();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  double? _latitude;
+  double? _longitude;
 
   final List<String> _categories = [
     'Concert',
@@ -452,6 +458,23 @@ class _AddEventDialogState extends State<AddEventDialog> {
                     }
                     return null;
                   },
+                  onTap: () async {
+                    final result = await Navigator.push<Map<String, dynamic>?>(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const LocationPickerScreen(),
+                      ),
+                    );
+                    if (result != null) {
+                      final LatLng location = result['location'];
+                      final String locationName = result['locationName'] ?? 'Unknown location';
+                      setState(() {
+                        _latitude = location.latitude;
+                        _longitude = location.longitude;
+                        _locationController.text = locationName;
+                      });
+                    }
+                  },
                 ),
                 const SizedBox(height: 15),
                 DropdownButtonFormField<String>(
@@ -544,10 +567,14 @@ class _AddEventDialogState extends State<AddEventDialog> {
           description: _descriptionController.text.trim(),
           date: _dateController.text.trim(),
           location: _locationController.text.trim(),
+          latitude: _latitude ?? 0.0,
+          longitude: _longitude ?? 0.0,
           category: _selectedCategory,
           imageUrl: imageUrl,
           organizerId: organizerId,
-          price: double.tryParse(_priceController.text.trim()) ?? 0.0,
+          // 
+          price: double.tryParse(_priceController.text) ?? 0.0,
+
         );
 
         await _saveEventToFirestore(event);
@@ -585,4 +612,10 @@ class _AddEventDialogState extends State<AddEventDialog> {
     _locationController.dispose();
     super.dispose();
   }
+}
+
+class LatLng {
+  double? get latitude => null;
+  
+  double? get longitude => null;
 }

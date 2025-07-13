@@ -1,74 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:image_picker/image_picker.dart';
-import 'dart:io';
-import 'package:permission_handler/permission_handler.dart';
 import '../../providers/auth_provider.dart';
-import '../../services/profile_service.dart';
-import '../../models/user_model.dart';
-import 'edit_profile_screen.dart';
-import 'privacy_security_screen.dart';
-import 'notifications_screen.dart';
-import '../auth/login_screen.dart';
 
-// Placeholder screens
-class HelpScreen extends StatelessWidget {
-  const HelpScreen({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Help & Support'),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
-      ),
-      body: const Center(child: Text('Help & Support Screen')),
-    );
-  }
-}
-
-class AboutScreen extends StatelessWidget {
-  const AboutScreen({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('About'),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
-      ),
-      body: const Center(child: Text('About Screen')),
-    );
-  }
-}
-
-class ProfileScreen extends StatefulWidget {
+class ProfileScreen extends StatelessWidget {
   const ProfileScreen({Key? key}) : super(key: key);
-
-  @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
-}
-
-class _ProfileScreenState extends State<ProfileScreen> {
-  final ProfileService _profileService = ProfileService();
-  final ImagePicker _picker = ImagePicker();
-  bool _isUpdatingProfile = false;
-
-  @override
-  void initState() {
-    super.initState();
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    if (authProvider.user == null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
-        );
-      });
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -81,12 +16,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: Consumer<AuthProvider>(
         builder: (context, authProvider, child) {
           final user = authProvider.user;
-          print('ProfileScreen built with user: $user');
-
+          
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
+                // Profile Header
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -102,63 +37,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   child: Column(
                     children: [
-                      Stack(
-                        children: [
-                          CircleAvatar(
-                            radius: 50,
-                            backgroundColor: Theme.of(context).primaryColor,
-                            child: user?.profileImageUrl != null
-                                ? ClipOval(
-                                    child: Image.network(
-                                      user!.profileImageUrl!,
-                                      width: 100,
-                                      height: 100,
-                                      fit: BoxFit.cover,
-                                      loadingBuilder: (context, child, loadingProgress) {
-                                        if (loadingProgress == null) return child;
-                                        return const CircularProgressIndicator();
-                                      },
-                                      errorBuilder: (context, error, stackTrace) {
-                                        print('Image load error: $error');
-                                        return Text(
-                                          user.name.substring(0, 1).toUpperCase(),
-                                          style: const TextStyle(
-                                            fontSize: 32,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.white,
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  )
-                                : Text(
-                                    user?.name.substring(0, 1).toUpperCase() ?? 'U',
-                                    style: const TextStyle(
-                                      fontSize: 32,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                    ),
-                                  ),
+                      CircleAvatar(
+                        radius: 50,
+                        backgroundColor: Theme.of(context).primaryColor,
+                        child: Text(
+                          user?.name.substring(0, 1).toUpperCase() ?? 'U',
+                          style: const TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
                           ),
-                          Positioned(
-                            bottom: 0,
-                            right: 0,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).primaryColor,
-                                shape: BoxShape.circle,
-                              ),
-                              child: IconButton(
-                                icon: const Icon(
-                                  Icons.camera_alt,
-                                  color: Colors.white,
-                                  size: 20,
-                                ),
-                                onPressed: _isUpdatingProfile ? null : _showImageSourceDialog,
-                              ),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                       const SizedBox(height: 16),
                       Text(
@@ -176,40 +65,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           color: Colors.grey.shade600,
                         ),
                       ),
-                      if (user?.phone != null) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          user!.phone!,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                      ],
                     ],
                   ),
                 ),
                 const SizedBox(height: 20),
+                // Profile Options
                 _buildProfileOption(
                   context,
                   icon: Icons.edit,
                   title: 'Edit Profile',
-                  onTap: () async {
-                    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-                    print('Navigating to Edit Profile with user: ${authProvider.user}');
-                    await authProvider.refreshUserData();
-                    if (authProvider.user != null) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const EditProfileScreen()),
-                      );
-                    } else {
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('User data not available')),
-                        );
-                      }
-                    }
+                  onTap: () {
+                    // TODO: Navigate to edit profile screen
                   },
                 ),
                 _buildProfileOption(
@@ -217,21 +83,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   icon: Icons.notifications,
                   title: 'Notifications',
                   onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const NotificationsScreen()),
-                    );
-                  },
-                ),
-                _buildProfileOption(
-                  context,
-                  icon: Icons.security,
-                  title: 'Privacy & Security',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const PrivacySecurityScreen()),
-                    );
+                    // TODO: Navigate to notifications settings
                   },
                 ),
                 _buildProfileOption(
@@ -239,10 +91,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   icon: Icons.help,
                   title: 'Help & Support',
                   onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const HelpScreen()),
-                    );
+                    // TODO: Navigate to help screen
                   },
                 ),
                 _buildProfileOption(
@@ -250,20 +99,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   icon: Icons.info,
                   title: 'About',
                   onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const AboutScreen()),
-                    );
+                    // TODO: Navigate to about screen
                   },
                 ),
                 const SizedBox(height: 20),
+                // Sign Out Button
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: authProvider.isLoading
                         ? null
                         : () async {
-                            _showSignOutDialog(context, authProvider);
+                            await authProvider.signOut();
                           },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red,
@@ -324,194 +171,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
           size: 16,
           color: Colors.grey,
         ),
-        onTap: () {
-          try {
-            onTap();
-            print('Navigated to: $title');
-          } catch (e) {
-            print('Navigation error for $title: $e');
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Navigation error for $title: $e'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
-          }
-        },
+        onTap: onTap,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
         ),
         tileColor: Colors.white,
       ),
-    );
-  }
-
-  void _showImageSourceDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return Builder(
-          builder: (context) {
-            return AlertDialog(
-              title: const Text('Select Image Source'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.photo_library),
-                    title: const Text('Gallery'),
-                    onTap: () {
-                      Navigator.of(dialogContext).pop();
-                      _pickImage(ImageSource.gallery);
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.camera_alt),
-                    title: const Text('Camera'),
-                    onTap: () {
-                      Navigator.of(dialogContext).pop();
-                      _pickImage(ImageSource.camera);
-                    },
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Future<void> _pickImage(ImageSource source) async {
-    print('Attempting to pick image from $source');
-    if (Platform.isAndroid || Platform.isIOS) {
-      var status = await Permission.storage.request();
-      if (source == ImageSource.camera) {
-        status = await Permission.camera.request();
-      }
-      if (!status.isGranted) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Permission denied to access gallery/camera'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-        return;
-      }
-    }
-
-    try {
-      final XFile? image = await _picker.pickImage(
-        source: source,
-        maxWidth: 1024,
-        maxHeight: 1024,
-        imageQuality: 85,
-      );
-      print('Image result: $image');
-
-      if (image != null) {
-        setState(() {
-          _isUpdatingProfile = true;
-        });
-
-        final authProvider = Provider.of<AuthProvider>(context, listen: false);
-        if (authProvider.user == null) {
-          throw Exception('User not logged in');
-        }
-        print('Uploading image for user: ${authProvider.user!.uid}');
-        final imageUrl = await _profileService.uploadProfileImage(
-          File(image.path),
-          authProvider.user!.uid,
-        );
-        print('Uploaded image URL: $imageUrl');
-
-        await _profileService.updateUserProfile(
-          authProvider.user!.uid,
-          {'profileImageUrl': imageUrl},
-        );
-        print('Profile updated with URL: $imageUrl');
-
-        await authProvider.refreshUserData();
-        print('User data refreshed');
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Profile picture updated successfully'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      } else {
-        print('No image selected');
-      }
-    } catch (e) {
-      print('Error details: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error updating profile picture: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isUpdatingProfile = false;
-        });
-      }
-    }
-  }
-
-  void _showSignOutDialog(BuildContext context, AuthProvider authProvider) {
-    showDialog(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: const Text('Sign Out'),
-          content: const Text('Are you sure you want to sign out?'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-              },
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () async {
-                Navigator.of(dialogContext).pop();
-                try {
-                  await authProvider.signOut();
-                  if (mounted) {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (context) => const LoginScreen()),
-                    );
-                  }
-                } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Error signing out: $e'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                }
-              },
-              child: const Text(
-                'Sign Out',
-                style: TextStyle(color: Colors.red),
-              ),
-            ),
-          ],
-        );
-      },
     );
   }
 }

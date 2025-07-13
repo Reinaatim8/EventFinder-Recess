@@ -5,43 +5,68 @@ import '../../providers/auth_provider.dart';
 import '../home/home_screen.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
+import '../../models/event.dart'; 
 
 // Placeholder Event model (replace with your actual Event model)
-class Event {
-  final String id;
-  final String title;
-  final String category;
-  final String date;
-  final String location;
-  final String description;
-  final String? imageUrl;
-  final String organizerId;
+// class Event {
+//   final String id;
+//   final String title;
+//   final String category;
+//   final String date;
+//   final String location;
+//   final String description;
+//   final String? imageUrl;
+//   final String organizerId;
+//   final double price;
 
-  Event({
-    required this.id,
-    required this.title,
-    required this.category,
-    required this.date,
-    required this.location,
-    required this.description,
-    this.imageUrl,
-    required this.organizerId,
-  });
+//    Event({
+//     required this.id,
+//     required this.title,
+//     required this.category,
+//     required this.date,
+//     required this.location,
+//     required this.description,
+//     this.imageUrl,
+//     required this.organizerId, 
+//     required this.price,
+//   });
 
-  factory Event.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-    return Event(
-      id: doc.id,
-      title: data['title'] ?? '',
-      category: data['category'] ?? '',
-      date: data['date'] ?? '',
-      location: data['location'] ?? '',
-      description: data['description'] ?? '',
-      imageUrl: data['imageUrl'],
-      organizerId: data['organizerId'] ?? '',
-    );
-  }
-}
+//   factory Event.fromFirestore(DocumentSnapshot doc) {
+//     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+//     return Event(
+//       id: doc.id,
+//       title: data['title'] ?? '',
+//       category: data['category'] ?? '',
+//       date: data['date'] ?? '',
+//       location: data['location'] ?? '',
+//       description: data['description'] ?? '',
+//       imageUrl: data['imageUrl'],
+//       organizerId: data['organizerId'] ?? '',
+//       price: (data['price'] as num).toDouble(),
+//     );
+//   }
+
+  get status => null;
+
+  get timestamp => null;
+
+  get rejectionReason => null;
+
+  get approvedAt => null;
+
+//   Map<String, dynamic> toFirestore() {
+//     return {
+//       'title': title,
+//       'category': category,
+//       'date': date,
+//       'location': location,
+//       'description': description,
+//       'imageUrl': imageUrl,
+//       'organizerId': organizerId,
+//       'price': price,
+//     };
+//   }
+// }
 
 // Booking model
 class Booking {
@@ -168,7 +193,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
       
       print('Found ${snapshot.docs.length} events');
       snapshot.docs.forEach((doc) => print('Event data: ${doc.data()}'));
-      
+
       setState(() {
         organizerEvents = snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList();
         _hasAccess = true; // Allow access for authenticated users to create events
@@ -507,9 +532,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                                 children: [
                                   Text(
                                     event.title,
-                                    style:
-
- const TextStyle(
+                                    style: const TextStyle(
                                       fontSize: 18,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -1116,166 +1139,163 @@ class _AttendeesScreenState extends State<AttendeesScreen> {
 }
 
 // Enhanced Event Analytics Screen
-class EventAnalyticsScreen extends StatefulWidget {
+class EventAnalyticsScreen extends StatelessWidget {
   final Event event;
 
   const EventAnalyticsScreen({Key? key, required this.event}) : super(key: key);
 
-  @override
-  State<EventAnalyticsScreen> createState() => _EventAnalyticsScreenState();
-}
-
-class _EventAnalyticsScreenState extends State<EventAnalyticsScreen> {
-  List<Booking> bookings = [];
-  bool _isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchAnalyticsData();
-  }
-
-  Future<void> _fetchAnalyticsData() async {
-    setState(() {
-      _isLoading = true;
-    });
-
+  Future<List<Booking>> _getEventBookings() async {
     try {
       QuerySnapshot snapshot = await FirebaseFirestore.instance
           .collection('bookings')
-          .where('eventId', isEqualTo: widget.event.id)
-          .orderBy('bookingDate', descending: true)
+          .where('eventId', isEqualTo: event.id)
           .get();
-
-      setState(() {
-        bookings = snapshot.docs.map((doc) => Booking.fromFirestore(doc)).toList();
-        _isLoading = false;
-      });
+      
+      return snapshot.docs.map((doc) => Booking.fromFirestore(doc)).toList();
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error loading analytics: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      print('Error fetching bookings: $e');
+      return [];
     }
-  }
-
-  // Calculate analytics data
-  Map<String, dynamic> _calculateAnalytics() {
-    final paidBookings = bookings.where((b) => b.paid).toList();
-    final pendingBookings = bookings.where((b) => !b.paid).toList();
-    final totalRevenue = paidBookings.fold<double>(
-        0.0, (sum, booking) => sum + booking.total);
-
-    // Group bookings by date for trend analysis
-    Map<String, int> bookingsByDate = {};
-    for (var booking in bookings) {
-      final date = DateFormat('yyyy-MM-dd').format(booking.bookingDate);
-      bookingsByDate[date] = (bookingsByDate[date] ?? 0) + 1;
-    }
-
-    return {
-      'totalBookings': bookings.length,
-      'paidBookings': paidBookings.length,
-      'pendingBookings': pendingBookings.length,
-      'totalRevenue': totalRevenue,
-      'bookingsByDate': bookingsByDate,
-    };
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('${widget.event.title} - Analytics'),
+        title: Text('${event.title} - Analytics'),
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _fetchAnalyticsData,
-          ),
-        ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _buildAnalyticsContent(),
-    );
-  }
+      body: FutureBuilder<List<Booking>>(
+        future: _getEventBookings(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          
+          final bookings = snapshot.data ?? [];
+          final totalBookings = bookings.length;
+          final paidBookings = bookings.where((b) => b.paid).length;
+          final pendingBookings = totalBookings - paidBookings;
+          final totalRevenue = bookings.where((b) => b.paid).fold(0.0, (sum, booking) => sum + booking.total);
+          final averageBookingValue = paidBookings > 0 ? totalRevenue / paidBookings : 0.0;
 
-  Widget _buildAnalyticsContent() {
-    final analytics = _calculateAnalytics();
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Summary Cards
-          Row(
-            children: [
-              Expanded(
-                child: _buildSummaryCard(
-                  'Total Bookings',
-                  analytics['totalBookings'].toString(),
-                  Icons.people,
-                  Colors.blue,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildSummaryCard(
-                  'Total Revenue',
-                  '€${analytics['totalRevenue'].toStringAsFixed(2)}',
-                  Icons.attach_money,
-                  Colors.green,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _buildSummaryCard(
-                  'Paid',
-                  analytics['paidBookings'].toString(),
-                  Icons.check_circle,
-                  Colors.green,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildSummaryCard(
-                  'Pending',
-                  analytics['pendingBookings'].toString(),
-                  Icons.pending,
-                  Colors.orange,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          // Booking Trends Chart
-          Text(
-            'Booking Trends',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[800],
-            ),
-          ),
-          const SizedBox(height: 16),
-          Container(
-            height: 300,
+          return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
-            child: _buildBookingTrendChart(analytics['bookingsByDate']),
-          ),
-        ],
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Summary Cards
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildSummaryCard(
+                        'Total Bookings',
+                        totalBookings.toString(),
+                        Icons.people,
+                        Colors.blue,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildSummaryCard(
+                        'Paid Bookings',
+                        paidBookings.toString(),
+                        Icons.check_circle,
+                        Colors.green,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildSummaryCard(
+                        'Pending Bookings',
+                        pendingBookings.toString(),
+                        Icons.pending,
+                        Colors.orange,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildSummaryCard(
+                        'Total Revenue',
+                        '€${totalRevenue.toStringAsFixed(2)}',
+                        Icons.attach_money,
+                        Colors.purple,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _buildSummaryCard(
+                  'Average Booking Value',
+                  '€${averageBookingValue.toStringAsFixed(2)}',
+                  Icons.calculate,
+                  Colors.teal,
+                ),
+                const SizedBox(height: 24),
+
+                // Detailed Analytics
+                Text(
+                  'Booking Trends',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[800],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.1),
+                        spreadRadius: 1,
+                        blurRadius: 5,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Booking Status Breakdown',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[700],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _buildStatusIndicator(
+                            'Paid',
+                            paidBookings,
+                            Colors.green,
+                          ),
+                          _buildStatusIndicator(
+                            'Pending',
+                            pendingBookings,
+                            Colors.orange,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -1283,6 +1303,7 @@ class _EventAnalyticsScreenState extends State<EventAnalyticsScreen> {
   Widget _buildSummaryCard(String title, String value, IconData icon, Color color) {
     return Card(
       elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -1310,85 +1331,33 @@ class _EventAnalyticsScreenState extends State<EventAnalyticsScreen> {
     );
   }
 
-  Widget _buildBookingTrendChart(Map<String, int> bookingsByDate) {
-    // Sort dates and limit to last 7 days for display
-    final sortedDates = bookingsByDate.keys.toList()
-      ..sort((a, b) => DateTime.parse(a).compareTo(DateTime.parse(b)));
-    final last7Days = sortedDates.length > 7
-        ? sortedDates.sublist(sortedDates.length - 7)
-        : sortedDates;
-
-    final dataPoints = last7Days
-        .asMap()
-        .entries
-        .map((entry) => FlSpot(
-              entry.key.toDouble(),
-              (bookingsByDate[entry.value] ?? 0).toDouble(),
-            ))
-        .toList();
-
-    return LineChart(
-      LineChartData(
-        gridData: const FlGridData(show: true),
-        titlesData: FlTitlesData(
-          bottomTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              getTitlesWidget: (value, meta) {
-                final index = value.toInt();
-                if (index >= 0 && index < last7Days.length) {
-                  final date = DateTime.parse(last7Days[index]);
-                  return Text(
-                    DateFormat('MM/dd').format(date),
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 12,
-                    ),
-                  );
-                }
-                return const Text('');
-              },
-              reservedSize: 30,
+  Widget _buildStatusIndicator(String label, int count, Color color) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Text(
+            count.toString(),
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: color,
             ),
           ),
-          leftTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              getTitlesWidget: (value, meta) {
-                return Text(
-                  value.toInt().toString(),
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 12,
-                  ),
-                );
-              },
-              reservedSize: 40,
-            ),
-          ),
-          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         ),
-        borderData: FlBorderData(show: true),
-        lineBarsData: [
-          LineChartBarData(
-            spots: dataPoints,
-            isCurved: true,
-            color: Theme.of(context).primaryColor,
-            barWidth: 3,
-            belowBarData: BarAreaData(
-              show: true,
-              color: Theme.of(context).primaryColor.withOpacity(0.2),
-            ),
-            dotData: const FlDotData(show: true),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey[600],
           ),
-        ],
-        minY: 0,
-        maxY: (dataPoints.isNotEmpty
-                ? dataPoints.map((e) => e.y).reduce((a, b) => a > b ? a : b) + 1
-                : 5)
-            .toDouble(),
-      ),
+        ),
+      ],
     );
   }
 }

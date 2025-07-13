@@ -1,75 +1,76 @@
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class UserModel {
   final String uid;
-  final String name;
   final String email;
-  final String? phone;
-  final String? profileImageUrl;
+  final String name;
   final bool emailVerified;
-  final DateTime? createdAt;
-  final DateTime? lastLoginAt;
-  final String? bio;
+  final DateTime createdAt;
+  final DateTime lastLoginAt;
 
   UserModel({
     required this.uid,
-    required this.name,
     required this.email,
-    this.phone,
-    this.profileImageUrl,
-    this.emailVerified = false,
-    this.createdAt,
-    this.lastLoginAt,
-    this.bio,
+    required this.name,
+    required this.emailVerified,
+    required this.createdAt,
+    required this.lastLoginAt,
   });
-
-  factory UserModel.fromMap(Map<String, dynamic> map) {
-    return UserModel(
-      uid: map['uid'] ?? '',
-      name: map['name'] ?? '',
-      email: map['email'] ?? '',
-      phone: map['phone'],
-      profileImageUrl: map['profileImageUrl'],
-      emailVerified: map['emailVerified'] ?? false,
-      createdAt: map['createdAt']?.toDate(),
-      lastLoginAt: map['lastLoginAt']?.toDate(),
-      bio: map['bio'],
-    );
-  }
 
   Map<String, dynamic> toMap() {
     return {
       'uid': uid,
-      'name': name,
       'email': email,
-      'phone': phone,
-      'profileImageUrl': profileImageUrl,
+      'name': name,
       'emailVerified': emailVerified,
-      'createdAt': createdAt,
-      'lastLoginAt': lastLoginAt,
-      'bio': bio,
+      'createdAt': createdAt.millisecondsSinceEpoch,
+      'lastLoginAt': lastLoginAt.millisecondsSinceEpoch,
     };
+  }
+
+  factory UserModel.fromMap(Map<String, dynamic> map) {
+    return UserModel(
+      uid: map['uid']?.toString() ?? '',
+      email: map['email']?.toString() ?? '',
+      name: map['name']?.toString() ?? 'User',
+      emailVerified: map['emailVerified'] as bool? ?? false,
+      createdAt: _parseDate(map['createdAt']) ?? DateTime.now(),
+      lastLoginAt: _parseDate(map['lastLoginAt']) ?? DateTime.now(),
+    );
+  }
+
+  static DateTime? _parseDate(dynamic value) {
+    if (value is Timestamp) {
+      return value.toDate();
+    } else if (value is int) {
+      return DateTime.fromMillisecondsSinceEpoch(value);
+    } else if (value is String) {
+      try {
+        return DateTime.parse(value);
+      } catch (e) {
+        print('Failed to parse date string: $value');
+        return null;
+      }
+    }
+    return null;
   }
 
   UserModel copyWith({
     String? uid,
-    String? name,
     String? email,
-    String? phone,
-    String? profileImageUrl,
+    String? name,
     bool? emailVerified,
     DateTime? createdAt,
     DateTime? lastLoginAt,
-    String? bio,
   }) {
     return UserModel(
       uid: uid ?? this.uid,
-      name: name ?? this.name,
       email: email ?? this.email,
-      phone: phone ?? this.phone,
-      profileImageUrl: profileImageUrl ?? this.profileImageUrl,
+      name: name ?? this.name,
       emailVerified: emailVerified ?? this.emailVerified,
       createdAt: createdAt ?? this.createdAt,
       lastLoginAt: lastLoginAt ?? this.lastLoginAt,
-      bio: bio ?? this.bio,
     );
   }
 }
