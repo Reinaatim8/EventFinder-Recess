@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
+import 'package:pretty_qr_code/pretty_qr_code.dart';
+import 'package:uuid/uuid.dart';
 import '../../providers/auth_provider.dart';
 import '../profile/profile_screen.dart';
 import 'bookevent_screen.dart';
@@ -250,10 +252,62 @@ Future<void> _loadBookedEvents() async {
                   ElevatedButton(
                     onPressed: () {
                       Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => CheckoutScreen(
+                      final priceString = event.price.toString().trim().toLowerCase();
+                      final eventPrice = priceString == "free"
+                          ? 0.0
+                          : double.tryParse(priceString) ?? 0.0;
+
+                        if (eventPrice <= 0) {
+                        // Free event → show QR directly
+                         final ticketId = const Uuid().v4();
+                          showDialog(
+                          context: context,
+                          builder: (_) => AlertDialog(
+                            title: const Text("🎟 Free Entry: Event Ticket"),
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text("Here's your QR code ticket:"),
+                                const SizedBox(height: 16),
+                                SizedBox(
+                                  width: 180,
+                                  height: 180,
+                                  child: PrettyQrView.data(
+                                  data: ticketId,
+                                  errorCorrectLevel: QrErrorCorrectLevel.M,
+                                  ),
+                              ),
+                              const SizedBox(height: 10),
+                              Text("Ticket ID: $ticketId", style: const TextStyle(fontSize: 12)),
+                              const SizedBox(height: 8),
+                              const Text("Please present this QR code at the event."),
+                              ],
+                             ),
+                             actions: [
+                             TextButton(
+                             onPressed: () {
+                              bookingsTabKey.currentState?.addBooking({
+                              'id': DateTime.now().millisecondsSinceEpoch,
+                              'event': event.title,
+                              'total': 0.0,
+                              'paid': true,
+                            });
+                              setState(() {
+                                 _eventStatus[event.id] = 'Paid';
+                            });
+                            Navigator.pop(context);
+                            },
+                            child: const Text("Done"),
+                              ),
+                              ],),
+                           );
+                          } else {
+                          // Paid event → proceed to checkout
+                          Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                           (_) => CheckoutScreen(
                             total: event.price is num ? event.price.toDouble() : double.tryParse(event.price.toString()) ?? 0.0,
 
                             onPaymentSuccess: () {
@@ -269,7 +323,7 @@ Future<void> _loadBookedEvents() async {
                             },
                           ),
                         ),
-                      );
+                      );}
                     },
                     child: const Text('Pay For Event'),
                   ),
@@ -306,6 +360,7 @@ Future<void> _loadBookedEvents() async {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor:Colors.orange ,
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _getScreens()[_selectedIndex],
@@ -371,7 +426,7 @@ class HomeTab extends StatelessWidget {
 
 
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
@@ -637,6 +692,7 @@ class _CategoryChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+
       onTap: () {
         Navigator.push(
           context,
@@ -678,10 +734,22 @@ class _EventCard extends StatelessWidget {
 
   const _EventCard({required this.event, required this.onTap, this.status, required this.onBookToggle,
     required this.isBooked,});
-
+  // Correct date parser for "dd/mm/yyyy"
+  DateTime parseEventDate(String input) {
+    try {
+      final parts = input.split('/');
+      if (parts.length != 3) return DateTime(1900);
+      final day = int.tryParse(parts[0]) ?? 1;
+      final month = int.tryParse(parts[1]) ?? 1;
+      final year = int.tryParse(parts[2]) ?? 1900;
+      return DateTime(year, month, day);
+    } catch (e) {
+      return DateTime(1900);
+    }
+  }
   @override
   Widget build(BuildContext context) {
-    final eventDate = DateTime.tryParse(event.date) ?? DateTime.now();
+    final eventDate = parseEventDate(event.date);
     final isPast = eventDate.isBefore(DateTime.now());
     return GestureDetector(
         onTap: () {
@@ -866,11 +934,7 @@ class _EventCard extends StatelessWidget {
                 ],
               ),)
             ));
-         // ],
-       // ),
-    //   ),
-    // );
-  }
+            }
 
   IconData _getCategoryIcon(String category) {
     switch (category.toLowerCase()) {
@@ -1008,27 +1072,89 @@ class _SearchTabState extends State<SearchTab> {
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => CheckoutScreen(
-                      total: event.price is num ? event.price.toDouble() : double.tryParse(event.price.toString()) ?? 0.0,
+                print("Raw price: ${event.price} | Type: ${event.price.runtimeType}");
 
-                      onPaymentSuccess: () {
-                        bookingsTabKey.currentState?.addBooking({
-                          'id': DateTime.now().millisecondsSinceEpoch,
-                          'event': event.title,
-                          'total': event.price,
-                          'paid': true,
-                        });
-                        setState(() {
-                          _eventStatus[event.id] = 'Paid';
-                        });
-                      },
+                final priceString = event.price.toString().trim().toLowerCase();
+                final eventPrice = priceString == "free"
+                    ? 0.0
+                    : double.tryParse(priceString) ?? 0.0;
+                print("Parsed eventPrice: $eventPrice");
+                if (eventPrice <= 0.0) {
+                  // 🚀 Free event → Show QR code directly
+                  final ticketId = const Uuid().v4();
+                  showDialog(
+                    context: context,
+                    builder: (_) =>
+                        AlertDialog(
+                          title: const Text("🎟 Free Event Ticket"),
+                          content: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text("Here's your QR code ticket:"),
+                              const SizedBox(height: 16),
+                              SizedBox(
+                                width: 180,
+                                height: 180,
+                                child: PrettyQrView.data(
+                                  data: ticketId,
+                                  errorCorrectLevel: QrErrorCorrectLevel.M,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Text("Ticket ID: $ticketId",
+                                  style: const TextStyle(fontSize: 12)),
+                              const SizedBox(height: 8),
+                              const Text(
+                                  "Please present this QR code at the event."),
+                            ],),
+                          actions: [
+                            TextButton(
+                              onPressed: () {
+                                bookingsTabKey.currentState?.addBooking({
+                                  'id': DateTime
+                                      .now()
+                                      .millisecondsSinceEpoch,
+                                  'event': event.title,
+                                  'total': 0.0,
+                                  'paid': true,
+                                });
+                                setState(() {
+                                  _eventStatus[event.id] = 'Paid';
+                                });
+                                Navigator.pop(context);
+                              },
+                              child: const Text("Free Event"),
+                            ),
+                          ],
+                        ),
+                  );
+                }else {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          CheckoutScreen(
+                            total: eventPrice,
+                            onPaymentSuccess: () {
+                              bookingsTabKey.currentState?.addBooking({
+                                'id': DateTime
+                                    .now()
+                                    .millisecondsSinceEpoch,
+                                'event': event.title,
+                                'total': event.price,
+                                'paid': true,
+                              });
+                              setState(() {
+                                _eventStatus[event.id] = 'Paid';
+                              });
+
+                            },
+
+                          ),
                     ),
-                  ),
-                );
-              },
+                  );
+                 }
+                },
               child: const Text('Pay For Event'),
             ),
             TextButton(
