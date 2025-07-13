@@ -14,6 +14,7 @@ import 'addingevent.dart';
 import '../home/event_management_screen.dart';
 import '../../models/event.dart';
 import '../map/map_screen.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:convex_bottom_bar/convex_bottom_bar.dart';
 
 final GlobalKey<_BookingsTabState> bookingsTabKey = GlobalKey<_BookingsTabState>();
@@ -211,12 +212,14 @@ Future<void> _loadBookedEvents() async {
                           _eventStatus[event.id] = 'Reserved';
                         });
                         Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Event Reserved!'),
-                            backgroundColor: Colors.orange,
-                          ),
-                        );
+                        Fluttertoast.showToast(
+                          msg: "Event Reserved!",
+                          toastLength: Toast.LENGTH_LONG,
+                          gravity: ToastGravity.CENTER, // or CENTER
+                          backgroundColor: Colors.orange,
+                          textColor: Colors.white,
+                           fontSize: 19.0,
+                         );
                       },
                       child: const Text('Book Event'),
                     ),
@@ -226,15 +229,18 @@ Future<void> _loadBookedEvents() async {
                         // UNBOOK logic
                         bookingsTabKey.currentState?.removeBookingByTitle(event.title); // You'll create this method next
                         setState(() {
-                          _eventStatus[event.id] = 'unbooked';
+                          _eventStatus[event.id] = 'Reservation Cancelled!';
                         });
                         Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Reservation canceled.'),
-                            backgroundColor: Colors.grey,
-                          ),
+                        Fluttertoast.showToast(
+                          msg: "Reservation Cancelled!",
+                          toastLength: Toast.LENGTH_LONG,
+                          gravity: ToastGravity.CENTER, // or CENTER
+                          backgroundColor: Colors.grey,
+                          textColor: Colors.pink,
+                          fontSize: 18.0,
                         );
+
                       },
                       style: ElevatedButton.styleFrom(backgroundColor: const Color.fromARGB(255, 246, 105, 50)),
                       child: const Text('Cancel Reseravtion'),
@@ -675,23 +681,39 @@ class _EventCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final eventDate = DateTime.tryParse(event.date) ?? DateTime.now();
+    final isPast = eventDate.isBefore(DateTime.now());
     return GestureDetector(
-        onTap: onTap,
-
-
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
+        onTap: () {
+          if (isPast) {
+            Fluttertoast.showToast(
+              msg: "Oops! Event Passed, Sorry!",
+              backgroundColor: Colors.red,
+              textColor: Colors.white,
+              toastLength: Toast.LENGTH_LONG,
+              gravity: ToastGravity.CENTER,
+              fontSize: 18.0,
+            );
+          } else {
+            onTap?.call();
+          }
+        },
+          child: Opacity(
+            opacity: isPast ? 0.3 : 1.0,
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 15),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+               boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
-              spreadRadius: 1,
+              color: Colors.grey.withOpacity(0.3),
               blurRadius: 5,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
+               offset: const Offset(0, 2),
+             ),
+            ],
+          ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -701,6 +723,10 @@ class _EventCard extends StatelessWidget {
                   topLeft: Radius.circular(12),
                   topRight: Radius.circular(12),
                 ),
+                  child: ColorFiltered(
+                    colorFilter: isPast
+                        ? const ColorFilter.mode(Colors.grey, BlendMode.saturation)
+                        : const ColorFilter.mode(Colors.transparent, BlendMode.multiply),
                 child: Image.network(
                   event.imageUrl!,
                   height: 200,
@@ -718,6 +744,7 @@ class _EventCard extends StatelessWidget {
                     );
                   },
                 ),
+              ),
               ),
             Padding(
               padding: const EdgeInsets.all(15),
@@ -838,7 +865,7 @@ class _EventCard extends StatelessWidget {
                   ],
                 ],
               ),)
-            );
+            ));
          // ],
        // ),
     //   ),
