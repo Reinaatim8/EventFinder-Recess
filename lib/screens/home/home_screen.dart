@@ -14,6 +14,7 @@ import 'package:flutter/foundation.dart';
 import 'dart:typed_data';
 import 'addingevent.dart';
 import '../home/event_management_screen.dart';
+import 'dart:async';
 
 // Note: Ensure 'geolocator' and 'geocoding' are added to pubspec.yaml:
 // dependencies:
@@ -327,8 +328,8 @@ class _HomeTabState extends State<HomeTab> {
       });
 
     List<Widget> eventWidgets = [];
-    for (var date in sortedDates) {
-      if (eventsByDate[date]!.isNotEmpty) {
+    for (var delta in sortedDates) {
+      if (eventsByDate[delta]!.isNotEmpty) {
         eventWidgets.add(
           Padding(
             padding: const EdgeInsets.symmetric(
@@ -336,7 +337,7 @@ class _HomeTabState extends State<HomeTab> {
               vertical: 10.0,
             ),
             child: Text(
-              date,
+              delta,
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -346,10 +347,10 @@ class _HomeTabState extends State<HomeTab> {
           ),
         );
         eventWidgets.addAll(
-          eventsByDate[date]!.asMap().entries.map(
+          eventsByDate[delta]!.asMap().entries.map(
             (entry) => Padding(
               padding: const EdgeInsets.only(bottom: 15, left: 20, right: 20),
-              child: _EventCard(event: entry.value, onTap: () {}),
+              child: _EventCard(event: entry.value),
             ),
           ),
         );
@@ -848,44 +849,188 @@ class _DateRangeDropdown extends StatelessWidget {
   }
 }
 
+class EventDetailsScreen extends StatelessWidget {
+  final Event event;
+
+  const EventDetailsScreen({Key? key, required this.event}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(event.title),
+        backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Colors.white,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (event.imageUrl != null)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  event.imageUrl!,
+                  height: 200,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            const SizedBox(height: 16),
+            Text(
+              event.title,
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(event.description, style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 16),
+            _buildInfoRow(Icons.calendar_today, 'Date', event.date),
+            _buildInfoRow(Icons.location_on, 'Location', event.location),
+            _buildInfoRow(Icons.category, 'Category', event.category),
+            _buildInfoRow(
+              Icons.attach_money,
+              'Price',
+              '€${event.price.toStringAsFixed(2)}',
+            ),
+            const SizedBox(height: 24),
+            Center(
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => CheckoutScreen(
+                        total: event.price,
+                        onPaymentSuccess: () {
+                          bookingsTabKey.currentState?.addBooking({
+                            'id': DateTime.now().millisecondsSinceEpoch,
+                            'event': event.title,
+                            'total': event.price,
+                            'paid': true,
+                          });
+                        },
+                      ),
+                    ),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 30,
+                    vertical: 15,
+                  ),
+                ),
+                child: const Text('Book Now'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: Colors.grey[600]),
+          const SizedBox(width: 12),
+          Text('$label: ', style: const TextStyle(fontWeight: FontWeight.bold)),
+          Expanded(child: Text(value)),
+        ],
+      ),
+    );
+  }
+}
+
 class _EventCard extends StatelessWidget {
   final Event event;
-  final VoidCallback onTap;
 
-  const _EventCard({required this.event, required this.onTap});
+  const _EventCard({required this.event});
 
   Future<void> _trackView(BuildContext context) async {
-    try {
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) return;
+    // Debouncing logic
+    Timer? _debounceTimer;
+    if (_debounceTimer?.isActive ?? false) return;
+
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () async {
+      try {
+        String? city;
+        String? country;
+
+        // Check if geolocation permission is granted
+        LocationPermission permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.denied) {
+          permission = await Geolocator.requestPermission();
+          if (permission == LocationPermission.denied) {
+            city = 'Unknown';
+            country = 'Unknown';
+          }
+        }
+
+        if (permission != LocationPermission.denied &&
+            permission != LocationPermission.deniedForever) {
+          try {
+            Position position = await Geolocator.getCurrentPosition(
+              desiredAccuracy: LocationAccuracy.medium,
+            ).timeout(const Duration(seconds: 5));
+            List<Placemark> placemarks = await placemarkFromCoordinates(
+              position.latitude,
+              position.longitude,
+            ).timeout(const Duration(seconds: 5));
+            city = placemarks.isNotEmpty ? placemarks[0].locality : 'Unknown';
+            country = placemarks.isNotEmpty ? placemarks[0].country : 'Unknown';
+          } catch (e) {
+            print('Error getting geolocation: $e');
+            city = 'Unknown';
+            country = 'Unknown';
+          }
+        }
+
+        final viewData = {
+          'eventId': event.id,
+          'timestamp': FieldValue.serverTimestamp(),
+          'city': city ?? 'Unknown',
+          'country': country ?? 'Unknown',
+          'userId':
+              Provider.of<AuthProvider>(context, listen: false).user?.uid ??
+              'anonymous',
+          'platform': defaultTargetPlatform.toString(),
+          'viewType': 'detail_view',
+        };
+
+        // Retry logic for Firestore write
+        int retries = 3;
+        while (retries > 0) {
+          try {
+            await FirebaseFirestore.instance
+                .collection('events')
+                .doc(event.id)
+                .collection('views')
+                .add(viewData);
+            break;
+          } catch (e) {
+            retries--;
+            if (retries == 0) {
+              print('Error tracking view after retries: $e');
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Failed to track event view. Please try again.',
+                  ),
+                ),
+              );
+            }
+            await Future.delayed(const Duration(milliseconds: 500));
+          }
+        }
+      } catch (e) {
+        print('Error tracking view: $e');
       }
-      if (permission == LocationPermission.deniedForever) return;
-
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.medium,
-      );
-      List<Placemark> placemarks = await placemarkFromCoordinates(
-        position.latitude,
-        position.longitude,
-      );
-      String? city = placemarks.isNotEmpty ? placemarks[0].locality : null;
-      String? country = placemarks.isNotEmpty ? placemarks[0].country : null;
-
-      await FirebaseFirestore.instance
-          .collection('events')
-          .doc(event.id)
-          .collection('views')
-          .add({
-            'eventId': event.id,
-            'timestamp': FieldValue.serverTimestamp(),
-            'city': city,
-            'country': country,
-          });
-    } catch (e) {
-      print('Error tracking view: $e');
-    }
+    });
   }
 
   @override
@@ -896,17 +1041,7 @@ class _EventCard extends StatelessWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => CheckoutScreen(
-              total: event.price,
-              onPaymentSuccess: () {
-                bookingsTabKey.currentState?.addBooking({
-                  'id': DateTime.now().millisecondsSinceEpoch,
-                  'event': event.title,
-                  'total': event.price,
-                  'paid': true,
-                });
-              },
-            ),
+            builder: (context) => EventDetailsScreen(event: event),
           ),
         );
       },
@@ -1202,7 +1337,7 @@ class BookingsTabState extends State<BookingsTab> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Total: \$${booking['total']?.toStringAsFixed(2) ?? '0.00'}',
+                          'Total: €${booking['total']?.toStringAsFixed(2) ?? '0.00'}',
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
@@ -1398,7 +1533,7 @@ class _SearchTabState extends State<SearchTab> {
                       final event = _filteredEvents[index];
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 15),
-                        child: _EventCard(event: event, onTap: () {}),
+                        child: _EventCard(event: event),
                       );
                     },
                   ),
