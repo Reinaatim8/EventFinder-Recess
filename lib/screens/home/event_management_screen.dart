@@ -7,44 +7,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import '../../models/event.dart'; 
 
-// Placeholder Event model (replace with your actual Event model)
-// class Event {
-//   final String id;
-//   final String title;
-//   final String category;
-//   final String date;
-//   final String location;
-//   final String description;
-//   final String? imageUrl;
-//   final String organizerId;
-//   final double price;
 
-//    Event({
-//     required this.id,
-//     required this.title,
-//     required this.category,
-//     required this.date,
-//     required this.location,
-//     required this.description,
-//     this.imageUrl,
-//     required this.organizerId, 
-//     required this.price,
-//   });
-
-//   factory Event.fromFirestore(DocumentSnapshot doc) {
-//     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-//     return Event(
-//       id: doc.id,
-//       title: data['title'] ?? '',
-//       category: data['category'] ?? '',
-//       date: data['date'] ?? '',
-//       location: data['location'] ?? '',
-//       description: data['description'] ?? '',
-//       imageUrl: data['imageUrl'],
-//       organizerId: data['organizerId'] ?? '',
-//       price: (data['price'] as num).toDouble(),
-//     );
-//   }
 
   get status => null;
 
@@ -54,19 +17,7 @@ import '../../models/event.dart';
 
   get approvedAt => null;
 
-//   Map<String, dynamic> toFirestore() {
-//     return {
-//       'title': title,
-//       'category': category,
-//       'date': date,
-//       'location': location,
-//       'description': description,
-//       'imageUrl': imageUrl,
-//       'organizerId': organizerId,
-//       'price': price,
-//     };
-//   }
-// }
+
 
 // Booking model
 class Booking {
@@ -242,6 +193,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
       QuerySnapshot snapshot = await FirebaseFirestore.instance
           .collection('bookings')
           .where('eventId', isEqualTo: eventId)
+          
           .get();
       
       return snapshot.docs.map((doc) => Booking.fromFirestore(doc)).toList();
@@ -579,6 +531,9 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                               return const LinearProgressIndicator();
                             }
                             final bookings = snapshot.data ?? [];
+                            final bookedCount = bookings.length;
+                            final maxslots = event.maxslots ?? 0;
+                            final slotsRemaining = maxslots - bookedCount;
                             final paidBookings = bookings.where((b) => b.paid).length;
                             final totalRevenue = bookings.where((b) => b.paid)
                                 .fold(0.0, (sum, booking) => sum + booking.total);
@@ -630,6 +585,19 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                                       const Text('Revenue'),
                                     ],
                                   ),
+                                  if (maxslots > 0) ...[
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      slotsRemaining > 0
+                                        ? 'Slots remaining: $slotsRemaining'
+                                        : 'Slots full',
+                                      style: TextStyle(
+                                        color: slotsRemaining > 0 ? Colors.orange : Colors.red,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+
                                 ],
                               ),
                             );
@@ -815,6 +783,9 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
         return Icons.event;
     }
   }
+}
+
+mixin maxSlots {
 }
 
 // Event Details Screen

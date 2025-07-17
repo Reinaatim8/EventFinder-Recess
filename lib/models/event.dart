@@ -16,6 +16,9 @@ class Event {
   final double? latitude;
   final double? longitude;
   final String? imageUrl;
+  final int? maxslots;
+
+  
 
   Event({
     required this.id,
@@ -26,13 +29,14 @@ class Event {
     required this.price,
     required this.category,
     required this.organizerId,
+    this.maxslots,
     this.status,
     this.timestamp,
     this.rejectionReason,
     this.approvedAt,
     this.latitude, 
     this.longitude,
-    this.imageUrl,
+    this.imageUrl, 
   });
 
   // Deserialize from Firestore
@@ -45,6 +49,7 @@ class Event {
       date: data['date'] ?? '',
       location: data['location'] ?? '',
       price: (data['price'] as num?)?.toDouble() ?? 0.0,
+      maxslots: data['maxslots'],
       category: data['category'] ?? '',
       organizerId: data['organizerId'] ?? '',
       status: data['status'],
@@ -73,6 +78,7 @@ class Event {
       'date': date,
       'location': location,
       'price': price,
+      'maxslots': maxslots,
       'category': category,
       'organizerId': organizerId,
       'status': status,
