@@ -1,3 +1,5 @@
+import 'package:event_locator_app/models/event.dart';
+import 'package:event_locator_app/screens/home/event_management_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -570,7 +572,9 @@ class _AddEventDialogState extends State<AddEventDialog> {
           category: _selectedCategory,
           imageUrl: imageUrl,
           organizerId: organizerId,
-          price: double.tryParse(_priceController.text.trim()) ?? 0.0,
+          // 
+          price: double.tryParse(_priceController.text) ?? 0.0,
+
         );
 
         await _saveEventToFirestore(event);
@@ -608,4 +612,10 @@ class _AddEventDialogState extends State<AddEventDialog> {
     _locationController.dispose();
     super.dispose();
   }
+}
+
+class LatLng {
+  double? get latitude => null;
+  
+  double? get longitude => null;
 }

@@ -148,7 +148,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 _openMobileMoneyDialog(_selectedNetwork!);
               }
             },
-            child: const Text("Book Ticket", style: TextStyle(color: Colors.white, fontSize: 16)),
+            child: const Text("Get Your Ticket", style: TextStyle(color: Colors.white, fontSize: 16)),
           ),
         ]),
       ),
@@ -305,11 +305,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text("Booking Successful ✅", style: TextStyle(fontSize:20,fontWeight: FontWeight.bold,)),
+        title: const Text("Payment Successful ✅", style: TextStyle(fontSize:20,fontWeight: FontWeight.bold,)),
         content:Column(
           mainAxisSize: MainAxisSize.min,
            children: [
-            Text("You booked your ticket for EUR${widget.total.toStringAsFixed(2)}."),
+            Text("Your Event ticket for EUR${widget.total.toStringAsFixed(2)}."),
             const SizedBox(height: 16),
             const Text("🎟 Your Ticket QR Code", style: TextStyle(fontWeight: FontWeight.bold,)),
              if (_ticketId != null)
