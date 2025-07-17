@@ -7,9 +7,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'dart:async';
 import '../../providers/auth_provider.dart';
 import '../home/home_screen.dart';
-import 'package:fl_chart/fl_chart.dart';
-import 'package:intl/intl.dart';
-import '../../models/event.dart'; 
+import '../../models/event.dart';
 
 // View Record Model
 class ViewRecord {
@@ -60,70 +58,6 @@ class ViewRecord {
   }
 }
 
-// Event Model
-// class Event {
-//   final String id;
-//   final String title;
-//   final String category;
-//   final String date;
-//   final String location;
-//   final String description;
-//   final String? imageUrl;
-//   final String organizerId;
-  final double price;
-//   final double price;
-
-//    Event({
-//     required this.id,
-//     required this.title,
-//     required this.category,
-//     required this.date,
-//     required this.location,
-//     required this.description,
-//     this.imageUrl,
-//     required this.organizerId, 
-//     required this.price,
-//     required this.price,
-  });
-
-//   factory Event.fromFirestore(DocumentSnapshot doc) {
-//     final data = doc.data() as Map<String, dynamic>? ?? {};
-//     return Event(
-//       id: doc.id,
-//       title: data['title'] ?? '',
-//       category: data['category'] ?? 'Other',
-//       date: data['date'] ?? '',
-//       location: data['location'] ?? '',
-//       description: data['description'] ?? '',
-//       imageUrl: data['imageUrl'],
-//       organizerId: data['organizerId'] ?? '',
-//       price: (data['price'] as num).toDouble(),
-//       price: (data['price'] ?? 0.0).toDouble(),
-    );
-//   }
-
-  get status => null;
-
-  get timestamp => null;
-
-  get rejectionReason => null;
-
-  get approvedAt => null;
-
-//   Map<String, dynamic> toFirestore() {
-//     return {
-//       'title': title,
-//       'category': category,
-//       'date': date,
-//       'location': location,
-//       'description': description,
-//       'imageUrl': imageUrl,
-//       'organizerId': organizerId,
-//       'price': price,
-//     };
-//   }
-// }
-
 // Booking Model
 class Booking {
   final String id;
@@ -156,7 +90,7 @@ class Booking {
       email: data['email'] ?? '',
       bookingDate:
           (data['bookingDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      total: (data['total'] ?? 0.0).toDouble(),
+      total: (data['total'] as num?)?.toDouble() ?? 0.0,
       paid: data['paid'] ?? false,
     );
   }
@@ -280,7 +214,6 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
     });
 
     try {
-      // Set up real-time listener for events
       _eventsSubscription = FirebaseFirestore.instance
           .collection('events')
           .where('organizerId', isEqualTo: organizerId)
