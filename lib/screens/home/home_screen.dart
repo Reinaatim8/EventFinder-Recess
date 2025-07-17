@@ -411,16 +411,18 @@ class HomeTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
         List<Widget> eventWidgets = events.map(
-          (event) => Padding(
-            padding: const EdgeInsets.only(bottom: 15, left: 20, right: 20),
-            child: _EventCard(event: event,
-             onTap: () => onEventTap(event), 
-             status: eventStatus[event.id],
-             isBooked: eventStatus[event.id] == 'Reserved',
-             onBookToggle: () {
-             // Call _showEventDetailsModal(event) to handle booking/unbooking
-             onEventTap(event);
-  },),
+          (event) => Column(
+            children: [
+              _EventCard(event: event,
+                onTap: () => onEventTap(event),
+                status: eventStatus[event.id],
+                isBooked: eventStatus[event.id] == 'Reserved',
+                onBookToggle: () {
+                  onEventTap(event);
+                },
+              ),
+              const SizedBox(height: 8), // small space between posts
+            ],
           ),
         ).toList();
 
@@ -769,32 +771,27 @@ class _EventCard extends StatelessWidget {
           child: Opacity(
             opacity: isPast ? 0.3 : 1.0,
           child: Container(
-            margin: const EdgeInsets.only(bottom: 15),
-            padding: const EdgeInsets.all(16),
+            margin: EdgeInsets.zero,
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 0),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-               boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.3),
-              blurRadius: 5,
-               offset: const Offset(0, 2),
-             ),
-            ],
-          ),
+              borderRadius: BorderRadius.zero,
+              border: Border(
+                bottom: BorderSide(
+                  color: Colors.grey.withOpacity(0.3),
+                  width: 0.5,
+                ),
+              ),
+              boxShadow: [],
+            ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (event.imageUrl != null)
-              ClipRRect(
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(12),
-                  topRight: Radius.circular(12),
-                ),
-                  child: ColorFiltered(
-                    colorFilter: isPast
-                        ? const ColorFilter.mode(Colors.grey, BlendMode.saturation)
-                        : const ColorFilter.mode(Colors.transparent, BlendMode.multiply),
+              ColorFiltered(
+                colorFilter: isPast
+                    ? const ColorFilter.mode(Colors.grey, BlendMode.saturation)
+                    : const ColorFilter.mode(Colors.transparent, BlendMode.multiply),
                 child: Image.network(
                   event.imageUrl!,
                   height: 200,
@@ -813,9 +810,8 @@ class _EventCard extends StatelessWidget {
                   },
                 ),
               ),
-              ),
             Padding(
-              padding: const EdgeInsets.all(15),
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
