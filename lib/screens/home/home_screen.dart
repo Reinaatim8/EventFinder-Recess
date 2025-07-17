@@ -23,6 +23,55 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:convex_bottom_bar/convex_bottom_bar.dart';
 import 'dart:async';
 
+// View Record Model (consistent with event_management_screen.dart)
+class ViewRecord {
+  final String id;
+  final String eventId;
+  final DateTime timestamp;
+  final String? city;
+  final String? country;
+  final String userId;
+  final String platform;
+  final String viewType;
+
+  ViewRecord({
+    required this.id,
+    required this.eventId,
+    required this.timestamp,
+    this.city,
+    this.country,
+    required this.userId,
+    required this.platform,
+    required this.viewType,
+  });
+
+  factory ViewRecord.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>? ?? {};
+    return ViewRecord(
+      id: doc.id,
+      eventId: data['eventId'] ?? '',
+      timestamp: (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      city: data['city'],
+      country: data['country'],
+      userId: data['userId'] ?? 'anonymous',
+      platform: data['platform'] ?? 'unknown',
+      viewType: data['viewType'] ?? 'detail_view',
+    );
+  }
+
+  Map<String, dynamic> toFirestore() {
+    return {
+      'eventId': eventId,
+      'timestamp': Timestamp.fromDate(timestamp),
+      'city': city,
+      'country': country,
+      'userId': userId,
+      'platform': platform,
+      'viewType': viewType,
+    };
+  }
+}
+
 // Note: Ensure 'geolocator' and 'geocoding' are added to pubspec.yaml:
 // dependencies:
 //   geolocator: ^10.1.0
@@ -260,7 +309,76 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _recordView(String eventId) async {
+    final userId = FirebaseAuth.instance.currentUser?.uid ?? 'anonymous';
+    String? city;
+    String? country;
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        print('Location services are disabled.');
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          print('Location permissions are denied.');
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        print('Location permissions are permanently denied.');
+        return;
+      }
+
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+      city = placemarks.isNotEmpty ? placemarks[0].locality : null;
+      country = placemarks.isNotEmpty ? placemarks[0].country : null;
+    } catch (e) {
+      print('Error getting location: $e');
+    }
+
+    final viewRecord = ViewRecord(
+      id: const Uuid().v4(),
+      eventId: eventId,
+      timestamp: DateTime.now(),
+      city: city,
+      country: country,
+      userId: userId,
+      platform: Platform.isAndroid
+          ? 'Android'
+          : Platform.isIOS
+          ? 'iOS'
+          : 'Unknown',
+      viewType: 'detail_view',
+    );
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('events')
+          .doc(eventId)
+          .collection('views')
+          .doc(viewRecord.id)
+          .set(viewRecord.toFirestore());
+    } catch (e) {
+      print('Error recording view: $e');
+    }
+  }
+
   void _showEventDetailsModal(Event event) {
+    // Record view when event details are opened
+    _recordView(event.id);
+
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
