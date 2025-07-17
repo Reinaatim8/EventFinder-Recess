@@ -29,11 +29,13 @@ class HomeScreen extends StatefulWidget {
 }
  final Map<String, String> _eventStatus = {};
 
+
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   List<Event> events = [];
   bool _isLoading = true;
   Set<String> bookedEventIds = {};
+  Set<String> savedEventIds = {};
 
 
   @override
@@ -359,8 +361,9 @@ Future<void> _loadBookedEvents() async {
 
   @override
   Widget build(BuildContext context) {
+
     return Scaffold(
-      backgroundColor:Colors.orange ,
+      backgroundColor:Colors.white ,
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _getScreens()[_selectedIndex],
@@ -732,6 +735,7 @@ class _EventCard extends StatelessWidget {
   final VoidCallback onBookToggle;
   final bool isBooked;
 
+
   const _EventCard({required this.event, required this.onTap, this.status, required this.onBookToggle,
     required this.isBooked,});
   // Correct date parser for "dd/mm/yyyy"
@@ -751,6 +755,7 @@ class _EventCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final eventDate = parseEventDate(event.date);
     final isPast = eventDate.isBefore(DateTime.now());
+
     return GestureDetector(
         onTap: () {
           if (isPast) {
@@ -772,12 +777,12 @@ class _EventCard extends StatelessWidget {
             margin: const EdgeInsets.only(bottom: 15),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Colors.white70,
               borderRadius: BorderRadius.circular(12),
                boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.3),
-              blurRadius: 5,
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 10,
                offset: const Offset(0, 2),
              ),
             ],
@@ -840,23 +845,58 @@ class _EventCard extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              event.title,
+                              event.title.toUpperCase(),
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
-                                fontSize: 18,
+                                fontSize: 20,
+                                decoration: TextDecoration.underline,
+
                               ),
                             ),
                             const SizedBox(height: 8),
+                            if (event.price == '0' || event.price == '0.0' || event.price == '0.00')
+                                Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.green[50],
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Text(
+                                  'Free Entry',
+                                  style: TextStyle(
+                                    color: Colors.green,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              )
+                            else
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue[50],
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                 child:Text(
+                                   (event.price == '0' || event.price == '0.0' || event.price == '0.00')
+                                       ? 'Free Entry'
+                                       : 'Entry Fee: UGX ${event.price}',
+                                   style: const TextStyle(
+                                     color: Colors.deepPurple,
+                                     fontWeight: FontWeight.bold,
+                                     fontSize: 16,
+                                   ),
+                                 ),
+                              ),
                             Row(
                               children: [
                                 Icon(Icons.calendar_today,
-                                    size: 16, color: Colors.grey[600]),
+                                    size: 20, color: Colors.green),
                                 const SizedBox(width: 5),
                                 Text(
                                   event.date,
                                   style: TextStyle(
-                                    color: Colors.grey[600],
-                                    fontSize: 14,
+                                    color: Colors.red,
+                                    fontSize: 17,
                                   ),
                                 ),
                               ],
@@ -865,19 +905,20 @@ class _EventCard extends StatelessWidget {
                             Row(
                               children: [
                                 Icon(Icons.location_on,
-                                    size: 16, color: Colors.grey[600]),
+                                    size: 20, color: Colors.red),
                                 const SizedBox(width: 5),
                                 Expanded(
                                   child: Text(
                                     event.location,
                                     style: TextStyle(
-                                      color: Colors.grey[600],
-                                      fontSize: 14,
+                                      color: Colors.deepPurple,
+                                      fontSize: 17,
                                     ),
                                   ),
                                 ),
                               ],
                             ),
+
                             if (status != null)
                              Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(
