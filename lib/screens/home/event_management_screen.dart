@@ -874,6 +874,9 @@ class EventDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Log view when screen is opened
+    _logView(context, event);
+
     return Scaffold(
       appBar: AppBar(
         title: Text(event.title),
@@ -941,6 +944,47 @@ class EventDetailsScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _logView(BuildContext context, Event event) async {
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final userId = authProvider.user?.uid ?? 'anonymous';
+      final platform = Theme.of(context).platform.toString().split('.').last;
+
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        0.0,
+        0.0,
+      ); // Placeholder coordinates
+      String? city = placemarks.isNotEmpty ? placemarks.first.locality : null;
+      String? country = placemarks.isNotEmpty ? placemarks.first.country : null;
+
+      await FirebaseFirestore.instance
+          .collection('events')
+          .doc(event.id)
+          .collection('views')
+          .add(
+            ViewRecord(
+              id: '',
+              eventId: event.id,
+              timestamp: DateTime.now(),
+              city: city,
+              country: country,
+              userId: userId,
+              platform: platform,
+              viewType: 'detail_view',
+            ).toFirestore(),
+          );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error logging view: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }
 
