@@ -10,6 +10,33 @@ import '../../models/event.dart';
 import 'package:uuid/uuid.dart';
 import 'package:flutter/foundation.dart';
 
+// Helper class to share common methods
+class EventUtils {
+  static IconData getCategoryIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'concert':
+      case 'festival':
+        return Icons.music_note;
+      case 'conference':
+        return Icons.computer;
+      case 'workshop':
+        return Icons.build;
+      case 'sports':
+        return Icons.sports;
+      case 'networking':
+        return Icons.group;
+      case 'exhibition':
+        return Icons.museum;
+      case 'theater':
+        return Icons.theater_comedy;
+      case 'comedy':
+        return Icons.sentiment_very_satisfied;
+      default:
+        return Icons.event;
+    }
+  }
+}
+
 // View Record Model (consistent with home_screen.dart)
 class ViewRecord {
   final String id;
@@ -325,7 +352,6 @@ class _EventAnalyticsScreenState extends State<EventAnalyticsScreen> {
       final hourlyViews = <String, int>{};
       final now = DateTime.now();
       for (var view in views) {
-        // Only consider views from the last 24 hours for the chart
         if (now.difference(view.timestamp).inHours <= 24) {
           final hour = DateFormat('HH').format(view.timestamp);
           hourlyViews[hour] = (hourlyViews[hour] ?? 0) + 1;
@@ -621,7 +647,7 @@ class EventDetailsScreen extends StatelessWidget {
                       height: 200,
                       color: Colors.grey[200],
                       child: Icon(
-                        _getCategoryIcon(event.category),
+                        EventUtils.getCategoryIcon(event.category),
                         size: 60,
                         color: Colors.grey[400],
                       ),
@@ -1104,7 +1130,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Icon(
-                                _getCategoryIcon(event.category),
+                                EventUtils.getCategoryIcon(event.category),
                                 color: Theme.of(context).primaryColor,
                                 size: 24,
                               ),
@@ -1405,29 +1431,5 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
         ),
       ),
     );
-  }
-
-  IconData _getCategoryIcon(String category) {
-    switch (category.toLowerCase()) {
-      case 'concert':
-      case 'festival':
-        return Icons.music_note;
-      case 'conference':
-        return Icons.computer;
-      case 'workshop':
-        return Icons.build;
-      case 'sports':
-        return Icons.sports;
-      case 'networking':
-        return Icons.group;
-      case 'exhibition':
-        return Icons.museum;
-      case 'theater':
-        return Icons.theater_comedy;
-      case 'comedy':
-        return Icons.sentiment_very_satisfied;
-      default:
-        return Icons.event;
-    }
   }
 }
