@@ -1,9 +1,12 @@
+import 'package:firebase_auth/firebase_auth.dart' show FirebaseAuth;
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
+import 'package:pretty_qr_code/pretty_qr_code.dart';
+import 'package:uuid/uuid.dart';
 import 'package:intl/intl.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
@@ -14,6 +17,10 @@ import 'package:flutter/foundation.dart';
 import 'dart:typed_data';
 import 'addingevent.dart';
 import '../home/event_management_screen.dart';
+import '../../models/event.dart';
+import '../map/map_screen.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:convex_bottom_bar/convex_bottom_bar.dart';
 import 'dart:async';
 
 // Note: Ensure 'geolocator' and 'geocoding' are added to pubspec.yaml:
@@ -23,60 +30,6 @@ import 'dart:async';
 
 final GlobalKey<BookingsTabState> bookingsTabKey =
     GlobalKey<BookingsTabState>();
-
-class Event {
-  final String id;
-  final String title;
-  final String description;
-  final String date;
-  final String location;
-  final String category;
-  final String? imageUrl;
-  final String organizerId;
-  final double price;
-
-  Event({
-    required this.id,
-    required this.title,
-    required this.description,
-    required this.date,
-    required this.location,
-    required this.category,
-    this.imageUrl,
-    required this.organizerId,
-    required this.price,
-  });
-
-  factory Event.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-    return Event(
-      id: doc.id,
-      title: data['title'] ?? '',
-      description: data['description'] ?? '',
-      date: data['date'] ?? '',
-      location: data['location'] ?? '',
-      category: data['category'] ?? 'Other',
-      imageUrl: data['imageUrl'],
-      organizerId: data['organizerId'] ?? '',
-      price: (data['price'] ?? 0.0).toDouble(),
-    );
-  }
-
-  Map<String, dynamic> toFirestore() {
-    return {
-      'id': id,
-      'title': title,
-      'description': description,
-      'date': date,
-      'location': location,
-      'category': category,
-      'imageUrl': imageUrl,
-      'organizerId': organizerId,
-      'price': price,
-      'createdAt': FieldValue.serverTimestamp(),
-    };
-  }
-}
 
 class DateFilterUtils {
   static bool isEventInDateRange(Event event, String dateRange) {
@@ -162,11 +115,13 @@ class HomeScreen extends StatefulWidget {
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
+ final Map<String, String> _eventStatus = {};
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   List<Event> events = [];
   bool _isLoading = true;
+  Set<String> bookedEventIds = {};
 
   @override
   void initState() {
@@ -182,8 +137,23 @@ class _HomeScreenState extends State<HomeScreen> {
       QuerySnapshot snapshot = await FirebaseFirestore.instance
           .collection('events')
           .get();
+          List<Event> fetchedEvents = snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList();
+          // ✅ Sort: upcoming events first, past events last
+          fetchedEvents.sort((a, b) {
+
+            final aDate   = parseEventDate(a.date);
+            final bDate   = parseEventDate(b.date);
+
+            final aPast   = aDate.isBefore(DateTime.now());
+            final bPast   = bDate.isBefore(DateTime.now());
+
+            if (aPast && !bPast) return 1;  // put a after b
+            if (!aPast && bPast) return -1; // put a before b
+            return aDate.compareTo(bDate);  // both past or both future → natural order
+          });
       setState(() {
-        events = snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList();
+        // events = snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList();
+        events = fetchedEvents;
         _isLoading = false;
       });
     } catch (e) {
@@ -198,6 +168,71 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
   }
+  Future<void> _bookEvent(String eventId) async {
+   final userId = FirebaseAuth.instance.currentUser?.uid;
+  if (userId == null) return;
+
+  final bookingRef = FirebaseFirestore.instance
+      .collection('bookings')
+      .doc('$userId-$eventId'); // unique composite ID
+
+  final bookingDoc = await bookingRef.get();
+
+  if (bookingDoc.exists) {
+    // ❌ Unbook
+    await bookingRef.delete();
+    setState(() {
+      bookedEventIds.remove(eventId);
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Event Reservation Cancelled')),
+    );
+  } else {
+    // ✅ Book
+    await bookingRef.set({
+      'userId': userId,
+      'eventId': eventId,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+    setState(() {
+      bookedEventIds.add(eventId);
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Event Reservation Successful')),
+    );
+  }
+}
+Future<void> _loadBookedEvents() async {
+  final userId = FirebaseAuth.instance.currentUser?.uid;
+  if (userId == null) return;
+
+  final snapshot = await FirebaseFirestore.instance
+      .collection('bookings')
+      .where('userId', isEqualTo: userId)
+      .get();
+
+  setState(() {
+    bookedEventIds = snapshot.docs.map((doc) => doc['eventId'] as String).toSet();
+  });
+}
+
+
+  void _toggleBooking(Event event) {
+  setState(() {
+    if (bookedEventIds.contains(event.id)) {
+      bookedEventIds.remove(event.id); // Unbook
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Reservation Cancelled: ${event.title}')),
+      );
+    } else {
+      bookedEventIds.add(event.id); // Book
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Reservation: ${event.title}')),
+      );
+    }
+  });
+}
+
 
   void _addEvent(Event event) async {
     try {
@@ -217,50 +252,221 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
   }
+  // (iii) Track booking/payment status per event
+  final Map<String, String> _eventStatus = {};
+
+// (i) Show bottom sheet with event details and actions
+  void _showEventDetailsModal(Event event) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog (
+        title: Text(event.title),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(event.description),
+            const SizedBox(height: 20),
+                  if (_eventStatus[event.id] != 'Reserved') ...[
+                    ElevatedButton(
+                      onPressed: () {
+                        bookingsTabKey.currentState?.addBooking({
+                          'id': DateTime.now().millisecondsSinceEpoch,
+                          'event': event.title,
+                          'total': event.price,
+                          'paid': false,
+                        });
+                        setState(() {
+                          _eventStatus[event.id] = 'Reserved';
+                        });
+                        Navigator.pop(context);
+                        Fluttertoast.showToast(
+                          msg: "Event Reserved!",
+                          toastLength: Toast.LENGTH_LONG,
+                          gravity: ToastGravity.CENTER, // or CENTER
+                          backgroundColor: Colors.orange,
+                          textColor: Colors.white,
+                           fontSize: 19.0,
+                         );
+                      },
+                      child: const Text('Book Event'),
+                    ),
+                  ] else ...[
+                    ElevatedButton(
+                      onPressed: () {
+                        // UNBOOK logic
+                        bookingsTabKey.currentState?.removeBookingByTitle(event.title); // You'll create this method next
+                        setState(() {
+                          _eventStatus[event.id] = 'Reservation Cancelled!';
+                        });
+                        Navigator.pop(context);
+                        Fluttertoast.showToast(
+                          msg: "Reservation Cancelled!",
+                          toastLength: Toast.LENGTH_LONG,
+                          gravity: ToastGravity.CENTER, // or CENTER
+                          backgroundColor: Colors.grey,
+                          textColor: Colors.pink,
+                          fontSize: 18.0,
+                        );
+
+                      },
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color.fromARGB(255, 246, 105, 50)),
+                      child: const Text('Cancel Reseravtion'),
+                    ),
+                  ],
+
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      final priceString = event.price.toString().trim().toLowerCase();
+                      final eventPrice = priceString == "free"
+                          ? 0.0
+                          : double.tryParse(priceString) ?? 0.0;
+
+                        if (eventPrice <= 0) {
+                        // Free event → show QR directly
+                         final ticketId = const Uuid().v4();
+                          showDialog(
+                          context: context,
+                          builder: (_) => AlertDialog(
+                            title: const Text("🎟 Free Entry: Event Ticket"),
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text("Here's your QR code ticket:"),
+                                const SizedBox(height: 16),
+                                SizedBox(
+                                  width: 180,
+                                  height: 180,
+                                  child: PrettyQrView.data(
+                                  data: ticketId,
+                                  errorCorrectLevel: QrErrorCorrectLevel.M,
+                                  ),
+                              ),
+                              const SizedBox(height: 10),
+                              Text("Ticket ID: $ticketId", style: const TextStyle(fontSize: 12)),
+                              const SizedBox(height: 8),
+                              const Text("Please present this QR code at the event."),
+                              ],
+                             ),
+                             actions: [
+                             TextButton(
+                             onPressed: () {
+                              bookingsTabKey.currentState?.addBooking({
+                              'id': DateTime.now().millisecondsSinceEpoch,
+                              'event': event.title,
+                              'total': 0.0,
+                              'paid': true,
+                            });
+                              setState(() {
+                                 _eventStatus[event.id] = 'Paid';
+                            });
+                            Navigator.pop(context);
+                            },
+                            child: const Text("Done"),
+                              ),
+                              ],),
+                           );
+                          } else {
+                          // Paid event → proceed to checkout
+                          Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                           (_) => CheckoutScreen(
+                            total: event.price is num ? event.price.toDouble() : double.tryParse(event.price.toString()) ?? 0.0,
+
+                            onPaymentSuccess: () {
+                              bookingsTabKey.currentState?.addBooking({
+                                'id': DateTime.now().millisecondsSinceEpoch,
+                                'event': event.title,
+                                'total': event.price,
+                                'paid': true,
+                              });
+                              setState(() {
+                                _eventStatus[event.id] = 'Paid';
+                              });
+                            },
+                          ),
+                        ),
+                      );}
+                    },
+                    child: const Text('Pay For Event'),
+                  ),
+                 TextButton(
+                     onPressed: () {
+                       Navigator.pop(context);
+                     },
+                  child: const Text(
+                   'Cancel',
+                       style: TextStyle(color: Colors.red),
+                 ),
+                 ),
+                ],
+              ),
+
+          ),
+        );
+  }
 
   List<Widget> _getScreens() => [
-    HomeTab(events: events, onAddEvent: _addEvent),
-    SearchTab(events: events),
-    BookingsTab(key: bookingsTabKey),
-    const ProfileScreen(),
-  ];
+        HomeTab(events: events, 
+        onAddEvent: _addEvent,
+         onEventTap: _showEventDetailsModal,
+        eventStatus: _eventStatus,),
+        SearchTab(events: events,
+        eventStatus: _eventStatus,
+        onEventTap: _showEventDetailsModal,
+        ),
+        BookingsTab(key: bookingsTabKey),
+        const ProfileScreen(),
+        const MapScreen(),
+      ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor:Colors.orange ,
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _getScreens()[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: _selectedIndex,
-        onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
-        selectedItemColor: Theme.of(context).primaryColor,
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.bookmark),
-            label: 'Bookings',
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-        ],
-      ),
+       bottomNavigationBar: ConvexAppBar(
+              style: TabStyle.react, // other styles: fixedCircle, flip, reactCircle
+              backgroundColor: Theme.of(context).primaryColor,
+              activeColor: Colors.white,
+              color: Colors.white60,
+              items: const [
+                TabItem(icon: Icons.home, title: 'Home'),
+                TabItem(icon: Icons.search, title: 'Search'),
+                TabItem(icon: Icons.bookmark, title: 'Bookings'),
+                TabItem(icon: Icons.person, title: 'Profile'),
+                TabItem(icon: Icons.map, title: 'Map'),
+              ],
+              initialActiveIndex: _selectedIndex,
+              onTap: (int index) {
+                setState(() {
+                  _selectedIndex = index;
+                });
+              },
+            ),
+
     );
   }
+}
+
+extension on String {
+  toDouble() {}
 }
 
 class HomeTab extends StatefulWidget {
   final List<Event> events;
   final Function(Event) onAddEvent;
 
+  
   const HomeTab({Key? key, required this.events, required this.onAddEvent})
     : super(key: key);
+      
+        get isBooked => null;
 
   @override
   State<HomeTab> createState() => _HomeTabState();
@@ -311,54 +517,23 @@ class _HomeTabState extends State<HomeTab> {
 
   @override
   Widget build(BuildContext context) {
-    Map<String, List<Event>> eventsByDate = {};
-    for (var event in _filteredEvents) {
-      eventsByDate.putIfAbsent(event.date, () => []).add(event);
-    }
-
-    var sortedDates = eventsByDate.keys.toList()
-      ..sort((a, b) {
-        try {
-          DateTime dateA = DateFilterUtils._parseDate(a);
-          DateTime dateB = DateFilterUtils._parseDate(b);
-          return dateA.compareTo(dateB);
-        } catch (e) {
-          return a.compareTo(b);
-        }
-      });
-
-    List<Widget> eventWidgets = [];
-    for (var delta in sortedDates) {
-      if (eventsByDate[delta]!.isNotEmpty) {
-        eventWidgets.add(
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 20.0,
-              vertical: 10.0,
-            ),
-            child: Text(
-              delta,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.black54,
-              ),
-            ),
+        List<Widget> eventWidgets = events.map(
+          (event) => Padding(
+            padding: const EdgeInsets.only(bottom: 15, left: 20, right: 20),
+            child: _EventCard(event: event,
+             onTap: () => onEventTap(event), 
+             status: eventStatus[event.id],
+             isBooked: eventStatus[event.id] == 'Reserved',
+             onBookToggle: () {
+             // Call _showEventDetailsModal(event) to handle booking/unbooking
+             onEventTap(event);
+  },),
           ),
-        );
-        eventWidgets.addAll(
-          eventsByDate[delta]!.asMap().entries.map(
-            (entry) => Padding(
-              padding: const EdgeInsets.only(bottom: 15, left: 20, right: 20),
-              child: _EventCard(event: entry.value),
-            ),
-          ),
-        );
-      }
-    }
+        ).toList();
+
 
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
@@ -503,7 +678,9 @@ class _HomeTabState extends State<HomeTab> {
                         context,
                         MaterialPageRoute(
                           builder: (context) =>
-                              SearchTab(events: widget.events),
+                              SearchTab(events: widget.events,
+                          onEventTap: onEventTap, 
+                           eventStatus: _eventStatus,          ),
                         ),
                       );
                     },
@@ -517,137 +694,27 @@ class _HomeTabState extends State<HomeTab> {
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      _CategoryChip(
-                        label: 'All',
-                        isSelected: _selectedCategory == 'All',
-                        onTap: () {
-                          setState(() {
-                            _selectedCategory = 'All';
-                          });
-                          _filterEvents();
-                        },
-                      ),
+                      _CategoryChip(label: 'All', isSelected: true, events: events,onEventTap: onEventTap),
                       const SizedBox(width: 10),
-                      _DateRangeDropdown(
-                        selectedDateRange: _selectedDateRange,
-                        dateRangeOptions: _dateRangeOptions,
-                        onDateRangeChanged: (value) {
-                          setState(() {
-                            _selectedDateRange = value;
-                          });
-                          _filterEvents();
-                        },
-                      ),
+                      _CategoryChip(label: 'Concert', events: events,onEventTap: onEventTap),
                       const SizedBox(width: 10),
-                      _CategoryChip(
-                        label: 'Concert',
-                        isSelected: _selectedCategory == 'Concert',
-                        onTap: () {
-                          setState(() {
-                            _selectedCategory = 'Concert';
-                          });
-                          _filterEvents();
-                        },
-                      ),
+                      _CategoryChip(label: 'Conference', events: events,onEventTap: onEventTap),
                       const SizedBox(width: 10),
-                      _CategoryChip(
-                        label: 'Conference',
-                        isSelected: _selectedCategory == 'Conference',
-                        onTap: () {
-                          setState(() {
-                            _selectedCategory = 'Conference';
-                          });
-                          _filterEvents();
-                        },
-                      ),
+                      _CategoryChip(label: 'Workshop', events: events,onEventTap: onEventTap),
                       const SizedBox(width: 10),
-                      _CategoryChip(
-                        label: 'Workshop',
-                        isSelected: _selectedCategory == 'Workshop',
-                        onTap: () {
-                          setState(() {
-                            _selectedCategory = 'Workshop';
-                          });
-                          _filterEvents();
-                        },
-                      ),
+                      _CategoryChip(label: 'Sports', events: events,onEventTap: onEventTap),
                       const SizedBox(width: 10),
-                      _CategoryChip(
-                        label: 'Sports',
-                        isSelected: _selectedCategory == 'Sports',
-                        onTap: () {
-                          setState(() {
-                            _selectedCategory = 'Sports';
-                          });
-                          _filterEvents();
-                        },
-                      ),
+                      _CategoryChip(label: 'Festival', events: events,onEventTap: onEventTap),
                       const SizedBox(width: 10),
-                      _CategoryChip(
-                        label: 'Festival',
-                        isSelected: _selectedCategory == 'Festival',
-                        onTap: () {
-                          setState(() {
-                            _selectedCategory = 'Festival';
-                          });
-                          _filterEvents();
-                        },
-                      ),
+                      _CategoryChip(label: 'Networking', events: events,onEventTap: onEventTap),
                       const SizedBox(width: 10),
-                      _CategoryChip(
-                        label: 'Networking',
-                        isSelected: _selectedCategory == 'Networking',
-                        onTap: () {
-                          setState(() {
-                            _selectedCategory = 'Networking';
-                          });
-                          _filterEvents();
-                        },
-                      ),
+                      _CategoryChip(label: 'Exhibition', events: events,onEventTap: onEventTap),
                       const SizedBox(width: 10),
-                      _CategoryChip(
-                        label: 'Exhibition',
-                        isSelected: _selectedCategory == 'Exhibition',
-                        onTap: () {
-                          setState(() {
-                            _selectedCategory = 'Exhibition';
-                          });
-                          _filterEvents();
-                        },
-                      ),
+                      _CategoryChip(label: 'Theater', events: events,onEventTap: onEventTap),
                       const SizedBox(width: 10),
-                      _CategoryChip(
-                        label: 'Theater',
-                        isSelected: _selectedCategory == 'Theater',
-                        onTap: () {
-                          setState(() {
-                            _selectedCategory = 'Theater';
-                          });
-                          _filterEvents();
-                        },
-                      ),
+                      _CategoryChip(label: 'Comedy', events: events,onEventTap: onEventTap),
                       const SizedBox(width: 10),
-                      _CategoryChip(
-                        label: 'Comedy',
-                        isSelected: _selectedCategory == 'Comedy',
-                        onTap: () {
-                          setState(() {
-                            _selectedCategory = 'Comedy';
-                          });
-                          _filterEvents();
-                        },
-                      ),
-                      const SizedBox(width: 10),
-                      _CategoryChip(
-                        label: 'Other',
-                        isSelected: _selectedCategory == 'Other',
-                        onTap: () {
-                          setState(() {
-                            _selectedCategory = 'Other';
-                          });
-                          _filterEvents();
-                        },
-                      ),
+                      _CategoryChip(label: 'Other', events: events,onEventTap: onEventTap),
                     ],
                   ),
                 ),
@@ -750,17 +817,29 @@ class _CategoryChip extends StatelessWidget {
   final String label;
   final bool isSelected;
   final VoidCallback onTap;
+  final Function(Event) onEventTap;
 
   const _CategoryChip({
     required this.label,
     required this.isSelected,
+    required this.onEventTap,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => SearchTab(events: events,
+            onEventTap: onEventTap, 
+           eventStatus: _eventStatus, ),
+          ),
+        );
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
@@ -851,213 +930,59 @@ class _DateRangeDropdown extends StatelessWidget {
 
 class EventDetailsScreen extends StatelessWidget {
   final Event event;
+  final VoidCallback onBookToggle;
+  final bool isBooked;
 
-  const EventDetailsScreen({Key? key, required this.event}) : super(key: key);
-
+  const _EventCard({required this.event, required this.onTap, this.status, required this.onBookToggle,
+    required this.isBooked,});
+  // Correct date parser for "dd/mm/yyyy"
+  DateTime parseEventDate(String input) {
+    try {
+      final parts = input.split('/');
+      if (parts.length != 3) return DateTime(1900);
+      final day = int.tryParse(parts[0]) ?? 1;
+      final month = int.tryParse(parts[1]) ?? 1;
+      final year = int.tryParse(parts[2]) ?? 1900;
+      return DateTime(year, month, day);
+    } catch (e) {
+      return DateTime(1900);
+    }
+  }
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(event.title),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (event.imageUrl != null)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  event.imageUrl!,
-                  height: 200,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                ),
-              ),
-            const SizedBox(height: 16),
-            Text(
-              event.title,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(event.description, style: const TextStyle(fontSize: 16)),
-            const SizedBox(height: 16),
-            _buildInfoRow(Icons.calendar_today, 'Date', event.date),
-            _buildInfoRow(Icons.location_on, 'Location', event.location),
-            _buildInfoRow(Icons.category, 'Category', event.category),
-            _buildInfoRow(
-              Icons.attach_money,
-              'Price',
-              '€${event.price.toStringAsFixed(2)}',
-            ),
-            const SizedBox(height: 24),
-            Center(
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => CheckoutScreen(
-                        total: event.price,
-                        onPaymentSuccess: () {
-                          bookingsTabKey.currentState?.addBooking({
-                            'id': DateTime.now().millisecondsSinceEpoch,
-                            'event': event.title,
-                            'total': event.price,
-                            'paid': true,
-                          });
-                        },
-                      ),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).primaryColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 30,
-                    vertical: 15,
-                  ),
-                ),
-                child: const Text('Book Now'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(IconData icon, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: Colors.grey[600]),
-          const SizedBox(width: 12),
-          Text('$label: ', style: const TextStyle(fontWeight: FontWeight.bold)),
-          Expanded(child: Text(value)),
-        ],
-      ),
-    );
-  }
-}
-
-class _EventCard extends StatelessWidget {
-  final Event event;
-
-  const _EventCard({required this.event});
-
-  Future<void> _trackView(BuildContext context) async {
-    // Debouncing logic
-    Timer? _debounceTimer;
-    if (_debounceTimer?.isActive ?? false) return;
-
-    _debounceTimer = Timer(const Duration(milliseconds: 500), () async {
-      try {
-        String? city;
-        String? country;
-
-        // Check if geolocation permission is granted
-        LocationPermission permission = await Geolocator.checkPermission();
-        if (permission == LocationPermission.denied) {
-          permission = await Geolocator.requestPermission();
-          if (permission == LocationPermission.denied) {
-            city = 'Unknown';
-            country = 'Unknown';
-          }
-        }
-
-        if (permission != LocationPermission.denied &&
-            permission != LocationPermission.deniedForever) {
-          try {
-            Position position = await Geolocator.getCurrentPosition(
-              desiredAccuracy: LocationAccuracy.medium,
-            ).timeout(const Duration(seconds: 5));
-            List<Placemark> placemarks = await placemarkFromCoordinates(
-              position.latitude,
-              position.longitude,
-            ).timeout(const Duration(seconds: 5));
-            city = placemarks.isNotEmpty ? placemarks[0].locality : 'Unknown';
-            country = placemarks.isNotEmpty ? placemarks[0].country : 'Unknown';
-          } catch (e) {
-            print('Error getting geolocation: $e');
-            city = 'Unknown';
-            country = 'Unknown';
-          }
-        }
-
-        final viewData = {
-          'eventId': event.id,
-          'timestamp': FieldValue.serverTimestamp(),
-          'city': city ?? 'Unknown',
-          'country': country ?? 'Unknown',
-          'userId':
-              Provider.of<AuthProvider>(context, listen: false).user?.uid ??
-              'anonymous',
-          'platform': defaultTargetPlatform.toString(),
-          'viewType': 'detail_view',
-        };
-
-        // Retry logic for Firestore write
-        int retries = 3;
-        while (retries > 0) {
-          try {
-            await FirebaseFirestore.instance
-                .collection('events')
-                .doc(event.id)
-                .collection('views')
-                .add(viewData);
-            break;
-          } catch (e) {
-            retries--;
-            if (retries == 0) {
-              print('Error tracking view after retries: $e');
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    'Failed to track event view. Please try again.',
-                  ),
-                ),
-              );
-            }
-            await Future.delayed(const Duration(milliseconds: 500));
-          }
-        }
-      } catch (e) {
-        print('Error tracking view: $e');
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
+    final eventDate = parseEventDate(event.date);
+    final isPast = eventDate.isBefore(DateTime.now());
     return GestureDetector(
-      onTap: () async {
-        await _trackView(context);
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => EventDetailsScreen(event: event),
-          ),
-        );
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
+        onTap: () {
+          if (isPast) {
+            Fluttertoast.showToast(
+              msg: "Oops! Event Passed, Sorry!",
+              backgroundColor: Colors.red,
+              textColor: Colors.white,
+              toastLength: Toast.LENGTH_LONG,
+              gravity: ToastGravity.CENTER,
+              fontSize: 18.0,
+            );
+          } else {
+            onTap?.call();
+          }
+        },
+          child: Opacity(
+            opacity: isPast ? 0.3 : 1.0,
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 15),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+               boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
-              spreadRadius: 1,
+              color: Colors.grey.withOpacity(0.3),
               blurRadius: 5,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
+               offset: const Offset(0, 2),
+             ),
+            ],
+          ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1067,6 +992,10 @@ class _EventCard extends StatelessWidget {
                   topLeft: Radius.circular(12),
                   topRight: Radius.circular(12),
                 ),
+                  child: ColorFiltered(
+                    colorFilter: isPast
+                        ? const ColorFilter.mode(Colors.grey, BlendMode.saturation)
+                        : const ColorFilter.mode(Colors.transparent, BlendMode.multiply),
                 child: Image.network(
                   event.imageUrl!,
                   height: 200,
@@ -1084,6 +1013,7 @@ class _EventCard extends StatelessWidget {
                     );
                   },
                 ),
+              ),
               ),
             Padding(
               padding: const EdgeInsets.all(15),
@@ -1157,9 +1087,28 @@ class _EventCard extends StatelessWidget {
                                 ),
                               ],
                             ),
-                          ],
-                        ),
-                      ),
+                            if (status != null)
+                             Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                color: status == 'Paid'
+                                    ? Colors.green.withOpacity(0.2)
+                                    : Colors.orange.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(20),
+                             ),
+                              child: Text(
+                               status!,
+                               style: TextStyle(
+                                 color: status == 'Paid' ? Colors.green : Colors.orange,
+                                 fontWeight: FontWeight.bold,
+                                 fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                             ],),),
+                          
+                                ],
+                              ),
+
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 12,
@@ -1196,13 +1145,9 @@ class _EventCard extends StatelessWidget {
                     ),
                   ],
                 ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+              ),)
+            ));
+            }
 
   IconData _getCategoryIcon(String category) {
     switch (category.toLowerCase()) {
@@ -1355,18 +1300,37 @@ class BookingsTabState extends State<BookingsTab> {
 
 class SearchTab extends StatefulWidget {
   final List<Event> events;
+  final Function(Event) onEventTap;
+  final Map<String, String> eventStatus;
 
-  const SearchTab({Key? key, required this.events}) : super(key: key);
+  const SearchTab({Key? key, required this.events,required this.onEventTap,
+    required this.eventStatus,
+}) : super(key: key);
 
   @override
   State<SearchTab> createState() => _SearchTabState();
 }
-
+ //Map<String, String> _eventStatus = {};
 class _SearchTabState extends State<SearchTab> {
   final _searchController = TextEditingController();
   String _selectedCategory = 'All';
   String _selectedDateRange = 'All Dates';
   List<Event> _filteredEvents = [];
+  DateTime parseEventDate(String input) {
+    try {
+      final parts = input.split('/');
+      if (parts.length != 3) return DateTime(1900);
+
+      final day = int.tryParse(parts[0]) ?? 1;
+      final month = int.tryParse(parts[1]) ?? 1;
+      final year = int.tryParse(parts[2]) ?? 1900;
+
+      return DateTime(year, month, day);
+    } catch (e) {
+      print("Date parse error for '$input': $e");
+      return DateTime(1900);
+    }
+  }
 
   final List<String> _categories = [
     'All',
@@ -1395,15 +1359,166 @@ class _SearchTabState extends State<SearchTab> {
   void initState() {
     super.initState();
     _filteredEvents = widget.events;
-    _searchController.addListener(_filterEvents);
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
+  void _showEventDetailsModal(Event event) {
+    showDialog(
+      context: context,
 
+      builder: (_) => AlertDialog (
+        title: Text(event.title),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(event.description),
+            const SizedBox(height: 20),
+            if (_eventStatus[event.id] != 'Reserved') ...[
+              ElevatedButton(
+                onPressed: () {
+                  bookingsTabKey.currentState?.addBooking({
+                    'id': DateTime.now().millisecondsSinceEpoch,
+                    'event': event.title,
+                    'total': event.price,
+                    'paid': false,
+                  });
+                  setState(() {
+                    _eventStatus[event.id] = 'Event Reserved';
+                  });
+                  Navigator.pop(context);
+                  Fluttertoast.showToast(msg: "Event Reservation Successful!",
+                      toastLength: Toast.LENGTH_LONG,
+                      gravity: ToastGravity.CENTER,
+                      backgroundColor: Colors.orange,
+                      textColor: Colors.white,
+                      fontSize: 19.0,);
+                },
+                child: const Text('Book/Reserve an Event'),
+              ),
+            ] else ...[
+              ElevatedButton(
+                onPressed: () {
+                  // UNBOOK logic
+                  bookingsTabKey.currentState?.removeBookingByTitle(event.title);
+                  setState(() {
+                    _eventStatus[event.id] = 'Cancelled Reservation!';
+                  });
+                  Navigator.pop(context);
+                  Fluttertoast.showToast(msg: "Event Reservation Cancelled!",
+                    toastLength: Toast.LENGTH_LONG,
+                    gravity: ToastGravity.CENTER,
+                    backgroundColor: Colors.pink,
+                    textColor: Colors.white,
+                    fontSize: 19.0,);
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.pink),
+                child: const Text('Cancel Reservation.'),
+              ),
+            ],
+
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                print("Raw price: ${event.price} | Type: ${event.price.runtimeType}");
+
+                final priceString = event.price.toString().trim().toLowerCase();
+                final eventPrice = priceString == "free"
+                    ? 0.0
+                    : double.tryParse(priceString) ?? 0.0;
+                print("Parsed eventPrice: $eventPrice");
+                if (eventPrice <= 0.0) {
+                  // 🚀 Free event → Show QR code directly
+                  final ticketId = const Uuid().v4();
+                  showDialog(
+                    context: context,
+                    builder: (_) =>
+                        AlertDialog(
+                          title: const Text("🎟 Free Event Ticket"),
+                          content: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text("Here's your QR code ticket:"),
+                              const SizedBox(height: 16),
+                              SizedBox(
+                                width: 180,
+                                height: 180,
+                                child: PrettyQrView.data(
+                                  data: ticketId,
+                                  errorCorrectLevel: QrErrorCorrectLevel.M,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Text("Ticket ID: $ticketId",
+                                  style: const TextStyle(fontSize: 12)),
+                              const SizedBox(height: 8),
+                              const Text(
+                                  "Please present this QR code at the event."),
+                            ],),
+                          actions: [
+                            TextButton(
+                              onPressed: () {
+                                bookingsTabKey.currentState?.addBooking({
+                                  'id': DateTime
+                                      .now()
+                                      .millisecondsSinceEpoch,
+                                  'event': event.title,
+                                  'total': 0.0,
+                                  'paid': true,
+                                });
+                                setState(() {
+                                  _eventStatus[event.id] = 'Paid';
+                                });
+                                Navigator.pop(context);
+                              },
+                              child: const Text("Free Event"),
+                            ),
+                          ],
+                        ),
+                  );
+                }else {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          CheckoutScreen(
+                            total: eventPrice,
+                            onPaymentSuccess: () {
+                              bookingsTabKey.currentState?.addBooking({
+                                'id': DateTime
+                                    .now()
+                                    .millisecondsSinceEpoch,
+                                'event': event.title,
+                                'total': event.price,
+                                'paid': true,
+                              });
+                              setState(() {
+                                _eventStatus[event.id] = 'Paid';
+                              });
+
+                            },
+
+                          ),
+                    ),
+                  );
+                 }
+                },
+              child: const Text('Pay For Event'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        ),
+
+      ),
+    );
+  }
   void _filterEvents() {
     setState(() {
       _filteredEvents = widget.events.where((event) {
@@ -1425,6 +1540,18 @@ class _SearchTabState extends State<SearchTab> {
         );
         return matchesSearch && matchesCategory && matchesDateRange;
       }).toList();
+          // ✅ Sort upcoming events first
+        _filteredEvents.sort((a, b) {
+          final aDate = parseEventDate(a.date);
+          final bDate = parseEventDate(b.date);
+
+          final aPast = aDate.isBefore(DateTime.now());
+          final bPast = bDate.isBefore(DateTime.now());
+
+          if (aPast && !bPast) return 1;
+          if (!aPast && bPast) return -1;
+          return aDate.compareTo(bDate);
+        });
     });
   }
 
@@ -1533,7 +1660,11 @@ class _SearchTabState extends State<SearchTab> {
                       final event = _filteredEvents[index];
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 15),
-                        child: _EventCard(event: event),
+                        child: _EventCard(
+                          event: event,
+                           onTap: () => _showEventDetailsModal(event),
+                           isBooked: _eventStatus[event.id] == 'Reserved',
+                            onBookToggle: ()=> _showEventDetailsModal(event),),
                       );
                     },
                   ),
@@ -1542,4 +1673,162 @@ class _SearchTabState extends State<SearchTab> {
       ),
     );
   }
+}
+
+class _CategoryFilterChip extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _CategoryFilterChip({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? Theme.of(context).primaryColor : Colors.grey[200],
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : Colors.black,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class BookingsTab extends StatefulWidget {
+  const BookingsTab({Key? key}) : super(key: key);
+
+  @override
+  State<BookingsTab> createState() => _BookingsTabState();
+}
+
+class _BookingsTabState extends State<BookingsTab> {
+  List<Map<String, dynamic>> bookings = [];
+  Map<String, String> _eventStatus = {};
+  @override
+  void initState() {
+    super.initState();
+    _fetchBookings();
+  }
+
+  void _fetchBookings() async {
+    final userId = Provider.of<AuthProvider>(context, listen: false).user?.uid;
+
+    if (userId == null) return;
+
+    try {
+      QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('bookings')
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      setState(() {
+        bookings = snapshot.docs
+            .map((doc) => doc.data() as Map<String, dynamic>)
+            .toList();
+      });
+    } catch (e) {
+      print("Error fetching bookings: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error fetching bookings'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+  void addBooking(Map<String, dynamic> booking) async {
+    final userId = Provider.of<AuthProvider>(context, listen: false).user?.uid;
+    // setState(() {
+    //   bookings.add(booking);
+    // });
+    if (userId == null) return;
+
+    try {
+      await FirebaseFirestore.instance.collection('bookings').add({
+        'userId': userId,
+        'event': booking['event'],
+        'price': booking['total'],
+        'paid': booking['paid'],
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      _fetchBookings();
+    } catch (e) {
+      print("Error saving booking: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error saving booking'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('My Bookings'),
+        backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Colors.white,
+      ),
+      body: bookings.isEmpty
+          ? const Center(child: Text('No bookings yet.'))
+          : ListView.builder(
+        itemCount: bookings.length,
+        itemBuilder: (context, index) {
+          final booking = bookings[index];
+          return ListTile(
+            title: Text(booking['event'] ?? ''),
+            subtitle: Text('Total: €${booking['price']}'),
+            trailing: booking['paid'] == true
+                ? const Text('Paid', style: TextStyle(color: Colors.green))
+                : ElevatedButton(
+              child: const Text('Checkout'),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => CheckoutScreen(
+                      total: booking['price'],
+                      onPaymentSuccess: () {
+                        setState(() {
+                          bookings[index]['paid'] = true;
+                        });
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Payment Successful!'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                );
+              },
+            ),
+          );
+        },
+      ),
+    );
+  }
+  
+  void removeBookingByTitle(String title) {}
 }
