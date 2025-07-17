@@ -6,38 +6,10 @@ import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'dart:async';
 import '../../providers/auth_provider.dart';
+import '../home/home_screen.dart';
 import '../../models/event.dart';
-import 'package:uuid/uuid.dart';
-import 'package:flutter/foundation.dart';
 
-// Helper class to share common methods
-class EventUtils {
-  static IconData getCategoryIcon(String category) {
-    switch (category.toLowerCase()) {
-      case 'concert':
-      case 'festival':
-        return Icons.music_note;
-      case 'conference':
-        return Icons.computer;
-      case 'workshop':
-        return Icons.build;
-      case 'sports':
-        return Icons.sports;
-      case 'networking':
-        return Icons.group;
-      case 'exhibition':
-        return Icons.museum;
-      case 'theater':
-        return Icons.theater_comedy;
-      case 'comedy':
-        return Icons.sentiment_very_satisfied;
-      default:
-        return Icons.event;
-    }
-  }
-}
-
-// View Record Model (consistent with home_screen.dart)
+// View Record Model
 class ViewRecord {
   final String id;
   final String eventId;
@@ -172,570 +144,6 @@ class EditEventScreen extends StatelessWidget {
         child: Text(
           'Edit Event Screen - Implementation Coming Soon',
           style: TextStyle(fontSize: 18, color: Colors.grey),
-        ),
-      ),
-    );
-  }
-}
-
-// Attendees Screen
-class AttendeesScreen extends StatefulWidget {
-  final Event event;
-
-  const AttendeesScreen({Key? key, required this.event}) : super(key: key);
-
-  @override
-  _AttendeesScreenState createState() => _AttendeesScreenState();
-}
-
-class _AttendeesScreenState extends State<AttendeesScreen> {
-  List<Booking> _attendees = [];
-  bool _isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchAttendees();
-  }
-
-  Future<void> _fetchAttendees() async {
-    setState(() {
-      _isLoading = true;
-    });
-    try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('bookings')
-          .where('eventId', isEqualTo: widget.event.id)
-          .get();
-      setState(() {
-        _attendees = snapshot.docs
-            .map((doc) => Booking.fromFirestore(doc))
-            .toList();
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error fetching attendees: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('${widget.event.title} Attendees'),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _attendees.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.people_outline,
-                    size: 100,
-                    color: Colors.grey[400],
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'No Attendees Yet',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'Attendees will appear here once they book',
-                    style: TextStyle(fontSize: 16, color: Colors.grey[500]),
-                  ),
-                ],
-              ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _attendees.length,
-              itemBuilder: (context, index) {
-                final attendee = _attendees[index];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: Theme.of(
-                        context,
-                      ).primaryColor.withOpacity(0.1),
-                      child: Text(
-                        attendee.firstName.isNotEmpty
-                            ? attendee.firstName[0]
-                            : 'A',
-                        style: TextStyle(color: Theme.of(context).primaryColor),
-                      ),
-                    ),
-                    title: Text('${attendee.firstName} ${attendee.lastName}'),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(attendee.email),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Booked: ${DateFormat.yMMMd().format(attendee.bookingDate)}',
-                          style: TextStyle(color: Colors.grey[600]),
-                        ),
-                        Text(
-                          'Status: ${attendee.paid ? 'Paid' : 'Pending'}',
-                          style: TextStyle(
-                            color: attendee.paid ? Colors.green : Colors.orange,
-                          ),
-                        ),
-                      ],
-                    ),
-                    trailing: Text('€${attendee.total.toStringAsFixed(2)}'),
-                  ),
-                );
-              },
-            ),
-    );
-  }
-}
-
-// Event Analytics Screen
-class EventAnalyticsScreen extends StatefulWidget {
-  final Event event;
-
-  const EventAnalyticsScreen({Key? key, required this.event}) : super(key: key);
-
-  @override
-  _EventAnalyticsScreenState createState() => _EventAnalyticsScreenState();
-}
-
-class _EventAnalyticsScreenState extends State<EventAnalyticsScreen> {
-  List<ViewRecord> _views = [];
-  bool _isLoading = true;
-  Map<String, int> _hourlyViews = {};
-  Map<String, int> _geoDistribution = {};
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchAnalytics();
-  }
-
-  Future<void> _fetchAnalytics() async {
-    setState(() {
-      _isLoading = true;
-    });
-    try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('events')
-          .doc(widget.event.id)
-          .collection('views')
-          .get();
-
-      final views = snapshot.docs
-          .map((doc) => ViewRecord.fromFirestore(doc))
-          .toList();
-
-      // Aggregate hourly views
-      final hourlyViews = <String, int>{};
-      final now = DateTime.now();
-      for (var view in views) {
-        if (now.difference(view.timestamp).inHours <= 24) {
-          final hour = DateFormat('HH').format(view.timestamp);
-          hourlyViews[hour] = (hourlyViews[hour] ?? 0) + 1;
-        }
-      }
-
-      // Aggregate geographic distribution
-      final geoDistribution = <String, int>{};
-      for (var view in views) {
-        final location = view.city != null && view.country != null
-            ? '${view.city}, ${view.country}'
-            : view.country ?? 'Unknown';
-        geoDistribution[location] = (geoDistribution[location] ?? 0) + 1;
-      }
-
-      setState(() {
-        _views = views;
-        _hourlyViews = hourlyViews;
-        _geoDistribution = geoDistribution;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error fetching analytics: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  List<FlSpot> _getHourlyViewSpots() {
-    final spots = <FlSpot>[];
-    final now = DateTime.now();
-    for (int i = 0; i < 24; i++) {
-      final hour = ((now.hour - 23 + i) % 24).toString().padLeft(2, '0');
-      final count = _hourlyViews[hour] ?? 0;
-      spots.add(FlSpot(i.toDouble(), count.toDouble()));
-    }
-    return spots;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('${widget.event.title} Analytics'),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'View Analytics',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey[800],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Card(
-                    elevation: 2,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        children: [
-                          Text(
-                            'Total Views: ${_views.length}',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          SizedBox(
-                            height: 200,
-                            child: LineChart(
-                              LineChartData(
-                                gridData: FlGridData(show: true),
-                                titlesData: FlTitlesData(
-                                  bottomTitles: AxisTitles(
-                                    sideTitles: SideTitles(
-                                      showTitles: true,
-                                      reservedSize: 30,
-                                      getTitlesWidget: (value, meta) {
-                                        final hour =
-                                            ((DateTime.now().hour -
-                                                23 +
-                                                value.toInt()) %
-                                            24);
-                                        return Text(
-                                          hour.toString().padLeft(2, '0'),
-                                          style: const TextStyle(fontSize: 10),
-                                        );
-                                      },
-                                      interval: 4,
-                                    ),
-                                  ),
-                                  leftTitles: AxisTitles(
-                                    sideTitles: SideTitles(
-                                      showTitles: true,
-                                      reservedSize: 40,
-                                      getTitlesWidget: (value, meta) {
-                                        return Text(
-                                          value.toInt().toString(),
-                                          style: const TextStyle(fontSize: 10),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                  topTitles: AxisTitles(
-                                    sideTitles: SideTitles(showTitles: false),
-                                  ),
-                                  rightTitles: AxisTitles(
-                                    sideTitles: SideTitles(showTitles: false),
-                                  ),
-                                ),
-                                borderData: FlBorderData(show: true),
-                                lineBarsData: [
-                                  LineChartBarData(
-                                    spots: _getHourlyViewSpots(),
-                                    isCurved: true,
-                                    color: Theme.of(context).primaryColor,
-                                    barWidth: 3,
-                                    belowBarData: BarAreaData(
-                                      show: true,
-                                      color: Theme.of(
-                                        context,
-                                      ).primaryColor.withOpacity(0.2),
-                                    ),
-                                  ),
-                                ],
-                                minY: 0,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Views in the last 24 hours',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    'Geographic Distribution',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey[800],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Card(
-                    elevation: 2,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        children: _geoDistribution.entries.map((entry) {
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 4),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    entry.key,
-                                    style: const TextStyle(fontSize: 16),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                Text(
-                                  '${entry.value} views',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: Theme.of(context).primaryColor,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    'Platform Distribution',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey[800],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Card(
-                    elevation: 2,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        children:
-                            {
-                              'Android': _views
-                                  .where((v) => v.platform == 'Android')
-                                  .length,
-                              'iOS': _views
-                                  .where((v) => v.platform == 'iOS')
-                                  .length,
-                              'Unknown': _views
-                                  .where((v) => v.platform == 'Unknown')
-                                  .length,
-                            }.entries.map((entry) {
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 4,
-                                ),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      entry.key,
-                                      style: const TextStyle(fontSize: 16),
-                                    ),
-                                    Text(
-                                      '${entry.value} views',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        color: Theme.of(context).primaryColor,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-    );
-  }
-}
-
-// Event Details Screen
-class EventDetailsScreen extends StatelessWidget {
-  final Event event;
-
-  const EventDetailsScreen({Key? key, required this.event}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(event.title),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (event.imageUrl != null)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  event.imageUrl!,
-                  height: 200,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      height: 200,
-                      color: Colors.grey[200],
-                      child: Icon(
-                        EventUtils.getCategoryIcon(event.category),
-                        size: 60,
-                        color: Colors.grey[400],
-                      ),
-                    );
-                  },
-                ),
-              ),
-            const SizedBox(height: 16),
-            Text(
-              event.title,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
-                const SizedBox(width: 8),
-                Text(event.date, style: TextStyle(color: Colors.grey[600])),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    event.location,
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              event.description,
-              style: TextStyle(fontSize: 16, color: Colors.grey[800]),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Category: ${event.category}',
-              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Price: ${event.price is num ? '€${event.price.toStringAsFixed(2)}' : event.price}',
-              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => AttendeesScreen(event: event),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.people),
-                  label: const Text('View Attendees'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).primaryColor,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            EventAnalyticsScreen(event: event),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.analytics),
-                  label: const Text('View Analytics'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).primaryColor,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-          ],
         ),
       ),
     );
@@ -1130,7 +538,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Icon(
-                                EventUtils.getCategoryIcon(event.category),
+                                _getCategoryIcon(event.category),
                                 color: Theme.of(context).primaryColor,
                                 size: 24,
                               ),
@@ -1382,7 +790,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
               .fold(0.0, (sum, booking) => sum + booking.total);
         }
       } catch (e) {
-        print('Error fetching stats: $e');
+        // Handle error silently to avoid breaking the stream
       }
 
       yield {'revenue': totalRevenue, 'bookings': totalBookings};
@@ -1409,7 +817,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: Theme.of(context).primaryColor.withOpacity(0.1),
           borderRadius: BorderRadius.circular(8),
@@ -1417,15 +825,833 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: Theme.of(context).primaryColor, size: 20),
-            const SizedBox(width: 8),
+            Icon(icon, size: 16, color: Theme.of(context).primaryColor),
+            const SizedBox(width: 4),
             Text(
               label,
               style: TextStyle(
                 color: Theme.of(context).primaryColor,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  IconData _getCategoryIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'concert':
+      case 'festival':
+        return Icons.music_note;
+      case 'conference':
+        return Icons.computer;
+      case 'workshop':
+        return Icons.build;
+      case 'sports':
+        return Icons.sports;
+      case 'networking':
+        return Icons.group;
+      case 'exhibition':
+        return Icons.museum;
+      case 'theater':
+        return Icons.theater_comedy;
+      case 'comedy':
+        return Icons.sentiment_very_satisfied;
+      default:
+        return Icons.event;
+    }
+  }
+}
+
+// Event Details Screen
+class EventDetailsScreen extends StatelessWidget {
+  final Event event;
+
+  const EventDetailsScreen({Key? key, required this.event}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(event.title),
+        backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Colors.white,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (event.imageUrl != null)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  event.imageUrl!,
+                  height: 200,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      height: 200,
+                      width: double.infinity,
+                      color: Colors.grey[300],
+                      child: const Icon(
+                        Icons.error,
+                        size: 50,
+                        color: Colors.grey,
+                      ),
+                    );
+                  },
+                ),
+              ),
+            const SizedBox(height: 16),
+            Text(
+              event.title,
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(event.description, style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 16),
+            _buildInfoRow(Icons.calendar_today, 'Date', event.date),
+            _buildInfoRow(Icons.location_on, 'Location', event.location),
+            _buildInfoRow(Icons.category, 'Category', event.category),
+            _buildInfoRow(
+              Icons.attach_money,
+              'Price',
+              '€${event.price.toStringAsFixed(2)}',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: Colors.grey[600]),
+          const SizedBox(width: 12),
+          Text('$label: ', style: const TextStyle(fontWeight: FontWeight.bold)),
+          Expanded(child: Text(value)),
+        ],
+      ),
+    );
+  }
+}
+
+// Attendees Screen
+class AttendeesScreen extends StatefulWidget {
+  final Event event;
+
+  const AttendeesScreen({Key? key, required this.event}) : super(key: key);
+
+  @override
+  State<AttendeesScreen> createState() => _AttendeesScreenState();
+}
+
+class _AttendeesScreenState extends State<AttendeesScreen> {
+  List<Booking> allBookings = [];
+  List<Booking> filteredBookings = [];
+  String _filterStatus = 'all';
+  bool _isLoading = true;
+  StreamSubscription? _bookingsSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchBookings();
+  }
+
+  @override
+  void dispose() {
+    _bookingsSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _fetchBookings() {
+    setState(() {
+      _isLoading = true;
+    });
+
+    _bookingsSubscription = FirebaseFirestore.instance
+        .collection('bookings')
+        .where('eventId', isEqualTo: widget.event.id)
+        .orderBy('bookingDate', descending: true)
+        .snapshots()
+        .listen(
+          (snapshot) {
+            if (mounted) {
+              setState(() {
+                allBookings = snapshot.docs
+                    .map((doc) => Booking.fromFirestore(doc))
+                    .toList();
+                _filterBookings();
+                _isLoading = false;
+              });
+            }
+          },
+          onError: (error) {
+            if (mounted) {
+              setState(() {
+                _isLoading = false;
+              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Error loading bookings: $error'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+        );
+  }
+
+  void _filterBookings() {
+    setState(() {
+      switch (_filterStatus) {
+        case 'paid':
+          filteredBookings = allBookings
+              .where((booking) => booking.paid)
+              .toList();
+          break;
+        case 'pending':
+          filteredBookings = allBookings
+              .where((booking) => !booking.paid)
+              .toList();
+          break;
+        default:
+          filteredBookings = allBookings;
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('${widget.event.title} - Attendees'),
+        backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _fetchBookings,
+          ),
+        ],
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _buildFilterChip(
+                          'All',
+                          'all',
+                          allBookings.length,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildFilterChip(
+                          'Paid',
+                          'paid',
+                          allBookings.where((b) => b.paid).length,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildFilterChip(
+                          'Pending',
+                          'pending',
+                          allBookings.where((b) => !b.paid).length,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: filteredBookings.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.people_outline,
+                                size: 64,
+                                color: Colors.grey[400],
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No ${_filterStatus == 'all' ? '' : _filterStatus} bookings',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemCount: filteredBookings.length,
+                          itemBuilder: (context, index) {
+                            final booking = filteredBookings[index];
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              elevation: 2,
+                              child: ListTile(
+                                leading: CircleAvatar(
+                                  backgroundColor: booking.paid
+                                      ? Colors.green
+                                      : Colors.orange,
+                                  child: Icon(
+                                    booking.paid ? Icons.check : Icons.pending,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                title: Text(
+                                  '${booking.firstName} ${booking.lastName}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      booking.email,
+                                      style: TextStyle(color: Colors.grey[600]),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Booked: ${DateFormat('dd/MM/yyyy').format(booking.bookingDate)}',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                trailing: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      '€${booking.total.toStringAsFixed(2)}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: booking.paid
+                                            ? Colors.green.withOpacity(0.1)
+                                            : Colors.orange.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Text(
+                                        booking.paid ? 'Paid' : 'Pending',
+                                        style: TextStyle(
+                                          color: booking.paid
+                                              ? Colors.green
+                                              : Colors.orange,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildFilterChip(String label, String value, int count) {
+    final isSelected = _filterStatus == value;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _filterStatus = value;
+          _filterBookings();
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? Theme.of(context).primaryColor : Colors.grey[200],
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          children: [
+            Text(
+              count.toString(),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: isSelected ? Colors.white : Colors.black,
+              ),
+            ),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                color: isSelected ? Colors.white : Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Analytics Screen
+class EventAnalyticsScreen extends StatefulWidget {
+  final Event event;
+
+  const EventAnalyticsScreen({Key? key, required this.event}) : super(key: key);
+
+  @override
+  State<EventAnalyticsScreen> createState() => _EventAnalyticsScreenState();
+}
+
+class _EventAnalyticsScreenState extends State<EventAnalyticsScreen> {
+  Timer? _debounceTimer;
+  int _currentViewers = 0;
+  int _totalViews = 0;
+  List<Map<String, dynamic>> _activityFeed = [];
+  Map<String, int> _hourlyViews = {};
+  Map<String, int> _geoViews = {};
+  StreamSubscription? _viewsSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _setupRealtimeListeners();
+  }
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    _viewsSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _setupRealtimeListeners() {
+    _viewsSubscription = FirebaseFirestore.instance
+        .collection('events')
+        .doc(widget.event.id)
+        .collection('views')
+        .orderBy('timestamp', descending: true)
+        .limit(100)
+        .snapshots()
+        .listen(
+          (snapshot) {
+            if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+            _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+              if (mounted) {
+                setState(() {
+                  final now = DateTime.now();
+                  final tenMinutesAgo = now.subtract(
+                    const Duration(minutes: 10),
+                  );
+
+                  _totalViews = snapshot.docs.length;
+                  _currentViewers = snapshot.docs.where((doc) {
+                    final timestamp = (doc['timestamp'] as Timestamp?)
+                        ?.toDate();
+                    return timestamp != null &&
+                        timestamp.isAfter(tenMinutesAgo);
+                  }).length;
+
+                  _activityFeed = snapshot.docs.take(10).map((doc) {
+                    final view = ViewRecord.fromFirestore(doc);
+                    return {
+                      'message':
+                          'View from ${view.city ?? 'Unknown'}, ${view.country ?? 'Unknown'} on ${view.platform}',
+                      'timestamp': view.timestamp,
+                    };
+                  }).toList();
+
+                  _hourlyViews = {};
+                  for (var doc in snapshot.docs) {
+                    final view = ViewRecord.fromFirestore(doc);
+                    final hour = DateFormat('HH:00').format(view.timestamp);
+                    _hourlyViews[hour] = (_hourlyViews[hour] ?? 0) + 1;
+                  }
+
+                  _geoViews = {};
+                  for (var doc in snapshot.docs) {
+                    final view = ViewRecord.fromFirestore(doc);
+                    final geoKey =
+                        '${view.city ?? 'Unknown'}, ${view.country ?? 'Unknown'}';
+                    _geoViews[geoKey] = (_geoViews[geoKey] ?? 0) + 1;
+                  }
+                });
+              }
+            });
+          },
+          onError: (error) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Error loading analytics: $error'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+        );
+  }
+
+  Stream<List<Booking>> _getEventBookingsStream() {
+    return FirebaseFirestore.instance
+        .collection('bookings')
+        .where('eventId', isEqualTo: widget.event.id)
+        .snapshots()
+        .map(
+          (snapshot) =>
+              snapshot.docs.map((doc) => Booking.fromFirestore(doc)).toList(),
+        );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Prepare data for hourly views chart
+    List<String> hours = List.generate(
+      24,
+      (index) => '${index.toString().padLeft(2, '0')}:00',
+    );
+    List<FlSpot> viewSpots = hours.asMap().entries.map((entry) {
+      int index = entry.key;
+      String hour = entry.value;
+      return FlSpot(index.toDouble(), (_hourlyViews[hour] ?? 0).toDouble());
+    }).toList();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('${widget.event.title} - Analytics'),
+        backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _setupRealtimeListeners,
+          ),
+        ],
+      ),
+      body: StreamBuilder<List<Booking>>(
+        stream: _getEventBookingsStream(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final bookings = snapshot.data ?? [];
+          final totalBookings = bookings.length;
+          final paidBookings = bookings.where((b) => b.paid).length;
+          final totalRevenue = bookings
+              .where((b) => b.paid)
+              .fold(0.0, (sum, booking) => sum + booking.total);
+          final averageBookingValue = paidBookings > 0
+              ? totalRevenue / paidBookings
+              : 0.0;
+          final conversionRate = _totalViews > 0
+              ? (paidBookings / _totalViews * 100).toStringAsFixed(1)
+              : '0.0';
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Overview',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[800],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildSummaryCard(
+                        'Current Viewers',
+                        _currentViewers.toString(),
+                        Icons.visibility,
+                        Colors.blue,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildSummaryCard(
+                        'Total Views',
+                        _totalViews.toString(),
+                        Icons.remove_red_eye,
+                        Colors.purple,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildSummaryCard(
+                        'Total Bookings',
+                        totalBookings.toString(),
+                        Icons.book_online,
+                        Colors.teal,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildSummaryCard(
+                        'Revenue',
+                        '€${totalRevenue.toStringAsFixed(2)}',
+                        Icons.attach_money,
+                        Colors.green,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildSummaryCard(
+                        'Conversion Rate',
+                        '$conversionRate%',
+                        Icons.trending_up,
+                        Colors.orange,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildSummaryCard(
+                        'Avg. Booking',
+                        '€${averageBookingValue.toStringAsFixed(2)}',
+                        Icons.calculate,
+                        Colors.cyan,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Views per Hour',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[800],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 200,
+                  child: LineChart(
+                    LineChartData(
+                      gridData: FlGridData(show: true),
+                      titlesData: FlTitlesData(
+                        leftTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 40,
+                            getTitlesWidget: (value, meta) {
+                              return Text(
+                                value.toInt().toString(),
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 12,
+                                ),
+                              );
+                            },
+                          ),
+                          axisNameWidget: const Text('Views'),
+                        ),
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 30,
+                            getTitlesWidget: (value, meta) {
+                              if (value.toInt() % 4 == 0) {
+                                return Text(
+                                  hours[value.toInt()],
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontSize: 12,
+                                  ),
+                                );
+                              }
+                              return const SizedBox.shrink();
+                            },
+                          ),
+                          axisNameWidget: const Text('Hour of Day'),
+                        ),
+                        topTitles: AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                        rightTitles: AxisTitles(
+                          sideTitles: SideTitles(showTitles: false),
+                        ),
+                      ),
+                      borderData: FlBorderData(show: true),
+                      lineBarsData: [
+                        LineChartBarData(
+                          spots: viewSpots,
+                          isCurved: true,
+                          color: Colors.blue,
+                          barWidth: 2,
+                          belowBarData: BarAreaData(
+                            show: true,
+                            color: Colors.blue.withOpacity(0.2),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Geographic Distribution',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[800],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.1),
+                        spreadRadius: 1,
+                        blurRadius: 5,
+                      ),
+                    ],
+                  ),
+                  child: _geoViews.isEmpty
+                      ? const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Text('No geographic data available'),
+                        )
+                      : Column(
+                          children: _geoViews.entries.take(5).map((entry) {
+                            return ListTile(
+                              title: Text(entry.key),
+                              trailing: Text(
+                                entry.value.toString(),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Recent Activity',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[800],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.1),
+                        spreadRadius: 1,
+                        blurRadius: 5,
+                      ),
+                    ],
+                  ),
+                  child: _activityFeed.isEmpty
+                      ? const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Text('No recent activity'),
+                        )
+                      : Column(
+                          children: _activityFeed.map((activity) {
+                            return ListTile(
+                              leading: const Icon(
+                                Icons.history,
+                                color: Colors.grey,
+                              ),
+                              title: Text(activity['message']),
+                              subtitle: Text(
+                                DateFormat(
+                                  'dd/MM/yyyy HH:mm',
+                                ).format(activity['timestamp']),
+                                style: TextStyle(color: Colors.grey[600]),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildSummaryCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 24),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              title,
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
