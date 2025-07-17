@@ -867,19 +867,28 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
 }
 
 // Event Details Screen
-class EventDetailsScreen extends StatelessWidget {
+class EventDetailsScreen extends StatefulWidget {
   final Event event;
 
   const EventDetailsScreen({Key? key, required this.event}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    // Log view when screen is opened
-    _logView(context, event);
+  State<EventDetailsScreen> createState() => _EventDetailsScreenState();
+}
 
+class _EventDetailsScreenState extends State<EventDetailsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Log view when screen is opened
+    _logView(context, widget.event);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(event.title),
+        title: Text(widget.event.title),
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
       ),
@@ -888,11 +897,11 @@ class EventDetailsScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (event.imageUrl != null)
+            if (widget.event.imageUrl != null)
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Image.network(
-                  event.imageUrl!,
+                  widget.event.imageUrl!,
                   height: 200,
                   width: double.infinity,
                   fit: BoxFit.cover,
@@ -912,19 +921,22 @@ class EventDetailsScreen extends StatelessWidget {
               ),
             const SizedBox(height: 16),
             Text(
-              event.title,
+              widget.event.title,
               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            Text(event.description, style: const TextStyle(fontSize: 16)),
+            Text(
+              widget.event.description,
+              style: const TextStyle(fontSize: 16),
+            ),
             const SizedBox(height: 16),
-            _buildInfoRow(Icons.calendar_today, 'Date', event.date),
-            _buildInfoRow(Icons.location_on, 'Location', event.location),
-            _buildInfoRow(Icons.category, 'Category', event.category),
+            _buildInfoRow(Icons.calendar_today, 'Date', widget.event.date),
+            _buildInfoRow(Icons.location_on, 'Location', widget.event.location),
+            _buildInfoRow(Icons.category, 'Category', widget.event.category),
             _buildInfoRow(
               Icons.attach_money,
               'Price',
-              '€${event.price.toStringAsFixed(2)}',
+              '€${widget.event.price.toStringAsFixed(2)}',
             ),
           ],
         ),
