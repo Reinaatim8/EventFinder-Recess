@@ -839,12 +839,86 @@ class _EventCard extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              event.title,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                              ),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    event.title,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18,
+                                    ),
+                                  ),
+                                ),
+                                // Shortcut icons row
+                                Row(
+                                  children: [
+                                    IconButton(
+                                      icon: Icon(
+                                        isBooked ? Icons.bookmark : Icons.bookmark_border,
+                                        color: isBooked ? Colors.orange : Colors.grey,
+                                      ),
+                                      tooltip: isBooked ? 'Cancel Booking' : 'Book Event',
+                                      onPressed: () {
+                                        if (!isPast) {
+                                          onBookToggle();
+                                        } else {
+                                          Fluttertoast.showToast(
+                                            msg: "Cannot book past event",
+                                            backgroundColor: Colors.red,
+                                            textColor: Colors.white,
+                                            toastLength: Toast.LENGTH_LONG,
+                                            gravity: ToastGravity.CENTER,
+                                            fontSize: 16.0,
+                                          );
+                                        }
+                                      },
+                                    ),
+                                    IconButton(
+                                      icon: Icon(
+                                        Icons.payment,
+                                        color: Colors.blue,
+                                      ),
+                                      tooltip: 'Pay for Event',
+                                      onPressed: () {
+                                        if (!isPast) {
+                                          // Navigate to payment screen or show payment dialog
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => CheckoutScreen(
+                                                total: event.price is num
+                                                    ? event.price.toDouble()
+                                                    : double.tryParse(event.price.toString()) ?? 0.0,
+                                                onPaymentSuccess: () {
+                                                  // Optionally update UI or state after payment success
+                                                  Fluttertoast.showToast(
+                                                    msg: "Payment Successful!",
+                                                    backgroundColor: Colors.green,
+                                                    textColor: Colors.white,
+                                                    toastLength: Toast.LENGTH_LONG,
+                                                    gravity: ToastGravity.CENTER,
+                                                    fontSize: 16.0,
+                                                  );
+                                                },
+                                              ),
+                                            ),
+                                          );
+                                        } else {
+                                          Fluttertoast.showToast(
+                                            msg: "Cannot pay for past event",
+                                            backgroundColor: Colors.red,
+                                            textColor: Colors.white,
+                                            toastLength: Toast.LENGTH_LONG,
+                                            gravity: ToastGravity.CENTER,
+                                            fontSize: 16.0,
+                                          );
+                                        }
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
                             const SizedBox(height: 8),
                             Row(
