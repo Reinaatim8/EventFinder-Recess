@@ -523,7 +523,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                         ),
                         const SizedBox(height: 16),
                         
-                        // Booking status
+                        // Booking statuses
                         FutureBuilder<List<Booking>>(
                           future: _getEventBookings(event.id),
                           builder: (context, snapshot) {
