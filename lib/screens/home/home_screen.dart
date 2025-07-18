@@ -1,10 +1,13 @@
 import 'package:firebase_auth/firebase_auth.dart' show FirebaseAuth;
+import 'package:firebase_auth/firebase_auth.dart' show FirebaseAuth;
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
+import 'package:pretty_qr_code/pretty_qr_code.dart';
+import 'package:uuid/uuid.dart';
 import 'package:pretty_qr_code/pretty_qr_code.dart';
 import 'package:uuid/uuid.dart';
 import '../../providers/auth_provider.dart';
@@ -361,6 +364,7 @@ Future<void> _loadBookedEvents() async {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor:Colors.orange ,
+      backgroundColor:Colors.white ,
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _getScreens()[_selectedIndex],
@@ -917,6 +921,39 @@ class _EventCard extends StatelessWidget {
                               ],
                             ),
                             const SizedBox(height: 8),
+                            if (event.price == '0' || event.price == '0.0' || event.price == '0.00')
+                                Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.green[50],
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Text(
+                                  'Free Entry',
+                                  style: TextStyle(
+                                    color: Colors.green,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              )
+                            else
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue[50],
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                 child:Text(
+                                   (event.price == '0' || event.price == '0.0' || event.price == '0.00')
+                                       ? 'Free Entry'
+                                       : 'Entry Fee: UGX ${event.price}',
+                                   style: const TextStyle(
+                                     color: Colors.deepPurple,
+                                     fontWeight: FontWeight.bold,
+                                     fontSize: 16,
+                                   ),
+                                 ),
+                              ),
                             Row(
                               children: [
                                 Icon(Icons.calendar_today,

@@ -29,6 +29,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
   final _dateController = TextEditingController();
   final _locationController = TextEditingController();
   final _priceController = TextEditingController();
+  final _maxslotsController = TextEditingController();
   String _selectedCategory = 'Other';
   File? _selectedImage;
   Uint8List? _webImage;
@@ -416,6 +417,24 @@ class _AddEventDialogState extends State<AddEventDialog> {
                     return null;
                   },
                 ),
+                const SizedBox(height: 15),
+                TextFormField(
+                  controller: _maxslotsController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Max Slots',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter max slots';
+                    }
+                    if (int.tryParse(value) == null) {
+                      return 'Please enter a valid number';
+                    }
+                    return null;
+                  },
+                ),
 
                 const SizedBox(height: 15),
                 TextFormField(
@@ -575,6 +594,10 @@ class _AddEventDialogState extends State<AddEventDialog> {
           // 
           price: double.tryParse(_priceController.text) ?? 0.0,
 
+          // 
+          price: double.tryParse(_priceController.text) ?? 0.0,
+          maxslots: int.tryParse(_maxslotsController.text) ?? 0,
+
         );
 
         await _saveEventToFirestore(event);
@@ -610,6 +633,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
     _descriptionController.dispose();
     _dateController.dispose();
     _locationController.dispose();
+    _maxslotsController.dispose();
     super.dispose();
   }
 }
