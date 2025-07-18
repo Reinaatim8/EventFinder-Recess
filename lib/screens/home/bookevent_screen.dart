@@ -123,13 +123,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             bgColor: Colors.yellow.shade100,
             borderColor: Colors.orange,
           ),
-          // _buildNetworkCard(
-          //   value: PaymentNetwork.airtel,
-          //   title: "Airtel Money",
-          //   image: "assets/images/airtel.png",
-          //   bgColor: Colors.red.shade50,
-          //   borderColor: Colors.redAccent,
-          // ),
+          _buildNetworkCard(
+            value: PaymentNetwork.airtel,
+            title: "Airtel Money",
+            image: "assets/images/airtel.png",
+            bgColor: Colors.red.shade50,
+            borderColor: Colors.redAccent,
+          ),
           const Spacer(),
           ElevatedButton(
             style: ElevatedButton.styleFrom(

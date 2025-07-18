@@ -5,22 +5,7 @@ import '../../providers/auth_provider.dart';
 import '../home/home_screen.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
-import '../home/home_screen.dart';
-import 'package:fl_chart/fl_chart.dart';
-import 'package:intl/intl.dart';
-import '../../models/event.dart';  
-
-
-
-  get status => null;
-
-  get timestamp => null;
-
-  get rejectionReason => null;
-
-  get approvedAt => null;
-
-
+import '../../models/event.dart'; 
 
 // Placeholder Event model (replace with your actual Event model)
 // class Event {
@@ -257,7 +242,6 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
       QuerySnapshot snapshot = await FirebaseFirestore.instance
           .collection('bookings')
           .where('eventId', isEqualTo: eventId)
-          
           .get();
       
       return snapshot.docs.map((doc) => Booking.fromFirestore(doc)).toList();
@@ -595,9 +579,6 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                               return const LinearProgressIndicator();
                             }
                             final bookings = snapshot.data ?? [];
-                            final bookedCount = bookings.length;
-                            final maxslots = event.maxslots ?? 0;
-                            final slotsRemaining = maxslots - bookedCount;
                             final paidBookings = bookings.where((b) => b.paid).length;
                             final totalRevenue = bookings.where((b) => b.paid)
                                 .fold(0.0, (sum, booking) => sum + booking.total);
@@ -649,19 +630,6 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                                       const Text('Revenue'),
                                     ],
                                   ),
-                                  if (maxslots > 0) ...[
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      slotsRemaining > 0
-                                        ? 'Slots remaining: $slotsRemaining'
-                                        : 'Slots full',
-                                      style: TextStyle(
-                                        color: slotsRemaining > 0 ? Colors.orange : Colors.red,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-
                                 ],
                               ),
                             );
@@ -847,9 +815,6 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
         return Icons.event;
     }
   }
-}
-
-mixin maxSlots {
 }
 
 // Event Details Screen
