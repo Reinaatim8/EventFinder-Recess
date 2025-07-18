@@ -946,6 +946,7 @@ class _EventCard extends StatelessWidget {
                                     ),
                                   ),
                                 ),
+                                
                               ],
                             ),
                             if (status != null)
@@ -1063,7 +1064,7 @@ class _SearchTabState extends State<SearchTab> {
       return DateTime(1900);
     }
   }
-
+// categories of events
   final List<String> _categories = [
     'All',
     'Concert',
