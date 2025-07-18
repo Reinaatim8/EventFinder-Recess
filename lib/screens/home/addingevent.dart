@@ -32,7 +32,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
   String _selectedCategory = 'Other';
   File? _selectedImage;
   Uint8List? _webImage;
-  bool _isUploading = false;
+  bool _isUploading = false;// almight 
 
   final ImagePicker _picker = ImagePicker();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
