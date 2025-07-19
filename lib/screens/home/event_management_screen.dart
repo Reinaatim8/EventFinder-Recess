@@ -307,7 +307,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
           'Event Management',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
-        backgroundColor: Theme.of(context).primaryColor,
+        backgroundColor: Color.fromARGB(255, 25, 25, 95),
         elevation: 0,
         actions: [
           IconButton(
@@ -335,7 +335,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                   ),
                 );
               },
-              backgroundColor: Theme.of(context).primaryColor,
+              backgroundColor: Color.fromARGB(255, 25, 25, 95),
               child: const Icon(Icons.add, color: Colors.white),
             )
           : null,
@@ -387,7 +387,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
             icon: const Icon(Icons.arrow_back),
             label: const Text('Go Back'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).primaryColor,
+              backgroundColor: Color.fromARGB(255, 25, 25, 95),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
             ),
@@ -439,7 +439,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
             icon: const Icon(Icons.add),
             label: const Text('Create Event'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).primaryColor,
+              backgroundColor: Color.fromARGB(255, 25, 25, 95),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
             ),
@@ -516,12 +516,12 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: Theme.of(context).primaryColor.withOpacity(0.1),
+                                color: Color.fromARGB(255, 25, 25, 95).withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Icon(
                                 _getCategoryIcon(event.category),
-                                color: Theme.of(context).primaryColor,
+                                color: Color.fromARGB(255, 25, 25, 95),
                                 size: 24,
                               ),
                             ),
@@ -582,6 +582,9 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                             final paidBookings = bookings.where((b) => b.paid).length;
                             final totalRevenue = bookings.where((b) => b.paid)
                                 .fold(0.0, (sum, booking) => sum + booking.total);
+                                final bookedCount = bookings.length;
+                            final maxslots = event.maxslots ?? 0;
+                            final slotsRemaining = maxslots - bookedCount;
                             
                             return Container(
                               padding: const EdgeInsets.all(12),
@@ -630,6 +633,19 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                                       const Text('Revenue'),
                                     ],
                                   ),
+                                  if (maxslots > 0) ...[
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      slotsRemaining > 0
+                                        ? 'Slots remaining: $slotsRemaining'
+                                        : 'Slots full',
+                                      style: TextStyle(
+                                        color: slotsRemaining > 0 ? Colors.orange : Colors.red,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+
                                 ],
                               ),
                             );
@@ -770,18 +786,18 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: Theme.of(context).primaryColor.withOpacity(0.1),
+          color: Color.fromARGB(255, 25, 25, 95).withOpacity(0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: Theme.of(context).primaryColor),
+            Icon(icon, size: 16, color: Color.fromARGB(255, 25, 25, 95)),
             const SizedBox(width: 4),
             Text(
               label,
               style: TextStyle(
-                color: Theme.of(context).primaryColor,
+                color: Color.fromARGB(255, 25, 25, 95),
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),
@@ -816,6 +832,8 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
     }
   }
 }
+mixin maxSlots {
+}
 
 // Event Details Screen
 class EventDetailsScreen extends StatelessWidget {
@@ -828,7 +846,7 @@ class EventDetailsScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(event.title),
-        backgroundColor: Theme.of(context).primaryColor,
+        backgroundColor: Color.fromARGB(255, 25, 25, 95),
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
@@ -959,7 +977,7 @@ class _AttendeesScreenState extends State<AttendeesScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('${widget.event.title} - Attendees'),
-        backgroundColor: Theme.of(context).primaryColor,
+        backgroundColor: Color.fromARGB(255, 25, 25, 95),
         foregroundColor: Colors.white,
         actions: [
           IconButton(
@@ -1110,7 +1128,7 @@ class _AttendeesScreenState extends State<AttendeesScreen> {
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
           color: isSelected 
-              ? Theme.of(context).primaryColor
+              ? Color.fromARGB(255, 25, 25, 95)
               : Colors.grey[200],
           borderRadius: BorderRadius.circular(8),
         ),
@@ -1163,7 +1181,7 @@ class EventAnalyticsScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text('${event.title} - Analytics'),
-        backgroundColor: Theme.of(context).primaryColor,
+        backgroundColor: Color.fromARGB(255, 25, 25, 95),
         foregroundColor: Colors.white,
       ),
       body: FutureBuilder<List<Booking>>(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:provider/provider.dart';
 import '../../core/utils/validators.dart';
 import '../../providers/auth_provider.dart';
@@ -91,12 +92,16 @@ class _LoginScreenState extends State<LoginScreen> {
         password: _passwordController.text.trim(),
       );
       if (!success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(authProvider.errorMessage ?? 'Login failed'),
+        
+          Fluttertoast.showToast(
+            msg: "Login failed. Please check your credentials.",
+            toastLength: Toast.LENGTH_LONG,
+            gravity: ToastGravity.TOP,
             backgroundColor: Colors.red,
-          ),
-        );
+            textColor: Colors.white,
+            fontSize: 18.0,
+          );
+        
       }
     }
   }

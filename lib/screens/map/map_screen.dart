@@ -196,7 +196,7 @@ class _MapScreenState extends State<MapScreen>
         text: event.title.length > 15 ? event.title.substring(0, 15) + '...' : event.title,
         style: TextStyle(
           fontSize: 16,
-          color: Colors.deepPurpleAccent,
+          color: Color.fromARGB(255, 25, 25, 95),
           fontWeight: FontWeight.w900,
           fontStyle: FontStyle.italic,
           shadows: [
@@ -243,7 +243,7 @@ class _MapScreenState extends State<MapScreen>
       case 'art': return const Color(0xFFE91E63);
       case 'technology': return const Color(0xFF4CAF50);
       case 'business': return const Color(0xFF607D8B);
-      default: return const Color(0xFF673AB7);
+      default: return Color.fromARGB(255, 25, 25, 95);
     }
   }
 
@@ -508,6 +508,7 @@ class _MapScreenState extends State<MapScreen>
       margin: const EdgeInsets.all(16),
       child: Column(
         children: [
+          const SizedBox(height: 20),
           // Search bar
           Container(
             decoration: BoxDecoration(
@@ -515,22 +516,24 @@ class _MapScreenState extends State<MapScreen>
               borderRadius: BorderRadius.circular(25),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10,
+                  color: Color.fromARGB(255, 25, 25, 95).withOpacity(0.1),
+                  spreadRadius: 7,
+                  blurRadius: 2,
                   offset: const Offset(0, 2),
                 ),
               ],
             ),
+            
             child: TextField(
               controller: _searchController,
               onChanged: (value) => _filterEvents(value, _selectedCategory),
               decoration: InputDecoration(
                 hintText: 'Search events...',
-                prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                prefixIcon: const Icon(Icons.search, color: Color.fromARGB(255, 25, 25, 95)),
                 suffixIcon: IconButton(
                   icon: Icon(
                     _isFilterExpanded ? Icons.expand_less : Icons.expand_more,
-                    color: Colors.grey,
+                    color: Color.fromARGB(255, 25, 25, 95),
                   ),
                   onPressed: () {
                     setState(() {
@@ -574,10 +577,10 @@ class _MapScreenState extends State<MapScreen>
                               });
                               _filterEvents(_searchController.text, category);
                             },
-                            selectedColor: const Color(0xFF673AB7).withOpacity(0.2),
-                            checkmarkColor: const Color(0xFF673AB7),
+                            selectedColor: Color.fromARGB(255, 25, 25, 95).withOpacity(0.2),
+                            checkmarkColor: Color.fromARGB(255, 25, 25, 95),
                             labelStyle: TextStyle(
-                              color: isSelected ? const Color(0xFF673AB7) : Colors.grey[600],
+                              color: isSelected ? Color.fromARGB(255, 25, 25, 95) : Colors.grey[600],
                               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                             ),
                           ),
@@ -638,17 +641,20 @@ class _MapScreenState extends State<MapScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: const Color.fromARGB(255, 25, 25, 95),
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('Events Map'),
-        backgroundColor: Colors.white.withOpacity(0.95),
+        title: const Text('EVENTS MAP'),
+        backgroundColor:const Color.fromARGB(255, 25, 25, 95),
+        toolbarHeight: 70,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Color(0xFF673AB7)),
+        iconTheme: const IconThemeData(color: Colors.white),
+       
         titleTextStyle: const TextStyle(
-          color: Color(0xFF673AB7),
+          color:  Colors.white,
           fontSize: 20,
           fontWeight: FontWeight.bold,
+          decoration: TextDecoration.underline,
         ),
         actions: [
           ScaleTransition(
@@ -656,7 +662,7 @@ class _MapScreenState extends State<MapScreen>
             child: IconButton(
               icon: Icon(
                 _showMarkers ? Icons.visibility : Icons.visibility_off,
-                color: const Color(0xFF673AB7),
+                color: Colors.white,
               ),
               onPressed: _toggleMarkers,
               tooltip: _showMarkers ? 'Hide Markers' : 'Show Markers',
@@ -672,7 +678,7 @@ class _MapScreenState extends State<MapScreen>
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF673AB7)),
+                      valueColor: AlwaysStoppedAnimation<Color>(Color.fromARGB(255, 25, 25, 95)),
                     ),
                     SizedBox(height: 16),
                     Text(
@@ -722,7 +728,7 @@ class _MapScreenState extends State<MapScreen>
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Color.fromARGB(255, 25, 25, 95),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -733,14 +739,14 @@ class _MapScreenState extends State<MapScreen>
                       children: [
                         Icon(
                           Icons.location_on,
-                          color: const Color(0xFF673AB7),
+                          color: Color.fromARGB(255, 25, 25, 95),
                           size: 16,
                         ),
                         const SizedBox(width: 4),
                         Text(
                           '${_filteredEvents.length} events',
                           style: const TextStyle(
-                            color: Color(0xFF673AB7),
+                            color: Color.fromARGB(255, 25, 25, 95),
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -761,7 +767,7 @@ class _MapScreenState extends State<MapScreen>
               ),
             );
           },
-          backgroundColor: const Color(0xFF673AB7),
+          backgroundColor: Color.fromARGB(255, 25, 25, 95),
           child: const Icon(Icons.my_location, color: Colors.white),
         ),
       ),

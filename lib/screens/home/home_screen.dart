@@ -248,7 +248,7 @@ Future<void> _loadBookedEvents() async {
                       child: const Text('Cancel Reseravtion'),
                     ),
                   ],
-
+              const SizedBox(height: 10),
                   ElevatedButton(
                     onPressed: () {
                       Navigator.pop(context);
@@ -325,6 +325,8 @@ Future<void> _loadBookedEvents() async {
                         ),
                       );}
                     },
+                    
+                    
                     child: const Text('Pay For Event'),
                   ),
                  TextButton(
@@ -360,15 +362,36 @@ Future<void> _loadBookedEvents() async {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor:Colors.orange ,
+      backgroundColor:const Color.fromARGB(255, 25, 25, 95),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _getScreens()[_selectedIndex],
-       bottomNavigationBar: ConvexAppBar(
-              style: TabStyle.react, // other styles: fixedCircle, flip, reactCircle
-              backgroundColor: Theme.of(context).primaryColor,
-              activeColor: Colors.white,
-              color: Colors.white60,
+            bottomNavigationBar: Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: const Color.fromARGB(255, 25, 25, 95),
+                          width: 0.2,
+                          
+                        ),
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(50),
+                          topRight: Radius.circular(50),
+                          bottomLeft: Radius.circular(20),
+                          bottomRight: Radius.circular(20),
+
+                        ),
+                        
+                        ),
+            child: ConvexAppBar(
+                      style: TabStyle.react, // other styles: fixedCircle, flip, reactCircle
+                      backgroundColor:Color.fromARGB(255, 25, 25, 95),
+                      activeColor:Colors.orange,
+                      color:Colors.white,
+                      height: 60,
+                      // elevation: 5,
+              curveSize: 100,
+                      curve: Curves.easeInOut,
+             
               items: const [
                 TabItem(icon: Icons.home, title: 'Home'),
                 TabItem(icon: Icons.search, title: 'Search'),
@@ -382,7 +405,7 @@ Future<void> _loadBookedEvents() async {
                   _selectedIndex = index;
                 });
               },
-            ),
+            ),),
 
     );
   }
@@ -428,20 +451,40 @@ class HomeTab extends StatelessWidget {
 
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+      backgroundColor: Colors.transparent,
+      body: Stack(
+        children:[
+          // Background image
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/blue2.jpeg',
+              fit: BoxFit.cover,
+
+            ),  
+        ),
+      SafeArea(
+        child: SingleChildScrollView( 
+        child: Column(
+          children: [
+            // Header section with title and search bar
               Container(
                 width: double.infinity,
+                height: 250,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor,
+                  color:const Color.fromARGB(255, 25, 25, 95),
                   borderRadius: const BorderRadius.only(
-                    bottomLeft: Radius.circular(20),
-                    bottomRight: Radius.circular(20),
+                    bottomLeft: Radius.circular(0),
+                    bottomRight: Radius.circular(0),
+                    topRight: Radius.circular(10),
+                    topLeft: Radius.circular(10),
                   ),
+                  boxShadow:[
+                      BoxShadow(
+                        color: Colors.black,
+                        spreadRadius: 1,
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),] 
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(20.0),
@@ -451,14 +494,31 @@ class HomeTab extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
-                            'Event Finder',
+                          RichText(
+                            text: TextSpan(
+                              children:[
+                          TextSpan(
+                            text: 'Event',
                             style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 24,
+                              color: Colors.orange,
+                              fontSize: 30,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
+                          TextSpan(
+                            text: ' Finder',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 30,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                              ],
+                            ),
+                          ),
+                          
+
+
                           Row(
                             children: [
                               GestureDetector(
@@ -473,7 +533,7 @@ class HomeTab extends StatelessWidget {
                                   ),
                                   child: Icon(
                                     Icons.add,
-                                    color: Theme.of(context).primaryColor,
+                                    color:const Color.fromARGB(255, 25, 25, 95),
                                     size: 20,
                                   ),
                                 ),
@@ -493,7 +553,7 @@ class HomeTab extends StatelessWidget {
                                   backgroundColor: Colors.white,
                                   child: Icon(
                                     Icons.person,
-                                    color: Theme.of(context).primaryColor,
+                                    color: const Color.fromARGB(255, 25, 25, 95),
                                   ),
                                 ),
                               ),
@@ -529,62 +589,83 @@ class HomeTab extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 10),
-                      const Text(
-                        'Discover amazing events near you',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 16,
+                      Text.rich(
+                        TextSpan(
+                          children: [
+                            TextSpan(
+                              text: 'Discover ',
+                              style: TextStyle(
+                                color: Colors.orange, 
+                                fontSize: 20,
+                                fontFamily: 'RobotoMono',
+                              ),
+                            ),
+                             TextSpan(
+                              text: 'Amazing Events Near You....',
+                              style: TextStyle(
+                                color: Colors.white, 
+                                fontSize: 18,
+                              ),
+                             ),],),),
+                             const SizedBox(height: 23),
+                             const SizedBox(height: 15),
+
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(15),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              spreadRadius: 1,
+                              blurRadius: 10,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(15),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.1),
-                        spreadRadius: 1,
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Search events...',
-                      prefixIcon: Icon(Icons.search, color: Colors.grey[400]),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 15),
+                        
+                        child: TextField(
+                          decoration: InputDecoration(
+                            hintText: 'Search events.....',
+                            prefixIcon: Icon(Icons.search, color:const Color.fromARGB(255, 25, 25, 95), size: 20,),
+                            border: InputBorder.none,
+                            //focusedBorder: InputBorder(color:Colors.yellow),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 15),
+                          ),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => SearchTab(
+                                  events: events,
+                                  onEventTap: onEventTap,
+                                  eventStatus: _eventStatus,
+                                ),
                     ),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => SearchTab(events: events,
-                          onEventTap: onEventTap, 
-                           eventStatus: _eventStatus,          ),
-                        ),
-                      );
-                    },
-                  ),
+                    );
+                                },
+                       ),
+                    ),
+                  ],
+            ),
                 ),
+             ),
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                
               ),
               const SizedBox(height: 20),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
+                  
                   child: Row(
                     children: [
-                      _CategoryChip(label: 'All', isSelected: true, events: events,onEventTap: onEventTap),
+                      _CategoryChip(label: 'All', isSelected: true, events: events,onEventTap: onEventTap,),
                       const SizedBox(width: 10),
                       _CategoryChip(label: 'Concert', events: events,onEventTap: onEventTap),
                       const SizedBox(width: 10),
@@ -597,7 +678,7 @@ class HomeTab extends StatelessWidget {
                       _CategoryChip(label: 'Festival', events: events,onEventTap: onEventTap),
                       const SizedBox(width: 10),
                       _CategoryChip(label: 'Networking', events: events,onEventTap: onEventTap),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 10, ),
                       _CategoryChip(label: 'Exhibition', events: events,onEventTap: onEventTap),
                       const SizedBox(width: 10),
                       _CategoryChip(label: 'Theater', events: events,onEventTap: onEventTap),
@@ -667,7 +748,8 @@ class HomeTab extends StatelessWidget {
           ),
         ),
       ),
-    );
+    ],
+    ),);
   }
 
   void _showAddEventDialog(BuildContext context) {
@@ -708,16 +790,17 @@ class _CategoryChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? Theme.of(context).primaryColor : Colors.white,
+           color: isSelected ? Colors.orange: Colors.black.withOpacity(0.05),
+          // color: Colors.white,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected ? Theme.of(context).primaryColor : Colors.grey[300]!,
-          ),
+          // backgroundColor: isSelected ? const Color.fromARGB(255, 25, 25, 95) : Colors.white,
+          
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected ? Colors.white : Colors.black,
+            color: isSelected ? Colors.white :const Color.fromARGB(255, 25, 25, 95),
+            //  backgroundColor: isSelected ? const Color.fromARGB(255, 25, 25, 95) : Colors.white,
             fontSize: 14,
             fontWeight: FontWeight.w500,
           ),
@@ -774,15 +857,14 @@ class _EventCard extends StatelessWidget {
             margin: EdgeInsets.zero,
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 0),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.zero,
+              color:  Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(0),
               border: Border(
                 bottom: BorderSide(
-                  color: Colors.grey.withOpacity(0.3),
-                  width: 0.5,
+                  color: Colors.white,
+                  width: 0,
                 ),
               ),
-              boxShadow: [],
             ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -794,13 +876,15 @@ class _EventCard extends StatelessWidget {
                     : const ColorFilter.mode(Colors.transparent, BlendMode.multiply),
                 child: Image.network(
                   event.imageUrl!,
-                  height: 200,
+                  height: 250,
                   width: double.infinity,
                   fit: BoxFit.cover,
+                  
+
                   errorBuilder: (context, error, stackTrace) {
                     return Container(
                       height: 200,
-                      color: Colors.grey[200],
+                      color: const Color.fromARGB(255, 111, 110, 110),
                       child: Icon(
                         _getCategoryIcon(event.category),
                         size: 60,
@@ -819,18 +903,19 @@ class _EventCard extends StatelessWidget {
                     children: [
                       if (event.imageUrl == null)
                         Container(
-                          padding: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(0),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).primaryColor.withOpacity(0.1),
+                            color: Color.fromARGB(255, 25, 25, 95).withOpacity(0.1),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Icon(
                             _getCategoryIcon(event.category),
-                            color: Theme.of(context).primaryColor,
-                            size: 24,
+                            color: Color.fromARGB(255, 25, 25, 95),
+                            size: 30,
                           ),
                         ),
                       if (event.imageUrl == null) const SizedBox(width: 15),
+                      
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -838,21 +923,61 @@ class _EventCard extends StatelessWidget {
                             Row(
                               children: [
                                 Expanded(
-                                  child: Text(
-                                    event.title,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 18,
-                                    ),
-                                  ),
+                                  child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        event.title.toUpperCase(),
+                                        style: const TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                          decoration: TextDecoration.underline,
+                                          backgroundColor: Colors.transparent,
+                                          color: Colors.black,
+                                        ),
+                                      ),
+                                      
+                                  
+                                  const SizedBox(height: 8),
+                                    (event.price == '0' || event.price == '0.0' || event.price == '0.00') ?
+                                      Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.green[50],
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const Text(
+                                        'Free Entry',
+                                        style: TextStyle(
+                                          color: Colors.green,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      ):
+                              
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color.fromARGB(255, 250, 186, 137),
+                                  borderRadius: BorderRadius.circular(6),
                                 ),
+                                 child:Text(
+                                   (event.price == '0' || event.price == '0.0' || event.price == '0.00')
+                                       ? 'Free Entry'
+                                       : 'Entry Fee: UGX ${event.price}',
+                                   style: const TextStyle(
+                                     color: Colors.black,
+                                     fontWeight: FontWeight.bold,
+                                ),),),],),),
                                 // Shortcut icons row
+                                const SizedBox(height: 8),
+                                
                                 Row(
                                   children: [
                                     IconButton(
                                       icon: Icon(
                                         isBooked ? Icons.bookmark : Icons.bookmark_border,
                                         color: isBooked ? Colors.orange : Colors.grey,
+                                        size: 35,
                                       ),
                                       tooltip: isBooked ? 'Cancel Booking' : 'Book Event',
                                       onPressed: () {
@@ -870,12 +995,15 @@ class _EventCard extends StatelessWidget {
                                         }
                                       },
                                     ),
+                                    const SizedBox(height: 13),
                                     IconButton(
                                       icon: Icon(
                                         Icons.payment,
-                                        color: Colors.blue,
+                                        color: Color.fromARGB(255, 25, 25, 95),
+                                        size: 35,
                                       ),
                                       tooltip: 'Pay for Event',
+                                      
                                       onPressed: () {
                                         if (!isPast) {
                                           // Navigate to payment screen or show payment dialog
@@ -915,18 +1043,20 @@ class _EventCard extends StatelessWidget {
                                   ],
                                 ),
                               ],
+                            
                             ),
                             const SizedBox(height: 8),
                             Row(
                               children: [
                                 Icon(Icons.calendar_today,
-                                    size: 16, color: Colors.grey[600]),
+                                    size: 19, color: Colors.green),
                                 const SizedBox(width: 5),
                                 Text(
                                   event.date,
                                   style: TextStyle(
-                                    color: Colors.grey[600],
+                                    color: Colors.black,
                                     fontSize: 14,
+                                    fontWeight: FontWeight.w500
                                   ),
                                 ),
                               ],
@@ -934,18 +1064,21 @@ class _EventCard extends StatelessWidget {
                             const SizedBox(height: 4),
                             Row(
                               children: [
-                                Icon(Icons.location_on,
-                                    size: 16, color: Colors.grey[600]),
+                               Icon(Icons.location_on,
+                                    size: 17, color: Colors.red),
                                 const SizedBox(width: 5),
-                                Expanded(
+                                Flexible(
                                   child: Text(
                                     event.location,
                                     style: TextStyle(
-                                      color: Colors.grey[600],
-                                      fontSize: 14,
+                                      color: Colors.black,
+                                      fontSize: 12,
                                     ),
-                                  ),
-                                ),
+                                    overflow: TextOverflow.ellipsis, 
+                                    maxLines: 2,
+                                    softWrap: false,
+                                  ),),
+                                
                               ],
                             ),
                             if (status != null)
@@ -974,20 +1107,20 @@ class _EventCard extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).primaryColor.withOpacity(0.1),
+                          color: Color.fromARGB(255, 25, 25, 95).withOpacity(0.1),
                           borderRadius: BorderRadius.circular(15),
                         ),
                         child: Text(
                           event.category,
                           style: TextStyle(
-                            color: Theme.of(context).primaryColor,
+                            color: Color.fromARGB(255, 25, 25, 95),
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
-                    ],
-                  ),),
+                    
+                  
                   if (event.description.isNotEmpty) ...[
                     const SizedBox(height: 12),
                     Text(
@@ -1002,8 +1135,10 @@ class _EventCard extends StatelessWidget {
                     ),
                   ],
                 ],
-              ),)
-            ));
+              ),
+              ),],
+            ),),
+            ),);
             }
 
   IconData _getCategoryIcon(String category) {
@@ -1039,15 +1174,17 @@ class SearchTab extends StatefulWidget {
   const SearchTab({Key? key, required this.events,required this.onEventTap,
     required this.eventStatus,
 }) : super(key: key);
-
+       
   @override
   State<SearchTab> createState() => _SearchTabState();
 }
- //Map<String, String> _eventStatus = {};
+ 
 class _SearchTabState extends State<SearchTab> {
   final _searchController = TextEditingController();
   String _selectedCategory = 'All';
   List<Event> _filteredEvents = [];
+  List<Event> upcomingEvents = [];
+   List<Event> pastEvents = [];   
   DateTime parseEventDate(String input) {
     try {
       final parts = input.split('/');
@@ -1082,6 +1219,7 @@ class _SearchTabState extends State<SearchTab> {
   void initState() {
     super.initState();
     _filteredEvents = widget.events;
+    _filterEvents();
   }
 
   void _showEventDetailsModal(Event event) {
@@ -1276,26 +1414,82 @@ class _SearchTabState extends State<SearchTab> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        title: const Text('Search Events'),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
+        
+        backgroundColor: Color.fromARGB(255, 25, 25, 95),
+        foregroundColor: Colors.white, 
+        toolbarHeight: 90,
+         
+              title: Column(
+                 mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+               RichText(
+                text: TextSpan(
+                  children: [
+                    TextSpan(
+                      text: 'Search',
+                      style: TextStyle(
+                        color: Colors.orange,
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    TextSpan(
+                      text: ' Events',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              const SizedBox(height: 4),
+              const Text(
+                'Find Events that Match your Interests',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                ),
+              ),
+              const SizedBox(height: 10),
+              ],),
+              
       ),
-      body: Column(
+      body: Stack(
+        children: [
+          // Background image
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/blue2.jpeg',
+              fit: BoxFit.cover,
+            ),
+          ),
+          // Main content    
+      Column(
         children: [
           Container(
             padding: const EdgeInsets.all(16),
-            color: Colors.white,
+            color:Color.fromARGB(255, 25, 25, 95) ,
             child: Column(
               children: [
                 TextField(
                   controller: _searchController,
                   decoration: InputDecoration(
                     hintText: 'Search events...',
+                    fillColor: Colors.white,
+                    filled: true,
                     prefixIcon: const Icon(Icons.search),
                     border: OutlineInputBorder(
+
                       borderRadius: BorderRadius.circular(10),
+                      
+                      
+                     
                     ),
                   ),
                   onChanged: (value) => _filterEvents(),
@@ -1370,7 +1564,7 @@ class _SearchTabState extends State<SearchTab> {
                       );
                     },
                   ),
-          ),
+       ), ], ),
         ],
       ),
     );
@@ -1395,13 +1589,17 @@ class _CategoryFilterChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? Theme.of(context).primaryColor : Colors.grey[200],
+          color: isSelected ? Colors.orange: Colors.grey[200],
           borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? Colors.transparent : Colors.transparent,
+          ),
+          
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected ? Colors.white : Colors.black,
+            color: isSelected ? Colors.white : Color.fromARGB(255, 25, 25, 95),
             fontSize: 14,
             fontWeight: FontWeight.w500,
           ),
@@ -1488,8 +1686,14 @@ class _BookingsTabState extends State<BookingsTab> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Bookings'),
-        backgroundColor: Theme.of(context).primaryColor,
+        backgroundColor: Color.fromARGB(255, 25, 25, 95),
         foregroundColor: Colors.white,
+        toolbarHeight: 80,
+        titleTextStyle: const TextStyle(
+          fontSize: 22,
+          fontWeight: FontWeight.bold,
+          color: Colors.orange,
+        ),
       ),
       body: bookings.isEmpty
           ? const Center(child: Text('No bookings yet.'))

@@ -56,7 +56,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         title: const Text("Checkout Your Ticket",
             style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
         centerTitle: true,
-        backgroundColor: Colors.purple.shade900,
+        backgroundColor: Color.fromARGB(255, 25, 25, 95),
+        toolbarHeight: 80,
           //color: Theme.of(context).primaryColor
       ),
       body: Padding(
@@ -65,7 +66,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           Card(
             elevation: 3,
             color: const Color.fromARGB(255, 212, 228, 245),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: 
+              BorderRadius.circular(12)
+              
+              ),
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(children: [
@@ -94,6 +99,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     const SizedBox(height: 10),
                     TextFormField(
                       decoration: const InputDecoration(labelText: "Email Address *"),
+                      initialValue: '', // Optional: pre-fill with user's email if available
+                      //autofocus: true,
+                      keyboardType: TextInputType.emailAddress,
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
+                      
                       onChanged: (val) => email = val,
                       validator: (val) => val!.isEmpty ? "Required" : null,
                     ),
@@ -123,18 +133,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             bgColor: Colors.yellow.shade100,
             borderColor: Colors.orange,
           ),
-          _buildNetworkCard(
-            value: PaymentNetwork.airtel,
-            title: "Airtel Money",
-            image: "assets/images/airtel.png",
-            bgColor: Colors.red.shade50,
-            borderColor: Colors.redAccent,
-          ),
+          // _buildNetworkCard(
+          //   value: PaymentNetwork.airtel,
+          //   title: "Airtel Money",
+          //   image: "assets/images/airtel.png",
+          //   bgColor: Colors.red.shade50,
+          //   borderColor: Colors.redAccent,
+          //),
           const Spacer(),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               minimumSize: const Size.fromHeight(50),
-              backgroundColor: Colors.purple.shade900,
+              backgroundColor: Color.fromARGB(255, 25, 25, 95),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             onPressed: () {
@@ -206,13 +216,25 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       builder: (_) {
         return StatefulBuilder(
           builder: (context, setState) => AlertDialog(
-            title: Text("Pay with $provider Mobile Money"),
+            title: Text("Pay with $provider Mobile Money" ,),
+            titleTextStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
+            icon: const Icon(Icons.mobile_friendly, color: Colors.yellow, size: 30, ),
             content: SingleChildScrollView(
               child: Column(
                 children: [
                   TextFormField(
                     keyboardType: TextInputType.phone,
-                    decoration: const InputDecoration(labelText: "Phone Number"),
+                    decoration: const InputDecoration(labelText: "Phone Number",
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(8)),
+                        borderSide: BorderSide(
+                          color: Colors.yellow,
+                          width: 1.5,
+                        ),
+                      ),
+                    ),
                     onChanged: (val) async {
                       phone = val;
                       if (phone.length == 10 && !_hasShownToast) {
@@ -262,6 +284,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               TextButton(
                 onPressed: () => Navigator.pop(context),
                 child: const Text("Cancel"),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  backgroundColor: Colors.red,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8),
+                  
+                  ),
+                ),
               ),
               ElevatedButton(
                 onPressed: () async {
@@ -292,7 +321,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   }
                 },
                 child: const Text("Confirm Payment"),
-              ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.yellow,
+                  foregroundColor: Colors.black,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),),
             ],
           ),
         );
