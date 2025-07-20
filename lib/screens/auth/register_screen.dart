@@ -95,7 +95,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         width: MediaQuery.of(context).size.width,
         decoration: const BoxDecoration(
           image: DecorationImage(
-            image: AssetImage('assets/images/background2.jpg'),
+            image: AssetImage('assets/images/orange.jpeg'),
             fit: BoxFit.cover,
           ),
         ),
@@ -112,11 +112,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   const SizedBox(height: 40),
                   // Title and subtitle
                   const Text(
-                    "Create Account",
+                    "Create An Account 📝",
                     style: TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: Colors.orange,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -125,7 +125,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     "Join us to discover and book amazing events",
                     style: TextStyle(
                       fontSize: 16,
-                      color: Colors.white70,
+                      color: Colors.white,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -139,8 +139,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Color.fromARGB(255, 25, 25, 95),
                           blurRadius: 20,
+                          spreadRadius: 1,
                           offset: const Offset(0, 10),
                         ),
                       ],
@@ -157,7 +158,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 hint: "Enter your full name",
                                 controller: _nameController,
                                 validator: Validators.validateName,
-                                prefixIcon: const Icon(Icons.person_outline),
+                                prefixIcon: const Icon(Icons.person_outline, color: Colors.orange),
                               ),
                               const SizedBox(height: 16),
                               CustomTextField(
@@ -166,7 +167,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 controller: _emailController,
                                 keyboardType: TextInputType.emailAddress,
                                 validator: Validators.validateEmail,
-                                prefixIcon: const Icon(Icons.email_outlined),
+                                prefixIcon: const Icon(Icons.email_outlined, color: Colors.orange),
                               ),
                               const SizedBox(height: 16),
                               CustomTextField(
@@ -175,7 +176,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 controller: _passwordController,
                                 obscureText: true,
                                 validator: Validators.validatePassword,
-                                prefixIcon: const Icon(Icons.lock_outline),
+                                prefixIcon: const Icon(Icons.lock_outline, color: Colors.orange),
                               ),
                               const SizedBox(height: 16),
                               CustomTextField(
@@ -187,7 +188,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   value,
                                   _passwordController.text,
                                 ),
-                                prefixIcon: const Icon(Icons.lock_outline),
+                                prefixIcon: const Icon(Icons.lock_outline, color: Colors.orange),
                               ),
                               const SizedBox(height: 24),
                               
@@ -212,6 +213,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 text: "Create Account",
                                 onPressed: authProvider.isLoading ? null : _handleRegister,
                                 isLoading: authProvider.isLoading,
+                                backgroundColor: Color.fromARGB(255, 25, 25, 95),
+                                textColor: Colors.orange,
                               ),
                               const SizedBox(height: 24),
                               Row(
@@ -227,7 +230,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     },
                                     child: const Text(
                                       "Sign In",
-                                      style: TextStyle(fontWeight: FontWeight.w600),
+                                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 20,color:Color.fromARGB(255, 25, 25, 95),
+                                      decorationColor: Color.fromARGB(255, 25, 25, 95),
+                                      decoration: TextDecoration.underline,
+                                      ),
+                                      
                                     ),
                                   ),
                                 ],

@@ -473,11 +473,12 @@ class HomeTab extends StatelessWidget {
                 decoration: BoxDecoration(
                   color:const Color.fromARGB(255, 25, 25, 95),
                   borderRadius: const BorderRadius.only(
-                    bottomLeft: Radius.circular(0),
-                    bottomRight: Radius.circular(0),
-                    topRight: Radius.circular(10),
-                    topLeft: Radius.circular(10),
+                    bottomLeft: Radius.circular(80,),
+                    bottomRight: Radius.circular(80),
+                    
+                    
                   ),
+                  
                   boxShadow:[
                       BoxShadow(
                         color: Colors.black,
@@ -1420,6 +1421,12 @@ class _SearchTabState extends State<SearchTab> {
         backgroundColor: Color.fromARGB(255, 25, 25, 95),
         foregroundColor: Colors.white, 
         toolbarHeight: 90,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.only(
+            bottomLeft: Radius.circular(30),
+            bottomRight: Radius.circular(30),
+          ),
+        ),
          
               title: Column(
                  mainAxisAlignment: MainAxisAlignment.start,
@@ -1486,7 +1493,9 @@ class _SearchTabState extends State<SearchTab> {
                     prefixIcon: const Icon(Icons.search),
                     border: OutlineInputBorder(
 
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: const BorderRadius.all(
+                        Radius.circular(30),
+                      ),
                       
                       
                      
