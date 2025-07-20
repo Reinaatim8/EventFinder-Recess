@@ -1,11 +1,14 @@
 import 'dart:convert';
+import 'dart:ui' as ui;
+import 'dart:typed_data';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:uuid/uuid.dart';
+import 'package:flutter/rendering.dart';
 import 'package:pretty_qr_code/pretty_qr_code.dart';
 import 'package:path_provider/path_provider.dart';
-//import 'package:screenshot/screenshot.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 
@@ -35,11 +38,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   PaymentNetwork? _selectedNetwork;
   String? _validatedPhone;
   String? _ticketId; // QR code ticket
+  final GlobalKey _qrKey = GlobalKey();
 
   //final ScreenshotController _screenshotController = ScreenshotController();
   final String subscriptionKey = "aab1d593853c454c9fcec8e4e02dde3c";
   final String apiUser = "815d497c-9cb6-477c-8e30-23c3c2b3bea6";
   final String apiKey = "5594113210ab4f3da3a7329b0ae65f40";
+
+  
 
   @override
   Widget build(BuildContext context) {
@@ -133,13 +139,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             bgColor: Colors.yellow.shade100,
             borderColor: Colors.orange,
           ),
-          // _buildNetworkCard(
-          //   value: PaymentNetwork.airtel,
-          //   title: "Airtel Money",
-          //   image: "assets/images/airtel.png",
-          //   bgColor: Colors.red.shade50,
-          //   borderColor: Colors.redAccent,
-          //),
+         
           const Spacer(),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -218,7 +218,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           builder: (context, setState) => AlertDialog(
             title: Text("Pay with $provider Mobile Money" ,),
             titleTextStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
-            icon: const Icon(Icons.mobile_friendly, color: Colors.yellow, size: 30, ),
+            icon: const Icon(Icons.mobile_friendly, color: Colors.orange, size: 30, ),
             content: SingleChildScrollView(
               child: Column(
                 children: [
@@ -346,15 +346,30 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             const SizedBox(height: 16),
             const Text("🎟 Your Ticket QR Code", style: TextStyle(fontWeight: FontWeight.bold,)),
              if (_ticketId != null)
-
-               SizedBox(
+              RepaintBoundary(
+                key: _qrKey,
+               child: SizedBox(
                  width: 180,
                  height: 180,
                  child: PrettyQrView.data(
                    data: _ticketId!,
                    errorCorrectLevel: QrErrorCorrectLevel.M,
+                   
+                 ),
                  ),
                ),
+               const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: _downloadQRCode,
+                    icon: Icon(Icons.download),
+                    label: Text("Download QR Code"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueAccent,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+
             const SizedBox(height: 8),
              if (_ticketId != null)
                Text('QR Code for: $_ticketId'),
@@ -378,6 +393,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       ),
     );
   }
+  
 
   Future<String?> getAccessToken() async {
     final credentials = base64Encode(utf8.encode('$apiUser:$apiKey'));
@@ -419,6 +435,39 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       throw Exception("Account not active: ${response.body}");
     }
   }
+  Future<void> _downloadQRCode() async {
+  try {
+    if (!(await Permission.storage.request().isGranted)) {
+      Fluttertoast.showToast(msg: "Storage permission denied.");
+      return;
+    }
+
+    RenderRepaintBoundary boundary = _qrKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+    ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+    ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    Uint8List pngBytes = byteData!.buffer.asUint8List();
+
+    final directory = await getExternalStorageDirectory();
+    final downloadPath = "${directory!.path}/EventTicket_${_ticketId!}.png";
+
+    final file = await File(downloadPath).create();
+    await file.writeAsBytes(pngBytes);
+
+    Fluttertoast.showToast(
+      msg: "🎉 QR Code saved to Downloads!",
+      toastLength: Toast.LENGTH_LONG,
+      backgroundColor: Colors.green,
+      textColor: Colors.white,
+    );
+  } catch (e) {
+    print("Error saving QR: $e");
+    Fluttertoast.showToast(
+      msg: "❌ Failed to save QR code.",
+      backgroundColor: Colors.red,
+      textColor: Colors.white,
+    );
+  }
+}
 
   Future<void> requestToPay({
     required String phoneNumber,
