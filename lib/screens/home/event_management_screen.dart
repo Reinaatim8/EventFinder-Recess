@@ -1383,8 +1383,10 @@ class _EventAnalyticsScreenState extends State<EventAnalyticsScreen> {
 
                   _totalViews = snapshot.docs.length;
                   _currentViewers = snapshot.docs.where((doc) {
-                    final timestamp = (doc['timestamp'] as Timestamp?).toDate();
-                    return timestamp.isAfter(tenMinutesAgo);
+                    final timestamp = (doc['timestamp'] as Timestamp?)
+                        ?.toDate();
+                    return timestamp != null &&
+                        timestamp.isAfter(tenMinutesAgo);
                   }).length;
 
                   _activityFeed = snapshot.docs.take(10).map((doc) {
