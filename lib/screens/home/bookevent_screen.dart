@@ -39,6 +39,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   String? _validatedPhone;
   String? _ticketId; // QR code ticket
   final GlobalKey _qrKey = GlobalKey();
+  int numberOfTickets = 1;
+  double get totalAmount => widget.total * numberOfTickets;
+
 
   //final ScreenshotController _screenshotController = ScreenshotController();
   final String subscriptionKey = "aab1d593853c454c9fcec8e4e02dde3c";
@@ -129,6 +132,28 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               ]),
             ),
           ),
+          const SizedBox(height: 16),
+          Text("Number of Tickets", style: TextStyle(fontWeight: FontWeight.bold)),
+          Row(
+            children: [
+              IconButton(
+                icon: Icon(Icons.remove_circle_outline),
+                onPressed: numberOfTickets > 1
+                    ? () => setState(() => numberOfTickets--)
+                    : null,
+              ),
+              Text('$numberOfTickets', style: TextStyle(fontSize: 18)),
+              IconButton(
+                icon: Icon(Icons.add_circle_outline),
+                onPressed: () => setState(() => numberOfTickets++),
+              ),
+              Spacer(),
+              Text("Total: UGX ${totalAmount.toStringAsFixed(2)}",
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+            ],
+          ),
+         const SizedBox(height: 16),
+
           const SizedBox(height: 20),
           const Text("Mobile Money Payment", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
@@ -150,8 +175,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             onPressed: () {
               if (_formKey.currentState!.validate()) {
                 if (_selectedNetwork == null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Please select a payment network")),
+                  Fluttertoast.showToast(
+                    msg: "❌ Please select a payment network.",
+                    toastLength: Toast.LENGTH_LONG,
+                    gravity: ToastGravity.TOP,
+                    backgroundColor: Colors.red,
+                    textColor: Colors.white,
                   );
                   return;
                 }
@@ -298,7 +327,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     final token = await getAccessToken();
                     if (token != null) {
                       try {
-                        await requestToPay(phoneNumber: _validatedPhone!, accessToken: token, amount: widget.total);
+                        await requestToPay(phoneNumber: _validatedPhone!, accessToken: token, amount: totalAmount);
                         _showSuccessDialog();
                       } catch (e) {
                         Fluttertoast.showToast(
@@ -342,7 +371,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         content:Column(
           mainAxisSize: MainAxisSize.min,
            children: [
-            Text("Your Event ticket for EUR${widget.total.toStringAsFixed(2)}."),
+            Text("Your Event-entry QR Code for UGX${totalAmount.toStringAsFixed(2)}."),
+            Text("Tickets Purchased: $numberOfTickets"),
             const SizedBox(height: 16),
             const Text("🎟 Your Ticket QR Code", style: TextStyle(fontWeight: FontWeight.bold,)),
              if (_ticketId != null)
