@@ -156,6 +156,485 @@ class EditEventScreen extends StatelessWidget {
   }
 }
 
+// Event Details Screen
+class EventDetailsScreen extends StatefulWidget {
+  final Event event;
+
+  const EventDetailsScreen({Key? key, required this.event}) : super(key: key);
+
+  @override
+  State<EventDetailsScreen> createState() => _EventDetailsScreenState();
+}
+
+class _EventDetailsScreenState extends State<EventDetailsScreen> {
+  Future<void> _logView(String eventId) async {
+    final userId =
+        Provider.of<AuthProvider>(context, listen: false).user?.uid ??
+        'anonymous';
+    String? city;
+    String? country;
+    String? organizerId;
+
+    try {
+      // Fetch event to get organizerId
+      final eventDoc = await FirebaseFirestore.instance
+          .collection('events')
+          .doc(eventId)
+          .get();
+      if (eventDoc.exists) {
+        organizerId = eventDoc.data()?['organizerId'] as String?;
+      } else {
+        print('Event does not exist: $eventId');
+        return;
+      }
+
+      // Get location data
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        print('Location services are disabled.');
+      } else {
+        LocationPermission permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.denied) {
+          permission = await Geolocator.requestPermission();
+          if (permission == LocationPermission.denied) {
+            print('Location permissions are denied.');
+          }
+        }
+
+        if (permission != LocationPermission.deniedForever) {
+          Position position = await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.low,
+          );
+          List<Placemark> placemarks = await placemarkFromCoordinates(
+            position.latitude,
+            position.longitude,
+          );
+          city = placemarks.isNotEmpty ? placemarks[0].locality : null;
+          country = placemarks.isNotEmpty ? placemarks[0].country : null;
+        }
+      }
+    } catch (e) {
+      print('Error getting location or event data: $e');
+    }
+
+    final viewRecord = ViewRecord(
+      id: const Uuid().v4(),
+      eventId: eventId,
+      timestamp: DateTime.now(),
+      city: city,
+      country: country,
+      userId: userId,
+      platform: 'Unknown', // Platform detection can be added if needed
+      viewType: 'detail_view',
+      organizerId: organizerId,
+    );
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('eventStats')
+          .doc(viewRecord.id)
+          .set(viewRecord.toFirestore());
+    } catch (e) {
+      print('Error recording view: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error recording view: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _logView(widget.event.id); // Record view when screen is opened
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.event.title),
+        backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Colors.white,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.event.title,
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Category: ${widget.event.category}',
+              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Date: ${widget.event.date}',
+              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Location: ${widget.event.location}',
+              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Description: ${widget.event.description}',
+              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        EventAnalyticsScreen(event: widget.event),
+                  ),
+                );
+              },
+              child: const Text('View Analytics'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Attendees Screen
+class AttendeesScreen extends StatelessWidget {
+  final Event event;
+
+  const AttendeesScreen({Key? key, required this.event}) : super(key: key);
+
+  Future<List<Booking>> _getEventBookings(String eventId) async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('bookings')
+          .where('eventId', isEqualTo: eventId)
+          .get();
+      return snapshot.docs.map((doc) => Booking.fromFirestore(doc)).toList();
+    } catch (e) {
+      //if (context.mounted) {
+      //ScaffoldMessenger.of(context).showSnackBar(
+      //SnackBar(
+      //content: Text('Error fetching bookings: $e'),
+      //backgroundColor: Colors.red,
+      //),
+      //);
+      //}
+      return [];
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Attendees for ${event.title}'),
+        backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Colors.white,
+      ),
+      body: FutureBuilder<List<Booking>>(
+        future: _getEventBookings(event.id),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+          final bookings = snapshot.data ?? [];
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: bookings.length,
+            itemBuilder: (context, index) {
+              final booking = bookings[index];
+              return Card(
+                margin: const EdgeInsets.only(bottom: 16),
+                child: ListTile(
+                  title: Text('${booking.firstName} ${booking.lastName}'),
+                  subtitle: Text(
+                    'Email: ${booking.email}\nPaid: ${booking.paid}',
+                  ),
+                  trailing: Text('€${booking.total.toStringAsFixed(2)}'),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+// Event Analytics Screen
+class EventAnalyticsScreen extends StatefulWidget {
+  final Event event;
+
+  const EventAnalyticsScreen({Key? key, required this.event}) : super(key: key);
+
+  @override
+  State<EventAnalyticsScreen> createState() => _EventAnalyticsScreenState();
+}
+
+class _EventAnalyticsScreenState extends State<EventAnalyticsScreen> {
+  int _totalViews = 0;
+  int _currentViewers = 0;
+  Map<String, int> _hourlyViews = {};
+  Map<String, int> _geoViews = {};
+  List<Map<String, dynamic>> _activityFeed = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _setupRealtimeListeners();
+  }
+
+  void _setupRealtimeListeners() {
+    FirebaseFirestore.instance
+        .collection('eventStats')
+        .where('eventId', isEqualTo: widget.event.id)
+        .snapshots()
+        .listen((snapshot) {
+          if (mounted) {
+            setState(() {
+              _totalViews = snapshot.docs.length;
+              _currentViewers = snapshot.docs
+                  .where(
+                    (doc) => _isWithinLastMinute(doc['timestamp'] as Timestamp),
+                  )
+                  .length;
+              _hourlyViews = _aggregateHourlyViews(snapshot.docs);
+              _geoViews = _aggregateGeoViews(snapshot.docs);
+              _activityFeed = _generateActivityFeed(snapshot.docs);
+            });
+          }
+        });
+  }
+
+  bool _isWithinLastMinute(Timestamp timestamp) {
+    final now = DateTime.now();
+    final viewTime = timestamp.toDate();
+    return now.difference(viewTime).inMinutes < 1;
+  }
+
+  Map<String, int> _aggregateHourlyViews(List<DocumentSnapshot> docs) {
+    final hourlyMap = <String, int>{};
+    final now = DateTime.now();
+    for (var doc in docs) {
+      final timestamp = (doc['timestamp'] as Timestamp).toDate();
+      final hourKey = DateFormat('yyyy-MM-dd HH:00').format(timestamp);
+      hourlyMap[hourKey] = (hourlyMap[hourKey] ?? 0) + 1;
+    }
+    return hourlyMap;
+  }
+
+  Map<String, int> _aggregateGeoViews(List<DocumentSnapshot> docs) {
+    final geoMap = <String, int>{};
+    for (var doc in docs) {
+      final city = doc['city'] as String? ?? 'Unknown';
+      final country = doc['country'] as String? ?? 'Unknown';
+      final key = '$city, $country';
+      geoMap[key] = (geoMap[key] ?? 0) + 1;
+    }
+    return geoMap;
+  }
+
+  List<Map<String, dynamic>> _generateActivityFeed(
+    List<DocumentSnapshot> docs,
+  ) {
+    return docs.map((doc) {
+      final data = doc.data() as Map<String, dynamic>;
+      final timestamp = (data['timestamp'] as Timestamp).toDate();
+      return {
+        'userId': data['userId'],
+        'city': data['city'] ?? 'Unknown',
+        'country': data['country'] ?? 'Unknown',
+        'timestamp': timestamp,
+      };
+    }).toList()..sort((a, b) => b['timestamp'].compareTo(a['timestamp']));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Analytics for ${widget.event.title}'),
+        backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Colors.white,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Card(
+              elevation: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    Text(
+                      'Total Views: $_totalViews',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Current Viewers: $_currentViewers',
+                      style: const TextStyle(fontSize: 16, color: Colors.green),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Card(
+              elevation: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Hourly Views',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      height: 200,
+                      child: LineChart(
+                        LineChartData(
+                          gridData: const FlGridData(show: false),
+                          titlesData: FlTitlesData(show: false),
+                          borderData: FlBorderData(show: false),
+                          lineBarsData: [
+                            LineChartBarData(
+                              spots: _hourlyViews.entries.map((entry) {
+                                final hour = DateTime.parse(entry.key);
+                                return FlSpot(
+                                  hour.millisecondsSinceEpoch.toDouble(),
+                                  entry.value.toDouble(),
+                                );
+                              }).toList(),
+                              isCurved: true,
+                              color: Colors.blue,
+                              barWidth: 2,
+                            ),
+                          ],
+                          minX: _hourlyViews.keys
+                              .map(DateTime.parse)
+                              .reduce((a, b) => a.isBefore(b) ? a : b)
+                              .millisecondsSinceEpoch
+                              .toDouble(),
+                          maxX: _hourlyViews.keys
+                              .map(DateTime.parse)
+                              .reduce((a, b) => a.isAfter(b) ? a : b)
+                              .millisecondsSinceEpoch
+                              .toDouble(),
+                          minY: 0,
+                          maxY:
+                              _hourlyViews.values.reduce(
+                                (a, b) => a > b ? a : b,
+                              ) +
+                              1.0,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Card(
+              elevation: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Geographic Views',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _geoViews.length,
+                      itemBuilder: (context, index) {
+                        final entry = _geoViews.entries.elementAt(index);
+                        return ListTile(
+                          title: Text(entry.key),
+                          trailing: Text(entry.value.toString()),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Card(
+              elevation: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Recent Activity',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _activityFeed.length > 5
+                          ? 5
+                          : _activityFeed.length,
+                      itemBuilder: (context, index) {
+                        final activity = _activityFeed[index];
+                        return ListTile(
+                          title: Text('User ${activity['userId']}'),
+                          subtitle: Text(
+                            '${activity['city']}, ${activity['country']} - ${DateFormat('yyyy-MM-dd HH:mm').format(activity['timestamp'])}',
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // Main Event Management Screen
 class EventManagementScreen extends StatefulWidget {
   const EventManagementScreen({Key? key}) : super(key: key);
@@ -826,18 +1305,17 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: Theme.of(context).primaryColor.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(15),
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: Theme.of(context).primaryColor),
-            const SizedBox(width: 4),
+            Icon(icon, color: Theme.of(context).primaryColor, size: 18),
+            const SizedBox(width: 8),
             Text(
               label,
               style: TextStyle(
                 color: Theme.of(context).primaryColor,
-                fontSize: 12,
+                fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -869,899 +1347,5 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
       default:
         return Icons.event;
     }
-  }
-}
-
-// Event Details Screen
-class EventDetailsScreen extends StatefulWidget {
-  final Event event;
-
-  const EventDetailsScreen({Key? key, required this.event}) : super(key: key);
-
-  @override
-  State<EventDetailsScreen> createState() => _EventDetailsScreenState();
-}
-
-class _EventDetailsScreenState extends State<EventDetailsScreen> {
-  @override
-  void initState() {
-    super.initState();
-    // Log view when screen is opened
-    _logView(context, widget.event);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.event.title),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (widget.event.imageUrl != null)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  widget.event.imageUrl!,
-                  height: 200,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      height: 200,
-                      width: double.infinity,
-                      color: Colors.grey[300],
-                      child: const Icon(
-                        Icons.error,
-                        size: 50,
-                        color: Colors.grey,
-                      ),
-                    );
-                  },
-                ),
-              ),
-            const SizedBox(height: 16),
-            Text(
-              widget.event.title,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              widget.event.description,
-              style: const TextStyle(fontSize: 16),
-            ),
-            const SizedBox(height: 16),
-            _buildInfoRow(Icons.calendar_today, 'Date', widget.event.date),
-            _buildInfoRow(Icons.location_on, 'Location', widget.event.location),
-            _buildInfoRow(Icons.category, 'Category', widget.event.category),
-            _buildInfoRow(
-              Icons.attach_money,
-              'Price',
-              '€${widget.event.price.toStringAsFixed(2)}',
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(IconData icon, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: Colors.grey[600]),
-          const SizedBox(width: 12),
-          Text('$label: ', style: const TextStyle(fontWeight: FontWeight.bold)),
-          Expanded(child: Text(value)),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _logView(BuildContext context, Event event) async {
-    final userId =
-        Provider.of<AuthProvider>(context, listen: false).user?.uid ??
-        'anonymous';
-    String? city;
-    String? country;
-    String? organizerId;
-
-    try {
-      // Ensure location services are enabled and permissions are granted
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        print('Location services are disabled.');
-        return;
-      }
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          print('Location permissions are denied.');
-          return;
-        }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        print('Location permissions are permanently denied.');
-        return;
-      }
-
-      // Fetch location data
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy:
-            LocationAccuracy.low, // Reduced accuracy to avoid errors
-      );
-      List<Placemark> placemarks = await placemarkFromCoordinates(
-        position.latitude,
-        position.longitude,
-      );
-      if (placemarks.isNotEmpty) {
-        city = placemarks[0].locality;
-        country = placemarks[0].country;
-      }
-
-      // Fetch event to get organizerId
-      final eventDoc = await FirebaseFirestore.instance
-          .collection('events')
-          .doc(event.id)
-          .get();
-      if (eventDoc.exists) {
-        organizerId = eventDoc.data()?['organizerId'] as String?;
-      }
-    } catch (e) {
-      print('Error fetching location or event data: $e');
-      // Proceed without location data if it fails
-    }
-
-    final viewRecord = ViewRecord(
-      id: const Uuid().v4(),
-      eventId: event.id,
-      timestamp: DateTime.now(),
-      city: city,
-      country: country,
-      userId: userId,
-      platform: Theme.of(context).platform.toString().split('.').last,
-      viewType: 'detail_view',
-      organizerId: organizerId,
-    );
-
-    try {
-      await FirebaseFirestore.instance
-          .collection('eventStats')
-          .doc(viewRecord.id)
-          .set(viewRecord.toFirestore());
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error recording view: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-}
-
-// Attendees Screen
-class AttendeesScreen extends StatefulWidget {
-  final Event event;
-
-  const AttendeesScreen({Key? key, required this.event}) : super(key: key);
-
-  @override
-  State<AttendeesScreen> createState() => _AttendeesScreenState();
-}
-
-class _AttendeesScreenState extends State<AttendeesScreen> {
-  List<Booking> allBookings = [];
-  List<Booking> filteredBookings = [];
-  String _filterStatus = 'all';
-  bool _isLoading = true;
-  StreamSubscription? _bookingsSubscription;
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchBookings();
-  }
-
-  @override
-  void dispose() {
-    _bookingsSubscription?.cancel();
-    super.dispose();
-  }
-
-  void _fetchBookings() {
-    setState(() {
-      _isLoading = true;
-    });
-
-    _bookingsSubscription = FirebaseFirestore.instance
-        .collection('bookings')
-        .where('eventId', isEqualTo: widget.event.id)
-        .orderBy('bookingDate', descending: true)
-        .snapshots()
-        .listen(
-          (snapshot) {
-            if (mounted) {
-              setState(() {
-                allBookings = snapshot.docs
-                    .map((doc) => Booking.fromFirestore(doc))
-                    .toList();
-                _filterBookings();
-                _isLoading = false;
-              });
-            }
-          },
-          onError: (error) {
-            if (mounted) {
-              setState(() {
-                _isLoading = false;
-              });
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Error loading bookings: $error'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
-          },
-        );
-  }
-
-  void _filterBookings() {
-    setState(() {
-      switch (_filterStatus) {
-        case 'paid':
-          filteredBookings = allBookings
-              .where((booking) => booking.paid)
-              .toList();
-          break;
-        case 'pending':
-          filteredBookings = allBookings
-              .where((booking) => !booking.paid)
-              .toList();
-          break;
-        default:
-          filteredBookings = allBookings;
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('${widget.event.title} - Attendees'),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _fetchBookings,
-          ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _buildFilterChip(
-                          'All',
-                          'all',
-                          allBookings.length,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _buildFilterChip(
-                          'Paid',
-                          'paid',
-                          allBookings.where((b) => b.paid).length,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _buildFilterChip(
-                          'Pending',
-                          'pending',
-                          allBookings.where((b) => !b.paid).length,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: filteredBookings.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.people_outline,
-                                size: 64,
-                                color: Colors.grey[400],
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'No ${_filterStatus == 'all' ? '' : _filterStatus} bookings',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: filteredBookings.length,
-                          itemBuilder: (context, index) {
-                            final booking = filteredBookings[index];
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              elevation: 2,
-                              child: ListTile(
-                                leading: CircleAvatar(
-                                  backgroundColor: booking.paid
-                                      ? Colors.green
-                                      : Colors.orange,
-                                  child: Icon(
-                                    booking.paid ? Icons.check : Icons.pending,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                title: Text(
-                                  '${booking.firstName} ${booking.lastName}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      booking.email,
-                                      style: TextStyle(color: Colors.grey[600]),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'Booked: ${DateFormat('dd/MM/yyyy').format(booking.bookingDate)}',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey[600],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                trailing: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      '€${booking.total.toStringAsFixed(2)}',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: booking.paid
-                                            ? Colors.green.withOpacity(0.1)
-                                            : Colors.orange.withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Text(
-                                        booking.paid ? 'Paid' : 'Pending',
-                                        style: TextStyle(
-                                          color: booking.paid
-                                              ? Colors.green
-                                              : Colors.orange,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                ),
-              ],
-            ),
-    );
-  }
-
-  Widget _buildFilterChip(String label, String value, int count) {
-    final isSelected = _filterStatus == value;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _filterStatus = value;
-          _filterBookings();
-        });
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? Theme.of(context).primaryColor : Colors.grey[200],
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Column(
-          children: [
-            Text(
-              count.toString(),
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: isSelected ? Colors.white : Colors.black,
-              ),
-            ),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                color: isSelected ? Colors.white : Colors.grey[600],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// Analytics Screen
-class EventAnalyticsScreen extends StatefulWidget {
-  final Event event;
-
-  const EventAnalyticsScreen({Key? key, required this.event}) : super(key: key);
-
-  @override
-  State<EventAnalyticsScreen> createState() => _EventAnalyticsScreenState();
-}
-
-class _EventAnalyticsScreenState extends State<EventAnalyticsScreen> {
-  Timer? _debounceTimer;
-  int _currentViewers = 0;
-  int _totalViews = 0;
-  List<Map<String, dynamic>> _activityFeed = [];
-  Map<String, int> _hourlyViews = {};
-  Map<String, int> _geoViews = {};
-  StreamSubscription? _viewsSubscription;
-
-  @override
-  void initState() {
-    super.initState();
-    _setupRealtimeListeners();
-  }
-
-  @override
-  void dispose() {
-    _debounceTimer?.cancel();
-    _viewsSubscription?.cancel();
-    super.dispose();
-  }
-
-  void _setupRealtimeListeners() {
-    _viewsSubscription = FirebaseFirestore.instance
-        .collection('eventStats')
-        .where('eventId', isEqualTo: widget.event.id)
-        .orderBy('timestamp', descending: true)
-        .limit(100)
-        .snapshots()
-        .listen(
-          (snapshot) {
-            if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
-            _debounceTimer = Timer(const Duration(milliseconds: 500), () {
-              if (mounted) {
-                setState(() {
-                  final now = DateTime.now();
-                  final tenMinutesAgo = now.subtract(
-                    const Duration(minutes: 10),
-                  );
-
-                  _totalViews = snapshot.docs.length;
-                  _currentViewers = snapshot.docs.where((doc) {
-                    final timestamp = (doc['timestamp'] as Timestamp?)
-                        ?.toDate();
-                    return timestamp != null &&
-                        timestamp.isAfter(tenMinutesAgo);
-                  }).length;
-
-                  _activityFeed = snapshot.docs.take(10).map((doc) {
-                    final view = ViewRecord.fromFirestore(doc);
-                    return {
-                      'message':
-                          'View from ${view.city ?? 'Unknown'}, ${view.country ?? 'Unknown'} on ${view.platform}',
-                      'timestamp': view.timestamp,
-                    };
-                  }).toList();
-
-                  _hourlyViews = {};
-                  for (var doc in snapshot.docs) {
-                    final view = ViewRecord.fromFirestore(doc);
-                    final hour = DateFormat('HH:00').format(view.timestamp);
-                    _hourlyViews[hour] = (_hourlyViews[hour] ?? 0) + 1;
-                  }
-
-                  _geoViews = {};
-                  for (var doc in snapshot.docs) {
-                    final view = ViewRecord.fromFirestore(doc);
-                    final geoKey =
-                        '${view.city ?? 'Unknown'}, ${view.country ?? 'Unknown'}';
-                    _geoViews[geoKey] = (_geoViews[geoKey] ?? 0) + 1;
-                  }
-                });
-              }
-            });
-          },
-          onError: (error) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Error loading analytics: $error'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
-          },
-        );
-  }
-
-  Stream<List<Booking>> _getEventBookingsStream() {
-    return FirebaseFirestore.instance
-        .collection('bookings')
-        .where('eventId', isEqualTo: widget.event.id)
-        .snapshots()
-        .map(
-          (snapshot) =>
-              snapshot.docs.map((doc) => Booking.fromFirestore(doc)).toList(),
-        );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // Prepare data for hourly views chart
-    List<String> hours = List.generate(
-      24,
-      (index) => '${index.toString().padLeft(2, '0')}:00',
-    );
-    List<FlSpot> viewSpots = hours.asMap().entries.map((entry) {
-      int index = entry.key;
-      String hour = entry.value;
-      return FlSpot(index.toDouble(), (_hourlyViews[hour] ?? 0).toDouble());
-    }).toList();
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('${widget.event.title} - Analytics'),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _setupRealtimeListeners,
-          ),
-        ],
-      ),
-      body: StreamBuilder<List<Booking>>(
-        stream: _getEventBookingsStream(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final bookings = snapshot.data ?? [];
-          final totalBookings = bookings.length;
-          final paidBookings = bookings.where((b) => b.paid).length;
-          final totalRevenue = bookings
-              .where((b) => b.paid)
-              .fold(0.0, (sum, booking) => sum + booking.total);
-          final averageBookingValue = paidBookings > 0
-              ? totalRevenue / paidBookings
-              : 0.0;
-          final conversionRate = _totalViews > 0
-              ? (paidBookings / _totalViews * 100).toStringAsFixed(1)
-              : '0.0';
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Overview',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[800],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildSummaryCard(
-                        'Current Viewers',
-                        _currentViewers.toString(),
-                        Icons.visibility,
-                        Colors.blue,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _buildSummaryCard(
-                        'Total Views',
-                        _totalViews.toString(),
-                        Icons.remove_red_eye,
-                        Colors.purple,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildSummaryCard(
-                        'Total Bookings',
-                        totalBookings.toString(),
-                        Icons.book_online,
-                        Colors.teal,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _buildSummaryCard(
-                        'Revenue',
-                        '€${totalRevenue.toStringAsFixed(2)}',
-                        Icons.attach_money,
-                        Colors.green,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildSummaryCard(
-                        'Conversion Rate',
-                        '$conversionRate%',
-                        Icons.trending_up,
-                        Colors.orange,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _buildSummaryCard(
-                        'Avg. Booking',
-                        '€${averageBookingValue.toStringAsFixed(2)}',
-                        Icons.calculate,
-                        Colors.cyan,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  'Views per Hour',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[800],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 200,
-                  child: LineChart(
-                    LineChartData(
-                      gridData: FlGridData(show: true),
-                      titlesData: FlTitlesData(
-                        leftTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize: 40,
-                            getTitlesWidget: (value, meta) {
-                              return Text(
-                                value.toInt().toString(),
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 12,
-                                ),
-                              );
-                            },
-                          ),
-                          axisNameWidget: const Text('Views'),
-                        ),
-                        bottomTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize: 30,
-                            getTitlesWidget: (value, meta) {
-                              if (value.toInt() % 4 == 0) {
-                                return Text(
-                                  hours[value.toInt()],
-                                  style: TextStyle(
-                                    color: Colors.grey[600],
-                                    fontSize: 12,
-                                  ),
-                                );
-                              }
-                              return const SizedBox.shrink();
-                            },
-                          ),
-                          axisNameWidget: const Text('Hour of Day'),
-                        ),
-                        topTitles: AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
-                        rightTitles: AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
-                      ),
-                      borderData: FlBorderData(show: true),
-                      lineBarsData: [
-                        LineChartBarData(
-                          spots: viewSpots,
-                          isCurved: true,
-                          color: Colors.blue,
-                          barWidth: 2,
-                          belowBarData: BarAreaData(
-                            show: true,
-                            color: Colors.blue.withOpacity(0.2),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  'Geographic Distribution',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[800],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.1),
-                        spreadRadius: 1,
-                        blurRadius: 5,
-                      ),
-                    ],
-                  ),
-                  child: _geoViews.isEmpty
-                      ? const Padding(
-                          padding: EdgeInsets.all(16),
-                          child: Text('No geographic data available'),
-                        )
-                      : Column(
-                          children: _geoViews.entries.take(5).map((entry) {
-                            return ListTile(
-                              title: Text(entry.key),
-                              trailing: Text(
-                                entry.value.toString(),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  'Recent Activity',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[800],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.1),
-                        spreadRadius: 1,
-                        blurRadius: 5,
-                      ),
-                    ],
-                  ),
-                  child: _activityFeed.isEmpty
-                      ? const Padding(
-                          padding: EdgeInsets.all(16),
-                          child: Text('No recent activity'),
-                        )
-                      : Column(
-                          children: _activityFeed.map((activity) {
-                            return ListTile(
-                              leading: const Icon(
-                                Icons.history,
-                                color: Colors.grey,
-                              ),
-                              title: Text(activity['message']),
-                              subtitle: Text(
-                                DateFormat(
-                                  'dd/MM/yyyy HH:mm',
-                                ).format(activity['timestamp']),
-                                style: TextStyle(color: Colors.grey[600]),
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildSummaryCard(
-    String title,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            Text(
-              title,
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }

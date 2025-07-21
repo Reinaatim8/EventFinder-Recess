@@ -33,7 +33,7 @@ class ViewRecord {
   final String userId;
   final String platform;
   final String viewType;
-  final String? organizerId; // Added to align with security rules
+  final String? organizerId;
 
   ViewRecord({
     required this.id,
@@ -320,45 +320,43 @@ class _HomeScreenState extends State<HomeScreen> {
           .collection('events')
           .doc(eventId)
           .get();
-      if (!eventDoc.exists) {
+      if (eventDoc.exists) {
+        organizerId = eventDoc.data()?['organizerId'] as String?;
+      } else {
         print('Event does not exist: $eventId');
         return;
       }
-      organizerId = eventDoc.data()?['organizerId'] as String?;
 
       // Get location data
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         print('Location services are disabled.');
-        return;
-      }
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
+        // Proceed without location if disabled
+      } else {
+        LocationPermission permission = await Geolocator.checkPermission();
         if (permission == LocationPermission.denied) {
-          print('Location permissions are denied.');
-          return;
+          permission = await Geolocator.requestPermission();
+          if (permission == LocationPermission.denied) {
+            print('Location permissions are denied.');
+            // Proceed without location if denied
+          }
+        }
+
+        if (permission != LocationPermission.deniedForever) {
+          Position position = await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.low,
+          );
+          List<Placemark> placemarks = await placemarkFromCoordinates(
+            position.latitude,
+            position.longitude,
+          );
+          city = placemarks.isNotEmpty ? placemarks[0].locality : null;
+          country = placemarks.isNotEmpty ? placemarks[0].country : null;
         }
       }
-
-      if (permission == LocationPermission.deniedForever) {
-        print('Location permissions are permanently denied.');
-        return;
-      }
-
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-
-      List<Placemark> placemarks = await placemarkFromCoordinates(
-        position.latitude,
-        position.longitude,
-      );
-      city = placemarks.isNotEmpty ? placemarks[0].locality : null;
-      country = placemarks.isNotEmpty ? placemarks[0].country : null;
     } catch (e) {
       print('Error getting location or event data: $e');
+      // Proceed without location data if it fails
     }
 
     final viewRecord = ViewRecord(
@@ -378,19 +376,20 @@ class _HomeScreenState extends State<HomeScreen> {
     );
 
     try {
-      // Write to eventStats collection (aligned with security rules)
       await FirebaseFirestore.instance
           .collection('eventStats')
           .doc(viewRecord.id)
           .set(viewRecord.toFirestore());
     } catch (e) {
       print('Error recording view: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error recording view: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error recording view: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
