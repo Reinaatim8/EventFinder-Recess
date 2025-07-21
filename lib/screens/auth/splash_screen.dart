@@ -61,17 +61,12 @@ class _SplashScreenState extends State<SplashScreen>
           opacity: _fadeAnimation,
           child: ScaleTransition(
             scale: _scaleAnimation,
-            child: const Column(
+            child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-               // Image.asset(
-                //  'assets/images/logo.jpg',
-                 // height: 140,
-               // ),
-                 Icon(
-                  Icons.travel_explore, // or Icons.search
-                  size: 90,
-                  color: Colors.orange,
+                Image.asset(
+                  'assets/images/eventfinder-removebg-preview.png',
+                  height: 140,
                 ),
                 SizedBox(height: 20),
                 Text(
