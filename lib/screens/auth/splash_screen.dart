@@ -38,7 +38,7 @@ class _SplashScreenState extends State<SplashScreen>
     _controller.forward();
 
     // Delay before navigating
-    Timer(const Duration(seconds: 9), () {
+    Timer(const Duration(seconds: 18), () {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const AuthWrapper()),
@@ -55,38 +55,36 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black, // Optional: Gradient can go here
-      body: Center(
+      
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color.fromARGB(255, 25, 25, 95), Colors.orange],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+       child: Center(
         child: FadeTransition(
           opacity: _fadeAnimation,
           child: ScaleTransition(
             scale: _scaleAnimation,
-            child: const Column(
+            child:  Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-               // Image.asset(
-                //  'assets/images/logo.jpg',
-                 // height: 140,
-               // ),
-                 Icon(
-                  Icons.travel_explore, // or Icons.search
-                  size: 90,
-                  color: Colors.orange,
-                ),
+               Image.asset(
+                 'assets/images/logoo.jpeg',
+                 height: 120,
+                 
+               ),
+                 
                 SizedBox(height: 20),
-                Text(
-                  "E.v.e.n.t-F.i.n.d.e.r",
-                  style: TextStyle(
-                    fontSize: 34,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 2.5,
-                    color: Colors.white,
-                  ),
-                ),
+                
+                
                 SizedBox(height: 10),
                 Text(
                   "'Find events. Book fast. Get there.'",
-                  style: TextStyle(fontSize: 14, color: Colors.black54, fontWeight: FontWeight.normal),
+                  style: TextStyle(fontSize: 22, color: Colors.white, fontWeight: FontWeight.bold),
                 ),
                 SizedBox(height: 30),
                 CircularProgressIndicator(color: Colors.blueAccent),
@@ -94,7 +92,7 @@ class _SplashScreenState extends State<SplashScreen>
             ),
           ),
         ),
-      ),
+      ),),
     );
   }
 }

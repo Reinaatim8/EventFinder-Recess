@@ -473,7 +473,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                     final stats = snapshot.data ?? {'revenue': 0.0, 'bookings': 0};
                     return _buildSummaryCard(
                       'Total Revenue',
-                      '€${stats['revenue'].toStringAsFixed(2)}',
+                      'UGX ${stats['revenue'].toStringAsFixed(2)}',
                       Icons.attach_money,
                       Colors.green,
                     );
@@ -623,7 +623,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                                   Column(
                                     children: [
                                       Text(
-                                        '€${totalRevenue.toStringAsFixed(2)}',
+                                        'UGX ${totalRevenue.toStringAsFixed(2)}',
                                         style: const TextStyle(
                                           fontSize: 18,
                                           fontWeight: FontWeight.bold,
@@ -1240,7 +1240,7 @@ class EventAnalyticsScreen extends StatelessWidget {
                     Expanded(
                       child: _buildSummaryCard(
                         'Total Revenue',
-                        '€${totalRevenue.toStringAsFixed(2)}',
+                        'UGX ${totalRevenue.toStringAsFixed(2)}',
                         Icons.attach_money,
                         Colors.purple,
                       ),

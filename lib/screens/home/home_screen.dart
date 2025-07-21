@@ -451,7 +451,7 @@ class HomeTab extends StatelessWidget {
 
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+     // backgroundColor: Colors.white,
       body: Stack(
         children:[
           // Background image
@@ -495,29 +495,11 @@ class HomeTab extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          RichText(
-                            text: TextSpan(
-                              children:[
-                          TextSpan(
-                            text: 'Event',
-                            style: TextStyle(
-                              color: Colors.orange,
-                              fontSize: 30,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          TextSpan(
-                            text: ' Finder',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 30,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                              ],
-                            ),
-                          ),
                           
+                          Image.asset(
+                              'assets/images/logoo.jpeg',
+                              height: 50, // adjust as needed
+                            ),
 
 
                           Row(
