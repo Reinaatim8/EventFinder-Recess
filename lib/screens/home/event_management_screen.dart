@@ -973,16 +973,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     String? organizerId;
 
     try {
-      // Fetch event to get organizerId
-      final eventDoc = await FirebaseFirestore.instance
-          .collection('events')
-          .doc(event.id)
-          .get();
-      if (eventDoc.exists) {
-        organizerId = eventDoc.data()?['organizerId'] as String?;
-      }
-
-      // Get location data
+      // Ensure location services are enabled and permissions are granted
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         print('Location services are disabled.');
@@ -1003,18 +994,31 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
         return;
       }
 
+      // Fetch location data
       Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        desiredAccuracy:
+            LocationAccuracy.low, // Reduced accuracy to avoid errors
       );
-
       List<Placemark> placemarks = await placemarkFromCoordinates(
         position.latitude,
         position.longitude,
       );
-      city = placemarks.isNotEmpty ? placemarks[0].locality : null;
-      country = placemarks.isNotEmpty ? placemarks[0].country : null;
+      if (placemarks.isNotEmpty) {
+        city = placemarks[0].locality;
+        country = placemarks[0].country;
+      }
+
+      // Fetch event to get organizerId
+      final eventDoc = await FirebaseFirestore.instance
+          .collection('events')
+          .doc(event.id)
+          .get();
+      if (eventDoc.exists) {
+        organizerId = eventDoc.data()?['organizerId'] as String?;
+      }
     } catch (e) {
-      print('Error getting location or event data: $e');
+      print('Error fetching location or event data: $e');
+      // Proceed without location data if it fails
     }
 
     final viewRecord = ViewRecord(
