@@ -23,7 +23,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:convex_bottom_bar/convex_bottom_bar.dart';
 import 'dart:async';
 
-// View Record Model (consistent with event_management_screen.dart)
+// View Record Model (aligned with security rules for eventStats)
 class ViewRecord {
   final String id;
   final String eventId;
@@ -33,6 +33,7 @@ class ViewRecord {
   final String userId;
   final String platform;
   final String viewType;
+  final String? organizerId; // Added to align with security rules
 
   ViewRecord({
     required this.id,
@@ -43,6 +44,7 @@ class ViewRecord {
     required this.userId,
     required this.platform,
     required this.viewType,
+    this.organizerId,
   });
 
   factory ViewRecord.fromFirestore(DocumentSnapshot doc) {
@@ -56,6 +58,7 @@ class ViewRecord {
       userId: data['userId'] ?? 'anonymous',
       platform: data['platform'] ?? 'unknown',
       viewType: data['viewType'] ?? 'detail_view',
+      organizerId: data['organizerId'],
     );
   }
 
@@ -68,14 +71,10 @@ class ViewRecord {
       'userId': userId,
       'platform': platform,
       'viewType': viewType,
+      'organizerId': organizerId,
     };
   }
 }
-
-// Note: Ensure 'geolocator' and 'geocoding' are added to pubspec.yaml:
-// dependencies:
-//   geolocator: ^10.1.0
-//   geocoding: ^2.1.0
 
 final GlobalKey<BookingsTabState> bookingsTabKey =
     GlobalKey<BookingsTabState>();
@@ -313,7 +312,21 @@ class _HomeScreenState extends State<HomeScreen> {
     final userId = FirebaseAuth.instance.currentUser?.uid ?? 'anonymous';
     String? city;
     String? country;
+    String? organizerId;
+
     try {
+      // Fetch event to get organizerId
+      final eventDoc = await FirebaseFirestore.instance
+          .collection('events')
+          .doc(eventId)
+          .get();
+      if (!eventDoc.exists) {
+        print('Event does not exist: $eventId');
+        return;
+      }
+      organizerId = eventDoc.data()?['organizerId'] as String?;
+
+      // Get location data
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         print('Location services are disabled.');
@@ -345,7 +358,7 @@ class _HomeScreenState extends State<HomeScreen> {
       city = placemarks.isNotEmpty ? placemarks[0].locality : null;
       country = placemarks.isNotEmpty ? placemarks[0].country : null;
     } catch (e) {
-      print('Error getting location: $e');
+      print('Error getting location or event data: $e');
     }
 
     final viewRecord = ViewRecord(
@@ -361,22 +374,27 @@ class _HomeScreenState extends State<HomeScreen> {
           ? 'iOS'
           : 'Unknown',
       viewType: 'detail_view',
+      organizerId: organizerId,
     );
 
     try {
+      // Write to eventStats collection (aligned with security rules)
       await FirebaseFirestore.instance
-          .collection('events')
-          .doc(eventId)
-          .collection('views')
+          .collection('eventStats')
           .doc(viewRecord.id)
           .set(viewRecord.toFirestore());
     } catch (e) {
       print('Error recording view: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error recording view: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
   void _showEventDetailsModal(Event event) {
-    // Record view when event details are opened
     _recordView(event.id);
 
     showDialog(
