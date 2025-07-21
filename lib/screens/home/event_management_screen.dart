@@ -8,6 +8,8 @@ import 'package:uuid/uuid.dart';
 import '../../providers/auth_provider.dart';
 import '../home/home_screen.dart';
 import '../../models/event.dart';
+import 'dart:async';
+import 'package:fl_chart/fl_chart.dart';
 
 // View Record Model (aligned with home_screen.dart)
 class ViewRecord {
