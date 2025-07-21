@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:intl/intl.dart';
-import 'package:fl_chart/fl_chart.dart';
-import 'dart:async';
+import 'package:uuid/uuid.dart';
 import '../../providers/auth_provider.dart';
 import '../home/home_screen.dart';
 import '../../models/event.dart';
 
-// View Record Model
+// View Record Model (aligned with home_screen.dart)
 class ViewRecord {
   final String id;
   final String eventId;
@@ -19,6 +19,7 @@ class ViewRecord {
   final String userId;
   final String platform;
   final String viewType;
+  final String? organizerId;
 
   ViewRecord({
     required this.id,
@@ -29,6 +30,7 @@ class ViewRecord {
     required this.userId,
     required this.platform,
     required this.viewType,
+    this.organizerId,
   });
 
   factory ViewRecord.fromFirestore(DocumentSnapshot doc) {
@@ -42,6 +44,7 @@ class ViewRecord {
       userId: data['userId'] ?? 'anonymous',
       platform: data['platform'] ?? 'unknown',
       viewType: data['viewType'] ?? 'detail_view',
+      organizerId: data['organizerId'],
     );
   }
 
@@ -54,6 +57,7 @@ class ViewRecord {
       'userId': userId,
       'platform': platform,
       'viewType': viewType,
+      'organizerId': organizerId,
     };
   }
 }
@@ -959,39 +963,80 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
   }
 
   Future<void> _logView(BuildContext context, Event event) async {
+    final userId =
+        Provider.of<AuthProvider>(context, listen: false).user?.uid ??
+        'anonymous';
+    String? city;
+    String? country;
+    String? organizerId;
+
     try {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final userId = authProvider.user?.uid ?? 'anonymous';
-      final platform = Theme.of(context).platform.toString().split('.').last;
-
-      List<Placemark> placemarks = await placemarkFromCoordinates(
-        0.0,
-        0.0,
-      ); // Placeholder coordinates
-      String? city = placemarks.isNotEmpty ? placemarks.first.locality : null;
-      String? country = placemarks.isNotEmpty ? placemarks.first.country : null;
-
-      await FirebaseFirestore.instance
+      // Fetch event to get organizerId
+      final eventDoc = await FirebaseFirestore.instance
           .collection('events')
           .doc(event.id)
-          .collection('views')
-          .add(
-            ViewRecord(
-              id: '',
-              eventId: event.id,
-              timestamp: DateTime.now(),
-              city: city,
-              country: country,
-              userId: userId,
-              platform: platform,
-              viewType: 'detail_view',
-            ).toFirestore(),
-          );
+          .get();
+      if (eventDoc.exists) {
+        organizerId = eventDoc.data()?['organizerId'] as String?;
+      }
+
+      // Get location data
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        print('Location services are disabled.');
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          print('Location permissions are denied.');
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        print('Location permissions are permanently denied.');
+        return;
+      }
+
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+      city = placemarks.isNotEmpty ? placemarks[0].locality : null;
+      country = placemarks.isNotEmpty ? placemarks[0].country : null;
+    } catch (e) {
+      print('Error getting location or event data: $e');
+    }
+
+    final viewRecord = ViewRecord(
+      id: const Uuid().v4(),
+      eventId: event.id,
+      timestamp: DateTime.now(),
+      city: city,
+      country: country,
+      userId: userId,
+      platform: Theme.of(context).platform.toString().split('.').last,
+      viewType: 'detail_view',
+      organizerId: organizerId,
+    );
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('eventStats')
+          .doc(viewRecord.id)
+          .set(viewRecord.toFirestore());
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error logging view: $e'),
+            content: Text('Error recording view: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -1318,9 +1363,8 @@ class _EventAnalyticsScreenState extends State<EventAnalyticsScreen> {
 
   void _setupRealtimeListeners() {
     _viewsSubscription = FirebaseFirestore.instance
-        .collection('events')
-        .doc(widget.event.id)
-        .collection('views')
+        .collection('eventStats')
+        .where('eventId', isEqualTo: widget.event.id)
         .orderBy('timestamp', descending: true)
         .limit(100)
         .snapshots()
@@ -1337,10 +1381,8 @@ class _EventAnalyticsScreenState extends State<EventAnalyticsScreen> {
 
                   _totalViews = snapshot.docs.length;
                   _currentViewers = snapshot.docs.where((doc) {
-                    final timestamp = (doc['timestamp'] as Timestamp?)
-                        ?.toDate();
-                    return timestamp != null &&
-                        timestamp.isAfter(tenMinutesAgo);
+                    final timestamp = (doc['timestamp'] as Timestamp?).toDate();
+                    return timestamp.isAfter(tenMinutesAgo);
                   }).length;
 
                   _activityFeed = snapshot.docs.take(10).map((doc) {
