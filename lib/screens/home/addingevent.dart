@@ -12,6 +12,7 @@ import '../../providers/auth_provider.dart';
 import '../../models/event.dart';
 import '../map/location_picker_screen.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:file_picker/file_picker.dart';
 
 class AddEventDialog extends StatefulWidget {
   final Function(Event) onAddEvent;
@@ -34,6 +35,13 @@ class _AddEventDialogState extends State<AddEventDialog> {
   Uint8List? _webImage;
   bool _isUploading = false;
 
+  // Document verification fields
+  File? _verificationDocument;
+  Uint8List? _webVerificationDocument;
+  String? _verificationDocumentName;
+  String _selectedDocumentType = 'Business License';
+  bool _requiresVerification = false;
+
   final ImagePicker _picker = ImagePicker();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   double? _latitude;
@@ -50,6 +58,18 @@ class _AddEventDialogState extends State<AddEventDialog> {
     'Theater',
     'Comedy',
     'Other',
+  ];
+
+  final List<String> _documentTypes = [
+    'Business License',
+    'Event Permit',
+    'Insurance Certificate',
+    'Tax Certificate',
+    'Organization Registration',
+    'Venue Agreement',
+    'Professional Certificate',
+    'Government ID',
+    'Other Official Document',
   ];
 
   Future<void> _pickImage() async {
@@ -122,6 +142,43 @@ class _AddEventDialogState extends State<AddEventDialog> {
     }
   }
 
+  Future<void> _pickVerificationDocument() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'],
+        allowMultiple: false,
+      );
+
+      if (result != null) {
+        PlatformFile file = result.files.first;
+        
+        if (kIsWeb) {
+          setState(() {
+            _webVerificationDocument = file.bytes;
+            _verificationDocumentName = file.name;
+            _verificationDocument = null;
+          });
+        } else {
+          setState(() {
+            _verificationDocument = File(file.path!);
+            _verificationDocumentName = file.name;
+            _webVerificationDocument = null;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error picking document: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   Future<String?> _uploadImageToFirebase() async {
     try {
       setState(() {
@@ -180,6 +237,86 @@ class _AddEventDialogState extends State<AddEventDialog> {
           _isUploading = false;
         });
       }
+    }
+  }
+
+  Future<String?> _uploadVerificationDocumentToFirebase() async {
+    try {
+      if (_verificationDocument == null && _webVerificationDocument == null) {
+        return null;
+      }
+
+      String fileName = 'verification_documents/${DateTime.now().millisecondsSinceEpoch}_${_verificationDocumentName ?? 'document'}';
+      Reference storageRef = FirebaseStorage.instance.ref().child(fileName);
+
+      String contentType = _getContentType(_verificationDocumentName ?? '');
+      
+      UploadTask uploadTask;
+      if (kIsWeb && _webVerificationDocument != null) {
+        uploadTask = storageRef.putData(
+          _webVerificationDocument!,
+          SettableMetadata(
+            contentType: contentType,
+            customMetadata: {
+              'uploaded_by': 'flutter_app',
+              'upload_time': DateTime.now().toIso8601String(),
+              'document_type': _selectedDocumentType,
+              'original_name': _verificationDocumentName ?? 'document',
+            },
+          ),
+        );
+      } else if (_verificationDocument != null) {
+        uploadTask = storageRef.putFile(
+          _verificationDocument!,
+          SettableMetadata(
+            contentType: contentType,
+            customMetadata: {
+              'uploaded_by': 'flutter_app',
+              'upload_time': DateTime.now().toIso8601String(),
+              'document_type': _selectedDocumentType,
+              'original_name': _verificationDocumentName ?? 'document',
+            },
+          ),
+        );
+      } else {
+        return null;
+      }
+
+      TaskSnapshot snapshot = await uploadTask;
+      String downloadUrl = await snapshot.ref.getDownloadURL();
+      
+      print('Verification document uploaded successfully. URL: $downloadUrl');
+      return downloadUrl;
+    } catch (e) {
+      print('Error uploading verification document: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error uploading verification document: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return null;
+    }
+  }
+
+  String _getContentType(String fileName) {
+    String extension = fileName.split('.').last.toLowerCase();
+    switch (extension) {
+      case 'pdf':
+        return 'application/pdf';
+      case 'doc':
+        return 'application/msword';
+      case 'docx':
+        return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      default:
+        return 'application/octet-stream';
     }
   }
 
@@ -332,13 +469,223 @@ class _AddEventDialogState extends State<AddEventDialog> {
     }
   }
 
+  Widget _buildVerificationSection() {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.verified_user,
+                  color: Colors.green[600],
+                  size: 24,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Event Verification',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green[600],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Upload a verification document to establish credibility for your event. This helps attendees trust your event.',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Checkbox(
+                  value: _requiresVerification,
+                  onChanged: (value) {
+                    setState(() {
+                      _requiresVerification = value ?? false;
+                    });
+                  },
+                ),
+                const Expanded(
+                  child: Text(
+                    'I want to verify this event with official documents',
+                    style: TextStyle(fontSize: 14),
+                  ),
+                ),
+              ],
+            ),
+            if (_requiresVerification) ...[
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: _selectedDocumentType,
+                decoration: const InputDecoration(
+                  labelText: 'Document Type',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.description),
+                ),
+                items: _documentTypes.map((type) {
+                  return DropdownMenuItem(
+                    value: type,
+                    child: Text(type),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedDocumentType = value!;
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey[300]!),
+                ),
+                child: _verificationDocument != null || _webVerificationDocument != null
+                    ? Row(
+                        children: [
+                          Icon(
+                            _getDocumentIcon(_verificationDocumentName ?? ''),
+                            color: Colors.blue,
+                            size: 32,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _verificationDocumentName ?? 'Document',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                Text(
+                                  _selectedDocumentType,
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () {
+                              setState(() {
+                                _verificationDocument = null;
+                                _webVerificationDocument = null;
+                                _verificationDocumentName = null;
+                              });
+                            },
+                            icon: const Icon(
+                              Icons.close,
+                              color: Colors.red,
+                            ),
+                          ),
+                        ],
+                      )
+                    : InkWell(
+                        onTap: _pickVerificationDocument,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.upload_file,
+                              size: 40,
+                              color: Colors.grey[400],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Upload Verification Document',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'PDF, DOC, DOCX, JPG, PNG (Max 10MB)',
+                              style: TextStyle(
+                                color: Colors.grey[500],
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue[200]!),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info,
+                      color: Colors.blue[600],
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Your document will be reviewed by our team. Verified events get a trust badge.',
+                        style: TextStyle(
+                          color: Colors.blue[700],
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  IconData _getDocumentIcon(String fileName) {
+    String extension = fileName.split('.').last.toLowerCase();
+    switch (extension) {
+      case 'pdf':
+        return Icons.picture_as_pdf;
+      case 'doc':
+      case 'docx':
+        return Icons.description;
+      case 'jpg':
+      case 'jpeg':
+      case 'png':
+        return Icons.image;
+      default:
+        return Icons.insert_drive_file;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
         padding: const EdgeInsets.all(20),
-        constraints: const BoxConstraints(maxHeight: 600),
+        constraints: const BoxConstraints(maxHeight: 700, maxWidth: 600),
         child: Form(
           key: _formKey,
           child: SingleChildScrollView(
@@ -416,7 +763,6 @@ class _AddEventDialogState extends State<AddEventDialog> {
                     return null;
                   },
                 ),
-
                 const SizedBox(height: 15),
                 TextFormField(
                   controller: _dateController,
@@ -496,6 +842,8 @@ class _AddEventDialogState extends State<AddEventDialog> {
                   },
                 ),
                 const SizedBox(height: 20),
+                _buildVerificationSection(),
+                const SizedBox(height: 20),
                 Row(
                   children: [
                     Expanded(
@@ -537,6 +885,17 @@ class _AddEventDialogState extends State<AddEventDialog> {
 
   Future<void> _addEvent() async {
     if (_formKey.currentState!.validate()) {
+      // Validate verification document if required
+      if (_requiresVerification && _verificationDocument == null && _webVerificationDocument == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please upload a verification document or uncheck the verification option.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
       try {
         final authProvider = Provider.of<AuthProvider>(context, listen: false);
         final organizerId = authProvider.user?.uid;
@@ -561,6 +920,22 @@ class _AddEventDialogState extends State<AddEventDialog> {
           }
         }
 
+        String? verificationDocumentUrl;
+        if (_requiresVerification && (_verificationDocument != null || _webVerificationDocument != null)) {
+          verificationDocumentUrl = await _uploadVerificationDocumentToFirebase();
+          if (verificationDocumentUrl == null) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Failed to upload verification document. Please try again.'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+            return;
+          }
+        }
+
         final event = Event(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
           title: _titleController.text.trim(),
@@ -572,9 +947,12 @@ class _AddEventDialogState extends State<AddEventDialog> {
           category: _selectedCategory,
           imageUrl: imageUrl,
           organizerId: organizerId,
-          // 
           price: double.tryParse(_priceController.text) ?? 0.0,
-
+          verificationDocumentUrl: verificationDocumentUrl,
+          verificationDocumentType: _requiresVerification ? _selectedDocumentType : null,
+          verificationStatus: _requiresVerification ? 'pending' : null,
+          requiresVerification: _requiresVerification,
+          verificationSubmittedAt: _requiresVerification ? DateTime.now().toIso8601String() : null,
         );
 
         await _saveEventToFirestore(event);
@@ -584,8 +962,10 @@ class _AddEventDialogState extends State<AddEventDialog> {
         if (mounted) {
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Event added successfully!'),
+            SnackBar(
+              content: Text(_requiresVerification 
+                  ? 'Event added successfully! Your verification document is being reviewed.'
+                  : 'Event added successfully!'),
               backgroundColor: Colors.green,
             ),
           );
@@ -610,12 +990,14 @@ class _AddEventDialogState extends State<AddEventDialog> {
     _descriptionController.dispose();
     _dateController.dispose();
     _locationController.dispose();
+    _priceController.dispose();
     super.dispose();
   }
 }
 
 class LatLng {
-  double? get latitude => null;
+  final double latitude;
+  final double longitude;
   
-  double? get longitude => null;
+  const LatLng(this.latitude, this.longitude);
 }
