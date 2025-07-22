@@ -34,6 +34,8 @@ class ViewRecord {
   final String platform;
   final String viewType;
   final String? organizerId;
+  final int timeSpent;
+  final List<String> interactions;
 
   ViewRecord({
     required this.id,
@@ -45,6 +47,8 @@ class ViewRecord {
     required this.platform,
     required this.viewType,
     this.organizerId,
+    this.timeSpent = 0,
+    this.interactions = const [],
   });
 
   factory ViewRecord.fromFirestore(DocumentSnapshot doc) {
@@ -59,6 +63,8 @@ class ViewRecord {
       platform: data['platform'] ?? 'unknown',
       viewType: data['viewType'] ?? 'detail_view',
       organizerId: data['organizerId'],
+      timeSpent: data['timeSpent'] ?? 0,
+      interactions: List<String>.from(data['interactions'] ?? []),
     );
   }
 
@@ -72,6 +78,8 @@ class ViewRecord {
       'platform': platform,
       'viewType': viewType,
       'organizerId': organizerId,
+      'timeSpent': timeSpent,
+      'interactions': interactions,
     };
   }
 }
@@ -170,58 +178,12 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoading = true;
   Set<String> bookedEventIds = {};
   final Map<String, String> _eventStatus = {};
-  final Map<String, int> _currentViewers = {};
-  StreamSubscription? _viewsSubscription;
 
   @override
   void initState() {
     super.initState();
     _fetchEvents();
     _loadBookedEvents();
-    _setupRealtimeViewers();
-  }
-
-  @override
-  void dispose() {
-    _viewsSubscription?.cancel();
-    super.dispose();
-  }
-
-  void _setupRealtimeViewers() {
-    _viewsSubscription = FirebaseFirestore.instance
-        .collection('eventStats')
-        .where(
-          'timestamp',
-          isGreaterThan: Timestamp.fromDate(
-            DateTime.now().subtract(const Duration(minutes: 10)),
-          ),
-        )
-        .snapshots()
-        .listen(
-          (snapshot) {
-            final Map<String, int> tempViewers = {};
-            for (var doc in snapshot.docs) {
-              final view = ViewRecord.fromFirestore(doc);
-              tempViewers[view.eventId] = (tempViewers[view.eventId] ?? 0) + 1;
-            }
-            if (mounted) {
-              setState(() {
-                _currentViewers.clear();
-                _currentViewers.addAll(tempViewers);
-              });
-            }
-          },
-          onError: (error) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Error loading real-time viewers: $error'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
-          },
-        );
   }
 
   Future<void> _fetchEvents() async {
@@ -354,13 +316,18 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _recordView(String eventId) async {
+  Future<void> _recordView(
+    String eventId, {
+    int timeSpent = 0,
+    List<String> interactions = const [],
+  }) async {
     final userId = FirebaseAuth.instance.currentUser?.uid ?? 'anonymous';
     String? city;
     String? country;
     String? organizerId;
 
     try {
+      // Fetch event to get organizerId
       final eventDoc = await FirebaseFirestore.instance
           .collection('events')
           .doc(eventId)
@@ -372,10 +339,9 @@ class _HomeScreenState extends State<HomeScreen> {
         return;
       }
 
+      // Get location data
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        print('Location services are disabled.');
-      } else {
+      if (serviceEnabled) {
         LocationPermission permission = await Geolocator.checkPermission();
         if (permission == LocationPermission.denied) {
           permission = await Geolocator.requestPermission();
@@ -395,6 +361,8 @@ class _HomeScreenState extends State<HomeScreen> {
           city = placemarks.isNotEmpty ? placemarks[0].locality : null;
           country = placemarks.isNotEmpty ? placemarks[0].country : null;
         }
+      } else {
+        print('Location services are disabled.');
       }
     } catch (e) {
       print('Error getting location or event data: $e');
@@ -414,6 +382,8 @@ class _HomeScreenState extends State<HomeScreen> {
           : 'Unknown',
       viewType: 'detail_view',
       organizerId: organizerId,
+      timeSpent: timeSpent,
+      interactions: interactions,
     );
 
     try {
@@ -435,7 +405,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showEventDetailsModal(Event event) {
-    _recordView(event.id);
+    final stopwatch = Stopwatch()..start();
+    List<String> interactions = [];
 
     showDialog(
       context: context,
@@ -446,19 +417,17 @@ class _HomeScreenState extends State<HomeScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(event.description),
-              const SizedBox(height: 20),
-              Text(
-                'Currently Viewing: ${_currentViewers[event.id] ?? 0}',
-                style: TextStyle(
-                  color: Colors.blue,
-                  fontWeight: FontWeight.bold,
-                ),
+              GestureDetector(
+                onTap: () {
+                  interactions.add('image_tap');
+                },
+                child: Text(event.description),
               ),
               const SizedBox(height: 20),
               if (_eventStatus[event.id] != 'Reserved') ...[
                 ElevatedButton(
                   onPressed: () {
+                    interactions.add('book_button_click');
                     _bookEvent(event.id);
                     bookingsTabKey.currentState?.addBooking({
                       'id': DateTime.now().millisecondsSinceEpoch,
@@ -472,6 +441,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       _eventStatus[event.id] = 'Reserved';
                     });
                     Navigator.pop(context);
+                    _recordView(
+                      event.id,
+                      timeSpent: stopwatch.elapsed.inSeconds,
+                      interactions: interactions,
+                    );
                     Fluttertoast.showToast(
                       msg: "Event Reserved!",
                       toastLength: Toast.LENGTH_LONG,
@@ -486,6 +460,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ] else ...[
                 ElevatedButton(
                   onPressed: () {
+                    interactions.add('cancel_button_click');
                     _bookEvent(event.id);
                     bookingsTabKey.currentState?.removeBookingByTitle(
                       event.title,
@@ -494,6 +469,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       _eventStatus[event.id] = 'Reservation Cancelled';
                     });
                     Navigator.pop(context);
+                    _recordView(
+                      event.id,
+                      timeSpent: stopwatch.elapsed.inSeconds,
+                      interactions: interactions,
+                    );
                     Fluttertoast.showToast(
                       msg: "Reservation Cancelled!",
                       toastLength: Toast.LENGTH_LONG,
@@ -511,6 +491,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
               ElevatedButton(
                 onPressed: () {
+                  interactions.add('pay_button_click');
                   Navigator.pop(context);
                   final priceString = event.price
                       .toString()
@@ -553,6 +534,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         actions: [
                           TextButton(
                             onPressed: () {
+                              interactions.add('free_ticket_confirm');
                               bookingsTabKey.currentState?.addBooking({
                                 'id': DateTime.now().millisecondsSinceEpoch,
                                 'event': event.title,
@@ -563,6 +545,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                 _eventStatus[event.id] = 'Paid';
                               });
                               Navigator.pop(context);
+                              _recordView(
+                                event.id,
+                                timeSpent: stopwatch.elapsed.inSeconds,
+                                interactions: interactions,
+                              );
                             },
                             child: const Text("Done"),
                           ),
@@ -576,6 +563,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         builder: (_) => CheckoutScreen(
                           total: eventPrice,
                           onPaymentSuccess: () {
+                            interactions.add('payment_success');
                             bookingsTabKey.currentState?.addBooking({
                               'id': DateTime.now().millisecondsSinceEpoch,
                               'event': event.title,
@@ -585,6 +573,11 @@ class _HomeScreenState extends State<HomeScreen> {
                             setState(() {
                               _eventStatus[event.id] = 'Paid';
                             });
+                            _recordView(
+                              event.id,
+                              timeSpent: stopwatch.elapsed.inSeconds,
+                              interactions: interactions,
+                            );
                           },
                         ),
                       ),
@@ -595,7 +588,13 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               TextButton(
                 onPressed: () {
+                  interactions.add('cancel_dialog');
                   Navigator.pop(context);
+                  _recordView(
+                    event.id,
+                    timeSpent: stopwatch.elapsed.inSeconds,
+                    interactions: interactions,
+                  );
                 },
                 child: const Text(
                   'Cancel',
@@ -615,13 +614,11 @@ class _HomeScreenState extends State<HomeScreen> {
       onAddEvent: _addEvent,
       onEventTap: _showEventDetailsModal,
       eventStatus: _eventStatus,
-      currentViewers: _currentViewers,
     ),
     SearchTab(
       events: events,
       eventStatus: _eventStatus,
       onEventTap: _showEventDetailsModal,
-      currentViewers: _currentViewers,
     ),
     BookingsTab(key: bookingsTabKey),
     const ProfileScreen(),
@@ -663,7 +660,6 @@ class HomeTab extends StatefulWidget {
   final Function(Event) onAddEvent;
   final Function(Event) onEventTap;
   final Map<String, String> eventStatus;
-  final Map<String, int> currentViewers;
 
   const HomeTab({
     Key? key,
@@ -671,7 +667,6 @@ class HomeTab extends StatefulWidget {
     required this.onAddEvent,
     required this.onEventTap,
     required this.eventStatus,
-    required this.currentViewers,
   }) : super(key: key);
 
   @override
@@ -764,7 +759,6 @@ class _HomeTabState extends State<HomeTab> {
           status: widget.eventStatus[event.id],
           isBooked: widget.eventStatus[event.id] == 'Reserved',
           onBookToggle: () => widget.onEventTap(event),
-          currentViewers: widget.currentViewers[event.id] ?? 0,
         ),
       );
     }).toList();
@@ -916,7 +910,6 @@ class _HomeTabState extends State<HomeTab> {
                             events: widget.events,
                             onEventTap: widget.onEventTap,
                             eventStatus: widget.eventStatus,
-                            currentViewers: widget.currentViewers,
                           ),
                         ),
                       );
@@ -1195,7 +1188,6 @@ class _EventCard extends StatelessWidget {
   final String? status;
   final bool isBooked;
   final VoidCallback onBookToggle;
-  final int currentViewers;
 
   const _EventCard({
     required this.event,
@@ -1203,7 +1195,6 @@ class _EventCard extends StatelessWidget {
     this.status,
     required this.isBooked,
     required this.onBookToggle,
-    required this.currentViewers,
   });
 
   DateTime parseEventDate(String input) {
@@ -1347,25 +1338,6 @@ class _EventCard extends StatelessWidget {
                                         color: Colors.grey[600],
                                         fontSize: 14,
                                       ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.visibility,
-                                    size: 16,
-                                    color: Colors.blue,
-                                  ),
-                                  const SizedBox(width: 5),
-                                  Text(
-                                    'Currently Viewing: $currentViewers',
-                                    style: TextStyle(
-                                      color: Colors.blue,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
                                     ),
                                   ),
                                 ],
@@ -1704,14 +1676,12 @@ class SearchTab extends StatefulWidget {
   final List<Event> events;
   final Function(Event) onEventTap;
   final Map<String, String> eventStatus;
-  final Map<String, int> currentViewers;
 
   const SearchTab({
     Key? key,
     required this.events,
     required this.onEventTap,
     required this.eventStatus,
-    required this.currentViewers,
   }) : super(key: key);
 
   @override
@@ -1926,7 +1896,6 @@ class _SearchTabState extends State<SearchTab> {
                           status: widget.eventStatus[event.id],
                           isBooked: widget.eventStatus[event.id] == 'Reserved',
                           onBookToggle: () => widget.onEventTap(event),
-                          currentViewers: widget.currentViewers[event.id] ?? 0,
                         ),
                       );
                     },

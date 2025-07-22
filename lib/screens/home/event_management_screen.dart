@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
@@ -21,6 +22,8 @@ class ViewRecord {
   final String platform;
   final String viewType;
   final String? organizerId;
+  final int timeSpent;
+  final List<String> interactions;
 
   ViewRecord({
     required this.id,
@@ -32,6 +35,8 @@ class ViewRecord {
     required this.platform,
     required this.viewType,
     this.organizerId,
+    this.timeSpent = 0,
+    this.interactions = const [],
   });
 
   factory ViewRecord.fromFirestore(DocumentSnapshot doc) {
@@ -46,6 +51,8 @@ class ViewRecord {
       platform: data['platform'] ?? 'unknown',
       viewType: data['viewType'] ?? 'detail_view',
       organizerId: data['organizerId'],
+      timeSpent: data['timeSpent'] ?? 0,
+      interactions: List<String>.from(data['interactions'] ?? []),
     );
   }
 
@@ -59,6 +66,8 @@ class ViewRecord {
       'platform': platform,
       'viewType': viewType,
       'organizerId': organizerId,
+      'timeSpent': timeSpent,
+      'interactions': interactions,
     };
   }
 }
@@ -105,8 +114,7 @@ class Booking {
 class AddEventScreen extends StatelessWidget {
   final VoidCallback onEventAdded;
 
-  const AddEventScreen({Key? key, required this.onEventAdded})
-    : super(key: key);
+  const AddEventScreen({Key? key, required this.onEventAdded}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -149,6 +157,688 @@ class EditEventScreen extends StatelessWidget {
         child: Text(
           'Edit Event Screen - Implementation Coming Soon',
           style: TextStyle(fontSize: 18, color: Colors.grey),
+        ),
+      ),
+    );
+  }
+}
+
+// Event Analytics Screen
+class EventAnalyticsScreen extends StatefulWidget {
+  final Event event;
+
+  const EventAnalyticsScreen({Key? key, required this.event}) : super(key: key);
+
+  @override
+  _EventAnalyticsScreenState createState() => _EventAnalyticsScreenState();
+}
+
+class _EventAnalyticsScreenState extends State<EventAnalyticsScreen> {
+  String _selectedTimeRange = 'Today';
+  final List<String> _timeRanges = [
+    'Today',
+    'This Week',
+    'This Month',
+    'All Time',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('${widget.event.title} Analytics'),
+        backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Colors.white,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Time Range Selector
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.grey[300]!),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: _selectedTimeRange,
+                  icon: const Icon(Icons.calendar_today, size: 16),
+                  style: const TextStyle(color: Colors.black, fontSize: 14),
+                  dropdownColor: Colors.white,
+                  items: _timeRanges.map((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    );
+                  }).toList(),
+                  onChanged: (String? newValue) {
+                    if (newValue != null) {
+                      setState(() {
+                        _selectedTimeRange = newValue;
+                      });
+                    }
+                  },
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            // Summary Metrics
+            StreamBuilder<List<ViewRecord>>(
+              stream: _getViewRecordsStream(widget.event.id),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final viewRecords = snapshot.data ?? [];
+                final filteredViews = _filterViewsByTimeRange(viewRecords);
+                final totalViews = filteredViews.length;
+                final uniqueUsers = filteredViews
+                    .map((view) => view.userId)
+                    .toSet()
+                    .length;
+                final avgTimeSpent = filteredViews.isNotEmpty
+                    ? filteredViews
+                            .map((view) => view.timeSpent)
+                            .reduce((a, b) => a + b) /
+                        filteredViews.length
+                    : 0;
+
+                return Row(
+                  children: [
+                    Expanded(
+                      child: _buildMetricCard(
+                        'Total Views',
+                        totalViews.toString(),
+                        Icons.remove_red_eye,
+                        Colors.blue,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildMetricCard(
+                        'Unique Users',
+                        uniqueUsers.toString(),
+                        Icons.person,
+                        Colors.green,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildMetricCard(
+                        'Avg Time Spent',
+                        '${avgTimeSpent.toStringAsFixed(1)}s',
+                        Icons.timer,
+                        Colors.orange,
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+            const SizedBox(height: 20),
+            // Temporal Analytics (Line Chart)
+            StreamBuilder<List<ViewRecord>>(
+              stream: _getViewRecordsStream(widget.event.id),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final viewRecords = snapshot.data ?? [];
+                final filteredViews = _filterViewsByTimeRange(viewRecords);
+
+                final viewCountsByTime = _aggregateViewsByTime(filteredViews);
+                return Container(
+                  height: 250,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.2),
+                        blurRadius: 5,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'View Trends Over Time',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Expanded(
+                        child: LineChart(
+                          LineChartData(
+                            gridData: const FlGridData(show: true),
+                            titlesData: FlTitlesData(
+                              bottomTitles: AxisTitles(
+                                sideTitles: SideTitles(
+                                  showTitles: true,
+                                  reservedSize: 30,
+                                  getTitlesWidget: (value, meta) {
+                                    String title = '';
+                                    switch (_selectedTimeRange) {
+                                      case 'Today':
+                                        title = '${value.toInt()}:00';
+                                        break;
+                                      case 'This Week':
+                                        title = _getDayOfWeek(value.toInt());
+                                        break;
+                                      case 'This Month':
+                                        title = 'Week ${value.toInt() + 1}';
+                                        break;
+                                      case 'All Time':
+                                        title = 'Month ${value.toInt() + 1}';
+                                        break;
+                                    }
+                                    return Text(
+                                      title,
+                                      style: const TextStyle(fontSize: 10),
+                                    );
+                                  },
+                                  interval: _selectedTimeRange == 'Today' ? 4 : 1,
+                                ),
+                              ),
+                              leftTitles: AxisTitles(
+                                sideTitles: SideTitles(
+                                  showTitles: true,
+                                  reservedSize: 40,
+                                  getTitlesWidget: (value, meta) {
+                                    return Text(
+                                      value.toInt().toString(),
+                                      style: const TextStyle(fontSize: 10),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+                            borderData: FlBorderData(show: true),
+                            lineBarsData: [
+                              LineChartBarData(
+                                spots: viewCountsByTime
+                                    .asMap()
+                                    .entries
+                                    .map((e) => FlSpot(
+                                        e.key.toDouble(), e.value.toDouble()))
+                                    .toList(),
+                                isCurved: true,
+                                color: Colors.blue,
+                                dotData: const FlDotData(show: false),
+                                belowBarData: BarAreaData(
+                                  show: true,
+                                  color: Colors.blue.withOpacity(0.1),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 20),
+            // Geographic Distribution
+            StreamBuilder<List<ViewRecord>>(
+              stream: _getViewRecordsStream(widget.event.id),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final viewRecords = snapshot.data ?? [];
+                final filteredViews = _filterViewsByTimeRange(viewRecords);
+                final locationCounts = _aggregateViewsByLocation(filteredViews);
+
+                return Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.2),
+                        blurRadius: 5,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Geographic Distribution',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      ...locationCounts.entries.map((entry) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                '${entry.key['city'] ?? 'Unknown'}, ${entry.key['country'] ?? 'Unknown'}',
+                                style: const TextStyle(fontSize: 14),
+                              ),
+                              Text(
+                                '${entry.value} views',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.blue,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ],
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 20),
+            // Activity Feed
+            StreamBuilder<List<ViewRecord>>(
+              stream: _getViewRecordsStream(widget.event.id),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final viewRecords = snapshot.data ?? [];
+                final filteredViews = _filterViewsByTimeRange(viewRecords)
+                  ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+
+                return Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.2),
+                        blurRadius: 5,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Recent Activity',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      ...filteredViews.take(10).map((view) {
+                        return ListTile(
+                          leading: Icon(
+                            Icons.visibility,
+                            color: Colors.grey[600],
+                            size: 20,
+                          ),
+                          title: Text(
+                            'User ${view.userId.substring(0, 8)} viewed from ${view.city ?? 'Unknown'}, ${view.country ?? 'Unknown'}',
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                          subtitle: Text(
+                            'Platform: ${view.platform} | Time Spent: ${view.timeSpent}s | Interactions: ${view.interactions.join(', ')}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          trailing: Text(
+                            DateFormat('MMM dd, HH:mm').format(view.timestamp),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Stream<List<ViewRecord>> _getViewRecordsStream(String eventId) {
+    return FirebaseFirestore.instance
+        .collection('eventStats')
+        .where('eventId', isEqualTo: eventId)
+        .snapshots()
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => ViewRecord.fromFirestore(doc)).toList());
+  }
+
+  List<ViewRecord> _filterViewsByTimeRange(List<ViewRecord> views) {
+    final now = DateTime.now();
+    DateTime startDate;
+
+    switch (_selectedTimeRange) {
+      case 'Today':
+        startDate = DateTime(now.year, now.month, now.day);
+        break;
+      case 'This Week':
+        final daysFromMonday = now.weekday - 1;
+        startDate = now.subtract(Duration(days: daysFromMonday));
+        break;
+      case 'This Month':
+        startDate = DateTime(now.year, now.month, 1);
+        break;
+      case 'All Time':
+        return views; // No filtering
+      default:
+        startDate = DateTime(now.year, now.month, now.day);
+    }
+
+    return views
+        .where((view) => view.timestamp.isAfter(startDate))
+        .toList();
+  }
+
+  List<int> _aggregateViewsByTime(List<ViewRecord> views) {
+    final now = DateTime.now();
+    List<int> viewCounts;
+
+    switch (_selectedTimeRange) {
+      case 'Today':
+        viewCounts = List.filled(24, 0); // Hourly buckets
+        for (var view in views) {
+          final hour = view.timestamp.hour;
+          viewCounts[hour]++;
+        }
+        break;
+      case 'This Week':
+        viewCounts = List.filled(7, 0); // Daily buckets
+        final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+        for (var view in views) {
+          final dayDiff =
+              view.timestamp.difference(startOfWeek).inDays.clamp(0, 6);
+          viewCounts[dayDiff]++;
+        }
+        break;
+      case 'This Month':
+        viewCounts = List.filled(4, 0); // Weekly buckets
+        final startOfMonth = DateTime(now.year, now.month, 1);
+        for (var view in views) {
+          final weekDiff =
+              view.timestamp.difference(startOfMonth).inDays ~/ 7;
+          if (weekDiff < 4) viewCounts[weekDiff]++;
+        }
+        break;
+      case 'All Time':
+        viewCounts = List.filled(12, 0); // Monthly buckets
+        final startYear = views.isNotEmpty
+            ? views
+                .map((v) => v.timestamp.year)
+                .reduce((a, b) => a < b ? a : b)
+            : now.year;
+        for (var view in views) {
+          final monthDiff = (view.timestamp.year - startYear) * 12 +
+              view.timestamp.month -
+              1;
+          if (monthDiff < 12) viewCounts[monthDiff]++;
+        }
+        break;
+      default:
+        viewCounts = List.filled(24, 0);
+    }
+
+    return viewCounts;
+  }
+
+  Map<Map<String, String?>, int> _aggregateViewsByLocation(
+      List<ViewRecord> views) {
+    final locationCounts = <Map<String, String?>, int>{};
+    for (var view in views) {
+      final key = {'city': view.city, 'country': view.country};
+      locationCounts[key] = (locationCounts[key] ?? 0) + 1;
+    }
+    return locationCounts;
+  }
+
+  String _getDayOfWeek(int index) {
+    const days = [
+      'Mon',
+      'Tue',
+      'Wed',
+      'Thu',
+      'Fri',
+      'Sat',
+      'Sun',
+    ];
+    return days[index % 7];
+  }
+
+  Widget _buildMetricCard(
+      String title, String value, IconData icon, Color color) {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 24),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              title,
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Attendees Screen
+class AttendeesScreen extends StatelessWidget {
+  final Event event;
+
+  const AttendeesScreen({Key? key, найти этот файл в папке проекта required this.event}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('${event.title} Attendees'),
+        backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Colors.white,
+      ),
+      body: StreamBuilder<List<Booking>>(
+        stream: FirebaseFirestore.instance
+            .collection('bookings')
+            .where('eventId', isEqualTo: event.id)
+            .snapshots()
+            .map((snapshot) =>
+                snapshot.docs.map((doc) => Booking.fromFirestore(doc)).toList()),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+          final bookings = snapshot.data ?? [];
+          if (bookings.isEmpty) {
+            return const Center(
+              child: Text(
+                'No attendees yet',
+                style: TextStyle(fontSize: 18, color: Colors.grey),
+              ),
+            );
+          }
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: bookings.length,
+            itemBuilder: (context, index) {
+              final booking = bookings[index];
+              return Card(
+                margin: const EdgeInsets.only(bottom: 16),
+                child: ListTile(
+                  title: Text('${booking.firstName} ${booking.lastName}'),
+                  subtitle: Text(
+                    'Email: ${booking.email}\nStatus: ${booking.paid ? 'Paid' : 'Pending'}\nBooked: ${DateFormat('MMM dd, yyyy').format(booking.bookingDate)}',
+                  ),
+                  trailing: Text(
+                    '€${booking.total.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue,
+                    ),
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+// Event Details Screen
+class EventDetailsScreen extends StatelessWidget {
+  final Event event;
+
+  const EventDetailsScreen({Key? key, required this.event}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(event.title),
+        backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Colors.white,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (event.imageUrl != null)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  event.imageUrl!,
+                  height: 200,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      height: 200,
+                      color: Colors.grey[200],
+                      child: const Icon(Icons.image, size: 50, color: Colors.grey),
+                    );
+                  },
+                ),
+              ),
+            const SizedBox(height: 16),
+            Text(
+              event.title,
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              event.category,
+              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Icon(Icons.calendar_today, size: 20, color: Colors.grey[600]),
+                const SizedBox(width: 8),
+                Text(
+                  event.date,
+                  style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.location_on, size: 20, color: Colors.grey[600]),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    event.location,
+                    style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              event.description,
+              style: const TextStyle(fontSize: 16, height: 1.5),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => AttendeesScreen(event: event),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.people),
+                  label: const Text('View Attendees'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).primaryColor,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => EventAnalyticsScreen(event: event),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.analytics),
+                  label: const Text('Analytics'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -317,6 +1007,36 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
     }
   }
 
+  Stream<List<Booking>> _getEventBookingsStream(String eventId) {
+    return FirebaseFirestore.instance
+        .collection('bookings')
+        .where('eventId', isEqualTo: eventId)
+        .snapshots()
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => Booking.fromFirestore(doc)).toList());
+  }
+
+  Stream<Map<String, dynamic>> _getOverallStatsStream() {
+    return FirebaseFirestore.instance
+        .collection('bookings')
+        .where('eventId', whereIn: organizerEvents.map((e) => e.id).toList())
+        .snapshots()
+        .map((snapshot) {
+      double totalRevenue = 0.0;
+      int totalBookings = snapshot.docs.length;
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        if (data['paid'] == true) {
+          totalRevenue += (data['total'] as num?)?.toDouble() ?? 0.0;
+        }
+      }
+      return {
+        'revenue': totalRevenue,
+        'bookings': totalBookings,
+      };
+    });
+  }
+
   Future<void> _deleteEvent(Event event) async {
     try {
       final confirmed = await showDialog<bool>(
@@ -366,6 +1086,156 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
     }
   }
 
+  Future<void> _recordView(BuildContext context, Event event) async {
+    final userId = Provider.of<AuthProvider>(context, listen: false).user?.uid ?? 'anonymous';
+    String? city;
+    String? country;
+
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (serviceEnabled) {
+        LocationPermission permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.denied) {
+          permission = await Geolocator.requestPermission();
+          if (permission == LocationPermission.denied) {
+            return;
+          }
+        }
+
+        if (permission != LocationPermission.deniedForever) {
+          Position position = await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.low,
+          );
+          List<Placemark> placemarks = await placemarkFromCoordinates(
+            position.latitude,
+            position.longitude,
+          );
+          city = placemarks.isNotEmpty ? placemarks[0].locality : null;
+          country = placemarks.isNotEmpty ? placemarks[0].country : null;
+        }
+      }
+    } catch (e) {
+      print('Error getting location: $e');
+    }
+
+    final viewRecord = ViewRecord(
+      id: const Uuid().v4(),
+      eventId: event.id,
+      timestamp: DateTime.now(),
+      city: city,
+      country: country,
+      userId: userId,
+      platform: Theme.of(context).platform == TargetPlatform.android
+          ? 'Android'
+          : Theme.of(context).platform == TargetPlatform.iOS
+              ? 'iOS'
+              : 'Unknown',
+      viewType: 'detail_view',
+      organizerId: event.organizerId,
+      timeSpent: 0,
+      interactions: ['viewed_details'],
+    );
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('eventStats')
+          .doc(viewRecord.id)
+          .set(viewRecord.toFirestore());
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error recording view: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildSummaryCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 24),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              title,
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Theme.of(context).primaryColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: Theme.of(context).primaryColor),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: Theme.of(context).primaryColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  IconData _getCategoryIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'concert':
+      case 'festival':
+        return Icons.music_note;
+      case 'conference':
+        return Icons.computer;
+      case 'workshop':
+        return Icons.build;
+      case 'sports':
+        return Icons.sports;
+      case 'networking':
+        return Icons.group;
+      case 'exhibition':
+        return Icons.museum;
+      case 'theater':
+        return Icons.theater_comedy;
+      case 'comedy':
+        return Icons.sentiment_very_satisfied;
+      default:
+        return Icons.event;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -387,10 +1257,10 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : !_hasAccess
-          ? _buildNoAccessState()
-          : organizerEvents.isEmpty
-          ? _buildEmptyState()
-          : _buildEventsList(),
+              ? _buildNoAccessState()
+              : organizerEvents.isEmpty
+                  ? _buildEmptyState()
+                  : _buildEventsList(),
       floatingActionButton: _hasAccess
           ? FloatingActionButton(
               onPressed: () {
@@ -777,1010 +1647,6 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildSummaryCard(
-    String title,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            Text(
-              title,
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Stream<Map<String, dynamic>> _getOverallStatsStream() async* {
-    while (true) {
-      double totalRevenue = 0.0;
-      int totalBookings = 0;
-
-      try {
-        for (Event event in organizerEvents) {
-          final bookings = await _getEventBookings(event.id);
-          totalBookings += bookings.length;
-          totalRevenue += bookings
-              .where((b) => b.paid)
-              .fold(0.0, (sum, booking) => sum + booking.total);
-        }
-      } catch (e) {
-        // Handle error silently to avoid breaking the stream
-      }
-
-      yield {'revenue': totalRevenue, 'bookings': totalBookings};
-      await Future.delayed(const Duration(seconds: 5));
-    }
-  }
-
-  Stream<List<Booking>> _getEventBookingsStream(String eventId) {
-    return FirebaseFirestore.instance
-        .collection('bookings')
-        .where('eventId', isEqualTo: eventId)
-        .snapshots()
-        .map(
-          (snapshot) =>
-              snapshot.docs.map((doc) => Booking.fromFirestore(doc)).toList(),
-        );
-  }
-
-  Future<void> _recordView(BuildContext context, Event event) async {
-    final userId =
-        Provider.of<AuthProvider>(context, listen: false).user?.uid ??
-        'anonymous';
-    String? city;
-    String? country;
-    String? organizerId;
-
-    try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        print('Location services are disabled.');
-        return;
-      }
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          print('Location permissions are denied.');
-          return;
-        }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        print('Location permissions are permanently denied.');
-        return;
-      }
-
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.low,
-      );
-      List<Placemark> placemarks = await placemarkFromCoordinates(
-        position.latitude,
-        position.longitude,
-      );
-      if (placemarks.isNotEmpty) {
-        city = placemarks[0].locality;
-        country = placemarks[0].country;
-      }
-
-      final eventDoc = await FirebaseFirestore.instance
-          .collection('events')
-          .doc(event.id)
-          .get();
-      if (eventDoc.exists) {
-        organizerId = eventDoc.data()?['organizerId'] as String?;
-      }
-    } catch (e) {
-      print('Error fetching location or event data: $e');
-    }
-
-    final viewRecord = ViewRecord(
-      id: const Uuid().v4(),
-      eventId: event.id,
-      timestamp: DateTime.now(),
-      city: city,
-      country: country,
-      userId: userId,
-      platform: Theme.of(context).platform.toString().split('.').last,
-      viewType: 'detail_view',
-      organizerId: organizerId,
-    );
-
-    try {
-      await FirebaseFirestore.instance
-          .collection('eventStats')
-          .doc(viewRecord.id)
-          .set(viewRecord.toFirestore());
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error recording view: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: Theme.of(context).primaryColor.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 16, color: Theme.of(context).primaryColor),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: Theme.of(context).primaryColor,
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  IconData _getCategoryIcon(String category) {
-    switch (category.toLowerCase()) {
-      case 'concert':
-      case 'festival':
-        return Icons.music_note;
-      case 'conference':
-        return Icons.computer;
-      case 'workshop':
-        return Icons.build;
-      case 'sports':
-        return Icons.sports;
-      case 'networking':
-        return Icons.group;
-      case 'exhibition':
-        return Icons.museum;
-      case 'theater':
-        return Icons.theater_comedy;
-      case 'comedy':
-        return Icons.sentiment_very_satisfied;
-      default:
-        return Icons.event;
-    }
-  }
-}
-
-// Event Details Screen
-class EventDetailsScreen extends StatefulWidget {
-  final Event event;
-
-  const EventDetailsScreen({Key? key, required this.event}) : super(key: key);
-
-  @override
-  State<EventDetailsScreen> createState() => _EventDetailsScreenState();
-}
-
-class _EventDetailsScreenState extends State<EventDetailsScreen> {
-  @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.event.title),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (widget.event.imageUrl != null)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  widget.event.imageUrl!,
-                  height: 200,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      height: 200,
-                      width: double.infinity,
-                      color: Colors.grey[300],
-                      child: const Icon(
-                        Icons.error,
-                        size: 50,
-                        color: Colors.grey,
-                      ),
-                    );
-                  },
-                ),
-              ),
-            const SizedBox(height: 16),
-            Text(
-              widget.event.title,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              widget.event.description,
-              style: const TextStyle(fontSize: 16),
-            ),
-            const SizedBox(height: 16),
-            _buildInfoRow(Icons.calendar_today, 'Date', widget.event.date),
-            _buildInfoRow(Icons.location_on, 'Location', widget.event.location),
-            _buildInfoRow(Icons.category, 'Category', widget.event.category),
-            _buildInfoRow(
-              Icons.attach_money,
-              'Price',
-              '€${widget.event.price.toStringAsFixed(2)}',
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(IconData icon, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: Colors.grey[600]),
-          const SizedBox(width: 12),
-          Text('$label: ', style: const TextStyle(fontWeight: FontWeight.bold)),
-          Expanded(child: Text(value)),
-        ],
-      ),
-    );
-  }
-}
-
-// Attendees Screen
-class AttendeesScreen extends StatefulWidget {
-  final Event event;
-
-  const AttendeesScreen({Key? key, required this.event}) : super(key: key);
-
-  @override
-  State<AttendeesScreen> createState() => _AttendeesScreenState();
-}
-
-class _AttendeesScreenState extends State<AttendeesScreen> {
-  List<Booking> allBookings = [];
-  List<Booking> filteredBookings = [];
-  String _filterStatus = 'all';
-  bool _isLoading = true;
-  StreamSubscription? _bookingsSubscription;
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchBookings();
-  }
-
-  @override
-  void dispose() {
-    _bookingsSubscription?.cancel();
-    super.dispose();
-  }
-
-  void _fetchBookings() {
-    setState(() {
-      _isLoading = true;
-    });
-
-    _bookingsSubscription = FirebaseFirestore.instance
-        .collection('bookings')
-        .where('eventId', isEqualTo: widget.event.id)
-        .orderBy('bookingDate', descending: true)
-        .snapshots()
-        .listen(
-          (snapshot) {
-            if (mounted) {
-              setState(() {
-                allBookings = snapshot.docs
-                    .map((doc) => Booking.fromFirestore(doc))
-                    .toList();
-                _filterBookings();
-                _isLoading = false;
-              });
-            }
-          },
-          onError: (error) {
-            if (mounted) {
-              setState(() {
-                _isLoading = false;
-              });
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Error loading bookings: $error'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
-          },
-        );
-  }
-
-  void _filterBookings() {
-    setState(() {
-      switch (_filterStatus) {
-        case 'paid':
-          filteredBookings = allBookings
-              .where((booking) => booking.paid)
-              .toList();
-          break;
-        case 'pending':
-          filteredBookings = allBookings
-              .where((booking) => !booking.paid)
-              .toList();
-          break;
-        default:
-          filteredBookings = allBookings;
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('${widget.event.title} - Attendees'),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _fetchBookings,
-          ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _buildFilterChip(
-                          'All',
-                          'all',
-                          allBookings.length,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _buildFilterChip(
-                          'Paid',
-                          'paid',
-                          allBookings.where((b) => b.paid).length,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _buildFilterChip(
-                          'Pending',
-                          'pending',
-                          allBookings.where((b) => !b.paid).length,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: filteredBookings.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.people_outline,
-                                size: 64,
-                                color: Colors.grey[400],
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'No ${_filterStatus == 'all' ? '' : _filterStatus} bookings',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: filteredBookings.length,
-                          itemBuilder: (context, index) {
-                            final booking = filteredBookings[index];
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              elevation: 2,
-                              child: ListTile(
-                                leading: CircleAvatar(
-                                  backgroundColor: booking.paid
-                                      ? Colors.green
-                                      : Colors.orange,
-                                  child: Icon(
-                                    booking.paid ? Icons.check : Icons.pending,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                title: Text(
-                                  '${booking.firstName} ${booking.lastName}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      booking.email,
-                                      style: TextStyle(color: Colors.grey[600]),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'Booked: ${DateFormat('dd/MM/yyyy').format(booking.bookingDate)}',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey[600],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                trailing: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      '€${booking.total.toStringAsFixed(2)}',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: booking.paid
-                                            ? Colors.green.withOpacity(0.1)
-                                            : Colors.orange.withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Text(
-                                        booking.paid ? 'Paid' : 'Pending',
-                                        style: TextStyle(
-                                          color: booking.paid
-                                              ? Colors.green
-                                              : Colors.orange,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                ),
-              ],
-            ),
-    );
-  }
-
-  Widget _buildFilterChip(String label, String value, int count) {
-    final isSelected = _filterStatus == value;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _filterStatus = value;
-          _filterBookings();
-        });
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? Theme.of(context).primaryColor : Colors.grey[200],
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Column(
-          children: [
-            Text(
-              count.toString(),
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: isSelected ? Colors.white : Colors.black,
-              ),
-            ),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                color: isSelected ? Colors.white : Colors.grey[600],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// Analytics Screen
-class EventAnalyticsScreen extends StatefulWidget {
-  final Event event;
-
-  const EventAnalyticsScreen({Key? key, required this.event}) : super(key: key);
-
-  @override
-  State<EventAnalyticsScreen> createState() => _EventAnalyticsScreenState();
-}
-
-class _EventAnalyticsScreenState extends State<EventAnalyticsScreen> {
-  Timer? _debounceTimer;
-  int _currentViewers = 0;
-  int _totalViews = 0;
-  List<Map<String, dynamic>> _activityFeed = [];
-  Map<String, int> _hourlyViews = {};
-  Map<String, int> _geoViews = {};
-  StreamSubscription? _viewsSubscription;
-
-  @override
-  void initState() {
-    super.initState();
-    _setupRealtimeListeners();
-  }
-
-  @override
-  void dispose() {
-    _debounceTimer?.cancel();
-    _viewsSubscription?.cancel();
-    super.dispose();
-  }
-
-  void _setupRealtimeListeners() {
-    _viewsSubscription = FirebaseFirestore.instance
-        .collection('eventStats')
-        .where('eventId', isEqualTo: widget.event.id)
-        .orderBy('timestamp', descending: true)
-        .limit(100)
-        .snapshots()
-        .listen(
-          (snapshot) {
-            if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
-            _debounceTimer = Timer(const Duration(milliseconds: 500), () {
-              if (mounted) {
-                setState(() {
-                  final now = DateTime.now();
-                  final tenMinutesAgo = now.subtract(
-                    const Duration(minutes: 10),
-                  );
-
-                  _totalViews = snapshot.docs.length;
-                  _currentViewers = snapshot.docs.where((doc) {
-                    final timestamp = (doc['timestamp'] as Timestamp?)
-                        ?.toDate();
-                    return timestamp != null &&
-                        timestamp.isAfter(tenMinutesAgo);
-                  }).length;
-
-                  _activityFeed = snapshot.docs.take(10).map((doc) {
-                    final view = ViewRecord.fromFirestore(doc);
-                    return {
-                      'message':
-                          'View from ${view.city ?? 'Unknown'}, ${view.country ?? 'Unknown'} on ${view.platform}',
-                      'timestamp': view.timestamp,
-                    };
-                  }).toList();
-
-                  _hourlyViews = {};
-                  for (var doc in snapshot.docs) {
-                    final view = ViewRecord.fromFirestore(doc);
-                    final hour = DateFormat('HH:00').format(view.timestamp);
-                    _hourlyViews[hour] = (_hourlyViews[hour] ?? 0) + 1;
-                  }
-
-                  _geoViews = {};
-                  for (var doc in snapshot.docs) {
-                    final view = ViewRecord.fromFirestore(doc);
-                    final geoKey =
-                        '${view.city ?? 'Unknown'}, ${view.country ?? 'Unknown'}';
-                    _geoViews[geoKey] = (_geoViews[geoKey] ?? 0) + 1;
-                  }
-                });
-              }
-            });
-          },
-          onError: (error) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Error loading analytics: $error'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
-          },
-        );
-  }
-
-  Stream<List<Booking>> _getEventBookingsStream() {
-    return FirebaseFirestore.instance
-        .collection('bookings')
-        .where('eventId', isEqualTo: widget.event.id)
-        .snapshots()
-        .map(
-          (snapshot) =>
-              snapshot.docs.map((doc) => Booking.fromFirestore(doc)).toList(),
-        );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    List<String> hours = List.generate(
-      24,
-      (index) => '${index.toString().padLeft(2, '0')}:00',
-    );
-    List<FlSpot> viewSpots = hours.asMap().entries.map((entry) {
-      int index = entry.key;
-      String hour = entry.value;
-      return FlSpot(index.toDouble(), (_hourlyViews[hour] ?? 0).toDouble());
-    }).toList();
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('${widget.event.title} - Analytics'),
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _setupRealtimeListeners,
-          ),
-        ],
-      ),
-      body: StreamBuilder<List<Booking>>(
-        stream: _getEventBookingsStream(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final bookings = snapshot.data ?? [];
-          final totalBookings = bookings.length;
-          final paidBookings = bookings.where((b) => b.paid).length;
-          final totalRevenue = bookings
-              .where((b) => b.paid)
-              .fold(0.0, (sum, booking) => sum + booking.total);
-          final averageBookingValue = paidBookings > 0
-              ? totalRevenue / paidBookings
-              : 0.0;
-          final conversionRate = _totalViews > 0
-              ? (paidBookings / _totalViews * 100).toStringAsFixed(1)
-              : '0.0';
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Overview',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[800],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildSummaryCard(
-                        'Current Viewers',
-                        _currentViewers.toString(),
-                        Icons.visibility,
-                        Colors.blue,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _buildSummaryCard(
-                        'Total Views',
-                        _totalViews.toString(),
-                        Icons.remove_red_eye,
-                        Colors.purple,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildSummaryCard(
-                        'Total Bookings',
-                        totalBookings.toString(),
-                        Icons.book_online,
-                        Colors.teal,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _buildSummaryCard(
-                        'Revenue',
-                        '€${totalRevenue.toStringAsFixed(2)}',
-                        Icons.attach_money,
-                        Colors.green,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildSummaryCard(
-                        'Conversion Rate',
-                        '$conversionRate%',
-                        Icons.trending_up,
-                        Colors.orange,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _buildSummaryCard(
-                        'Avg. Booking',
-                        '€${averageBookingValue.toStringAsFixed(2)}',
-                        Icons.calculate,
-                        Colors.cyan,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  'Views per Hour',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[800],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 200,
-                  child: LineChart(
-                    LineChartData(
-                      gridData: FlGridData(show: true),
-                      titlesData: FlTitlesData(
-                        leftTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize: 40,
-                            getTitlesWidget: (value, meta) {
-                              return Text(
-                                value.toInt().toString(),
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 12,
-                                ),
-                              );
-                            },
-                          ),
-                          axisNameWidget: const Text('Views'),
-                        ),
-                        bottomTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize: 30,
-                            getTitlesWidget: (value, meta) {
-                              if (value.toInt() % 4 == 0) {
-                                return Text(
-                                  hours[value.toInt()],
-                                  style: TextStyle(
-                                    color: Colors.grey[600],
-                                    fontSize: 12,
-                                  ),
-                                );
-                              }
-                              return const SizedBox.shrink();
-                            },
-                          ),
-                          axisNameWidget: const Text('Hour of Day'),
-                        ),
-                        topTitles: AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
-                        rightTitles: AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
-                      ),
-                      borderData: FlBorderData(show: true),
-                      lineBarsData: [
-                        LineChartBarData(
-                          spots: viewSpots,
-                          isCurved: true,
-                          color: Colors.blue,
-                          barWidth: 2,
-                          belowBarData: BarAreaData(
-                            show: true,
-                            color: Colors.blue.withOpacity(0.2),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  'Geographic Distribution',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[800],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.1),
-                        spreadRadius: 1,
-                        blurRadius: 5,
-                      ),
-                    ],
-                  ),
-                  child: _geoViews.isEmpty
-                      ? const Padding(
-                          padding: EdgeInsets.all(16),
-                          child: Text('No geographic data available'),
-                        )
-                      : Column(
-                          children: _geoViews.entries.take(5).map((entry) {
-                            return ListTile(
-                              title: Text(entry.key),
-                              trailing: Text(
-                                entry.value.toString(),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  'Recent Activity',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[800],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.1),
-                        spreadRadius: 1,
-                        blurRadius: 5,
-                      ),
-                    ],
-                  ),
-                  child: _activityFeed.isEmpty
-                      ? const Padding(
-                          padding: EdgeInsets.all(16),
-                          child: Text('No recent activity'),
-                        )
-                      : Column(
-                          children: _activityFeed.map((activity) {
-                            return ListTile(
-                              leading: const Icon(
-                                Icons.history,
-                                color: Colors.grey,
-                              ),
-                              title: Text(activity['message']),
-                              subtitle: Text(
-                                DateFormat(
-                                  'dd/MM/yyyy HH:mm',
-                                ).format(activity['timestamp']),
-                                style: TextStyle(color: Colors.grey[600]),
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildSummaryCard(
-    String title,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
-    return Card(
-      elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            Text(
-              title,
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
