@@ -451,17 +451,17 @@ class HomeTab extends StatelessWidget {
 
 
     return Scaffold(
-     // backgroundColor: Colors.white,
+     backgroundColor: Colors.white,
       body: Stack(
         children:[
           // Background image
-          Positioned.fill(
-            child: Image.asset(
-              'assets/images/blue2.jpeg',
-              fit: BoxFit.cover,
+        //   Positioned.fill(
+        //     child: Image.asset(
+        //       'assets/images/blue2.jpeg',
+        //       fit: BoxFit.cover,
 
-            ),  
-        ),
+        //     ),  
+        // ),
       SafeArea(
         child: SingleChildScrollView( 
         child: Column(
@@ -840,7 +840,8 @@ class _EventCard extends StatelessWidget {
             margin: EdgeInsets.zero,
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 0),
             decoration: BoxDecoration(
-              color:  Colors.blue.shade50,
+              // color:  Colors.blue.shade50,
+              color: Colors.white,
               borderRadius: BorderRadius.circular(0),
               border: Border(
                 bottom: BorderSide(
@@ -857,11 +858,15 @@ class _EventCard extends StatelessWidget {
                 colorFilter: isPast
                     ? const ColorFilter.mode(Colors.grey, BlendMode.saturation)
                     : const ColorFilter.mode(Colors.transparent, BlendMode.multiply),
-                child: Image.network(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(15),
+                 child: Image.network(
                   event.imageUrl!,
                   height: 250,
                   width: double.infinity,
                   fit: BoxFit.cover,
+                  
+                 
                   
 
                   errorBuilder: (context, error, stackTrace) {
@@ -875,7 +880,7 @@ class _EventCard extends StatelessWidget {
                       ),
                     );
                   },
-                ),
+                ),),
               ),
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
@@ -889,7 +894,7 @@ class _EventCard extends StatelessWidget {
                           padding: const EdgeInsets.all(0),
                           decoration: BoxDecoration(
                             color: Color.fromARGB(255, 25, 25, 95).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(20),
                           ),
                           child: Icon(
                             _getCategoryIcon(event.category),
@@ -913,7 +918,7 @@ class _EventCard extends StatelessWidget {
                                         style: const TextStyle(
                                           fontSize: 20,
                                           fontWeight: FontWeight.bold,
-                                          decoration: TextDecoration.underline,
+                                          //decoration: TextDecoration.underline,
                                           backgroundColor: Colors.transparent,
                                           color: Colors.black,
                                         ),

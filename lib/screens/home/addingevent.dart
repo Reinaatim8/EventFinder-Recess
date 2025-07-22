@@ -641,8 +641,3 @@ class _AddEventDialogState extends State<AddEventDialog> {
   }
 }
 
-class LatLng {
-  double? get latitude => null;
-  
-  double? get longitude => null;
-}
