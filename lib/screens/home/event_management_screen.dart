@@ -604,7 +604,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
-                                      const Text('Total Bookings'),
+                                      const Text('Bookings'),
                                     ],
                                   ),
                                   Column(
@@ -637,7 +637,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                                     const SizedBox(height: 12),
                                     Text(
                                       slotsRemaining > 0
-                                        ? 'Slots remaining: $slotsRemaining'
+                                        ? 'Slots-Left: $slotsRemaining'
                                         : 'Slots full',
                                       style: TextStyle(
                                         color: slotsRemaining > 0 ? Colors.orange : Colors.red,
