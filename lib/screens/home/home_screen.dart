@@ -170,12 +170,58 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoading = true;
   Set<String> bookedEventIds = {};
   final Map<String, String> _eventStatus = {};
+  final Map<String, int> _currentViewers = {};
+  StreamSubscription? _viewsSubscription;
 
   @override
   void initState() {
     super.initState();
     _fetchEvents();
     _loadBookedEvents();
+    _setupRealtimeViewers();
+  }
+
+  @override
+  void dispose() {
+    _viewsSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _setupRealtimeViewers() {
+    _viewsSubscription = FirebaseFirestore.instance
+        .collection('eventStats')
+        .where(
+          'timestamp',
+          isGreaterThan: Timestamp.fromDate(
+            DateTime.now().subtract(const Duration(minutes: 10)),
+          ),
+        )
+        .snapshots()
+        .listen(
+          (snapshot) {
+            final Map<String, int> tempViewers = {};
+            for (var doc in snapshot.docs) {
+              final view = ViewRecord.fromFirestore(doc);
+              tempViewers[view.eventId] = (tempViewers[view.eventId] ?? 0) + 1;
+            }
+            if (mounted) {
+              setState(() {
+                _currentViewers.clear();
+                _currentViewers.addAll(tempViewers);
+              });
+            }
+          },
+          onError: (error) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Error loading real-time viewers: $error'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+        );
   }
 
   Future<void> _fetchEvents() async {
@@ -315,7 +361,6 @@ class _HomeScreenState extends State<HomeScreen> {
     String? organizerId;
 
     try {
-      // Fetch event to get organizerId
       final eventDoc = await FirebaseFirestore.instance
           .collection('events')
           .doc(eventId)
@@ -327,18 +372,15 @@ class _HomeScreenState extends State<HomeScreen> {
         return;
       }
 
-      // Get location data
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         print('Location services are disabled.');
-        // Proceed without location if disabled
       } else {
         LocationPermission permission = await Geolocator.checkPermission();
         if (permission == LocationPermission.denied) {
           permission = await Geolocator.requestPermission();
           if (permission == LocationPermission.denied) {
             print('Location permissions are denied.');
-            // Proceed without location if denied
           }
         }
 
@@ -356,7 +398,6 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     } catch (e) {
       print('Error getting location or event data: $e');
-      // Proceed without location data if it fails
     }
 
     final viewRecord = ViewRecord(
@@ -406,6 +447,14 @@ class _HomeScreenState extends State<HomeScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(event.description),
+              const SizedBox(height: 20),
+              Text(
+                'Currently Viewing: ${_currentViewers[event.id] ?? 0}',
+                style: TextStyle(
+                  color: Colors.blue,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               const SizedBox(height: 20),
               if (_eventStatus[event.id] != 'Reserved') ...[
                 ElevatedButton(
@@ -566,11 +615,13 @@ class _HomeScreenState extends State<HomeScreen> {
       onAddEvent: _addEvent,
       onEventTap: _showEventDetailsModal,
       eventStatus: _eventStatus,
+      currentViewers: _currentViewers,
     ),
     SearchTab(
       events: events,
       eventStatus: _eventStatus,
       onEventTap: _showEventDetailsModal,
+      currentViewers: _currentViewers,
     ),
     BookingsTab(key: bookingsTabKey),
     const ProfileScreen(),
@@ -612,6 +663,7 @@ class HomeTab extends StatefulWidget {
   final Function(Event) onAddEvent;
   final Function(Event) onEventTap;
   final Map<String, String> eventStatus;
+  final Map<String, int> currentViewers;
 
   const HomeTab({
     Key? key,
@@ -619,6 +671,7 @@ class HomeTab extends StatefulWidget {
     required this.onAddEvent,
     required this.onEventTap,
     required this.eventStatus,
+    required this.currentViewers,
   }) : super(key: key);
 
   @override
@@ -711,6 +764,7 @@ class _HomeTabState extends State<HomeTab> {
           status: widget.eventStatus[event.id],
           isBooked: widget.eventStatus[event.id] == 'Reserved',
           onBookToggle: () => widget.onEventTap(event),
+          currentViewers: widget.currentViewers[event.id] ?? 0,
         ),
       );
     }).toList();
@@ -862,6 +916,7 @@ class _HomeTabState extends State<HomeTab> {
                             events: widget.events,
                             onEventTap: widget.onEventTap,
                             eventStatus: widget.eventStatus,
+                            currentViewers: widget.currentViewers,
                           ),
                         ),
                       );
@@ -1140,6 +1195,7 @@ class _EventCard extends StatelessWidget {
   final String? status;
   final bool isBooked;
   final VoidCallback onBookToggle;
+  final int currentViewers;
 
   const _EventCard({
     required this.event,
@@ -1147,6 +1203,7 @@ class _EventCard extends StatelessWidget {
     this.status,
     required this.isBooked,
     required this.onBookToggle,
+    required this.currentViewers,
   });
 
   DateTime parseEventDate(String input) {
@@ -1290,6 +1347,25 @@ class _EventCard extends StatelessWidget {
                                         color: Colors.grey[600],
                                         fontSize: 14,
                                       ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.visibility,
+                                    size: 16,
+                                    color: Colors.blue,
+                                  ),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    'Currently Viewing: $currentViewers',
+                                    style: TextStyle(
+                                      color: Colors.blue,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
                                     ),
                                   ),
                                 ],
@@ -1628,12 +1704,14 @@ class SearchTab extends StatefulWidget {
   final List<Event> events;
   final Function(Event) onEventTap;
   final Map<String, String> eventStatus;
+  final Map<String, int> currentViewers;
 
   const SearchTab({
     Key? key,
     required this.events,
     required this.onEventTap,
     required this.eventStatus,
+    required this.currentViewers,
   }) : super(key: key);
 
   @override
@@ -1848,6 +1926,7 @@ class _SearchTabState extends State<SearchTab> {
                           status: widget.eventStatus[event.id],
                           isBooked: widget.eventStatus[event.id] == 'Reserved',
                           onBookToggle: () => widget.onEventTap(event),
+                          currentViewers: widget.currentViewers[event.id] ?? 0,
                         ),
                       );
                     },
