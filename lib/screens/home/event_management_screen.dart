@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
@@ -114,7 +113,8 @@ class Booking {
 class AddEventScreen extends StatelessWidget {
   final VoidCallback onEventAdded;
 
-  const AddEventScreen({Key? key, required this.onEventAdded}) : super(key: key);
+  const AddEventScreen({Key? key, required this.onEventAdded})
+    : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -242,9 +242,9 @@ class _EventAnalyticsScreenState extends State<EventAnalyticsScreen> {
                     .length;
                 final avgTimeSpent = filteredViews.isNotEmpty
                     ? filteredViews
-                            .map((view) => view.timeSpent)
-                            .reduce((a, b) => a + b) /
-                        filteredViews.length
+                              .map((view) => view.timeSpent)
+                              .reduce((a, b) => a + b) /
+                          filteredViews.length
                     : 0;
 
                 return Row(
@@ -346,7 +346,9 @@ class _EventAnalyticsScreenState extends State<EventAnalyticsScreen> {
                                       style: const TextStyle(fontSize: 10),
                                     );
                                   },
-                                  interval: _selectedTimeRange == 'Today' ? 4 : 1,
+                                  interval: _selectedTimeRange == 'Today'
+                                      ? 4
+                                      : 1,
                                 ),
                               ),
                               leftTitles: AxisTitles(
@@ -368,8 +370,12 @@ class _EventAnalyticsScreenState extends State<EventAnalyticsScreen> {
                                 spots: viewCountsByTime
                                     .asMap()
                                     .entries
-                                    .map((e) => FlSpot(
-                                        e.key.toDouble(), e.value.toDouble()))
+                                    .map(
+                                      (e) => FlSpot(
+                                        e.key.toDouble(),
+                                        e.value.toDouble(),
+                                      ),
+                                    )
                                     .toList(),
                                 isCurved: true,
                                 color: Colors.blue,
@@ -530,8 +536,11 @@ class _EventAnalyticsScreenState extends State<EventAnalyticsScreen> {
         .collection('eventStats')
         .where('eventId', isEqualTo: eventId)
         .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map((doc) => ViewRecord.fromFirestore(doc)).toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => ViewRecord.fromFirestore(doc))
+              .toList(),
+        );
   }
 
   List<ViewRecord> _filterViewsByTimeRange(List<ViewRecord> views) {
@@ -555,9 +564,7 @@ class _EventAnalyticsScreenState extends State<EventAnalyticsScreen> {
         startDate = DateTime(now.year, now.month, now.day);
     }
 
-    return views
-        .where((view) => view.timestamp.isAfter(startDate))
-        .toList();
+    return views.where((view) => view.timestamp.isAfter(startDate)).toList();
   }
 
   List<int> _aggregateViewsByTime(List<ViewRecord> views) {
@@ -576,8 +583,10 @@ class _EventAnalyticsScreenState extends State<EventAnalyticsScreen> {
         viewCounts = List.filled(7, 0); // Daily buckets
         final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
         for (var view in views) {
-          final dayDiff =
-              view.timestamp.difference(startOfWeek).inDays.clamp(0, 6);
+          final dayDiff = view.timestamp
+              .difference(startOfWeek)
+              .inDays
+              .clamp(0, 6);
           viewCounts[dayDiff]++;
         }
         break;
@@ -585,22 +594,18 @@ class _EventAnalyticsScreenState extends State<EventAnalyticsScreen> {
         viewCounts = List.filled(4, 0); // Weekly buckets
         final startOfMonth = DateTime(now.year, now.month, 1);
         for (var view in views) {
-          final weekDiff =
-              view.timestamp.difference(startOfMonth).inDays ~/ 7;
+          final weekDiff = view.timestamp.difference(startOfMonth).inDays ~/ 7;
           if (weekDiff < 4) viewCounts[weekDiff]++;
         }
         break;
       case 'All Time':
         viewCounts = List.filled(12, 0); // Monthly buckets
         final startYear = views.isNotEmpty
-            ? views
-                .map((v) => v.timestamp.year)
-                .reduce((a, b) => a < b ? a : b)
+            ? views.map((v) => v.timestamp.year).reduce((a, b) => a < b ? a : b)
             : now.year;
         for (var view in views) {
-          final monthDiff = (view.timestamp.year - startYear) * 12 +
-              view.timestamp.month -
-              1;
+          final monthDiff =
+              (view.timestamp.year - startYear) * 12 + view.timestamp.month - 1;
           if (monthDiff < 12) viewCounts[monthDiff]++;
         }
         break;
@@ -612,7 +617,8 @@ class _EventAnalyticsScreenState extends State<EventAnalyticsScreen> {
   }
 
   Map<Map<String, String?>, int> _aggregateViewsByLocation(
-      List<ViewRecord> views) {
+    List<ViewRecord> views,
+  ) {
     final locationCounts = <Map<String, String?>, int>{};
     for (var view in views) {
       final key = {'city': view.city, 'country': view.country};
@@ -622,20 +628,16 @@ class _EventAnalyticsScreenState extends State<EventAnalyticsScreen> {
   }
 
   String _getDayOfWeek(int index) {
-    const days = [
-      'Mon',
-      'Tue',
-      'Wed',
-      'Thu',
-      'Fri',
-      'Sat',
-      'Sun',
-    ];
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     return days[index % 7];
   }
 
   Widget _buildMetricCard(
-      String title, String value, IconData icon, Color color) {
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Card(
       elevation: 2,
       child: Padding(
@@ -663,7 +665,7 @@ class _EventAnalyticsScreenState extends State<EventAnalyticsScreen> {
 class AttendeesScreen extends StatelessWidget {
   final Event event;
 
-  const AttendeesScreen({Key? key, найти этот файл в папке проекта required this.event}) : super(key: key);
+  const AttendeesScreen({Key? key, required this.event}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -678,8 +680,11 @@ class AttendeesScreen extends StatelessWidget {
             .collection('bookings')
             .where('eventId', isEqualTo: event.id)
             .snapshots()
-            .map((snapshot) =>
-                snapshot.docs.map((doc) => Booking.fromFirestore(doc)).toList()),
+            .map(
+              (snapshot) => snapshot.docs
+                  .map((doc) => Booking.fromFirestore(doc))
+                  .toList(),
+            ),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -756,7 +761,11 @@ class EventDetailsScreen extends StatelessWidget {
                     return Container(
                       height: 200,
                       color: Colors.grey[200],
-                      child: const Icon(Icons.image, size: 50, color: Colors.grey),
+                      child: const Icon(
+                        Icons.image,
+                        size: 50,
+                        color: Colors.grey,
+                      ),
                     );
                   },
                 ),
@@ -825,7 +834,8 @@ class EventDetailsScreen extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => EventAnalyticsScreen(event: event),
+                        builder: (context) =>
+                            EventAnalyticsScreen(event: event),
                       ),
                     );
                   },
@@ -1012,8 +1022,10 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
         .collection('bookings')
         .where('eventId', isEqualTo: eventId)
         .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map((doc) => Booking.fromFirestore(doc)).toList());
+        .map(
+          (snapshot) =>
+              snapshot.docs.map((doc) => Booking.fromFirestore(doc)).toList(),
+        );
   }
 
   Stream<Map<String, dynamic>> _getOverallStatsStream() {
@@ -1022,19 +1034,16 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
         .where('eventId', whereIn: organizerEvents.map((e) => e.id).toList())
         .snapshots()
         .map((snapshot) {
-      double totalRevenue = 0.0;
-      int totalBookings = snapshot.docs.length;
-      for (var doc in snapshot.docs) {
-        final data = doc.data();
-        if (data['paid'] == true) {
-          totalRevenue += (data['total'] as num?)?.toDouble() ?? 0.0;
-        }
-      }
-      return {
-        'revenue': totalRevenue,
-        'bookings': totalBookings,
-      };
-    });
+          double totalRevenue = 0.0;
+          int totalBookings = snapshot.docs.length;
+          for (var doc in snapshot.docs) {
+            final data = doc.data();
+            if (data['paid'] == true) {
+              totalRevenue += (data['total'] as num?)?.toDouble() ?? 0.0;
+            }
+          }
+          return {'revenue': totalRevenue, 'bookings': totalBookings};
+        });
   }
 
   Future<void> _deleteEvent(Event event) async {
@@ -1087,7 +1096,9 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
   }
 
   Future<void> _recordView(BuildContext context, Event event) async {
-    final userId = Provider.of<AuthProvider>(context, listen: false).user?.uid ?? 'anonymous';
+    final userId =
+        Provider.of<AuthProvider>(context, listen: false).user?.uid ??
+        'anonymous';
     String? city;
     String? country;
 
@@ -1128,8 +1139,8 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
       platform: Theme.of(context).platform == TargetPlatform.android
           ? 'Android'
           : Theme.of(context).platform == TargetPlatform.iOS
-              ? 'iOS'
-              : 'Unknown',
+          ? 'iOS'
+          : 'Unknown',
       viewType: 'detail_view',
       organizerId: event.organizerId,
       timeSpent: 0,
@@ -1257,10 +1268,10 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : !_hasAccess
-              ? _buildNoAccessState()
-              : organizerEvents.isEmpty
-                  ? _buildEmptyState()
-                  : _buildEventsList(),
+          ? _buildNoAccessState()
+          : organizerEvents.isEmpty
+          ? _buildEmptyState()
+          : _buildEventsList(),
       floatingActionButton: _hasAccess
           ? FloatingActionButton(
               onPressed: () {
