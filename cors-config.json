@@ -1,0 +1,9 @@
+[
+  {
+    "origin": ["http://localhost:5000", "http://localhost:8000", "http://localhost:3000", "http://localhost:4200", "http://localhost:32793", "http://127.0.0.1:32793", "http://localhost"],
+    "method": ["GET"],
+    "responseHeader": ["Content-Type"],
+    "maxAgeSeconds": 3600
+  }
+]
+

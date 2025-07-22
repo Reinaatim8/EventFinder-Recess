@@ -272,7 +272,7 @@ class _MapScreenState extends State<MapScreen>
       final icon = await _createCustomMarker(event);
       final marker = Marker(
         markerId: MarkerId(event.id),
-        position: LatLng(event.latitude ?? 0.0, event.longitude ?? 0.0),
+        position: LatLng(event.latitude, event.longitude),
         icon: icon,
         onTap: () => _onMarkerTap(event),
       );
@@ -295,7 +295,7 @@ class _MapScreenState extends State<MapScreen>
     // Animate camera to marker
     _mapController.animateCamera(
       CameraUpdate.newLatLngZoom(
-       LatLng(event.latitude ?? 0.0, event.longitude ?? 0.0),
+        LatLng(event.latitude, event.longitude),
         15.0,
       ),
     );
@@ -401,9 +401,7 @@ class _MapScreenState extends State<MapScreen>
                   _buildDetailRow(Icons.calendar_today, 'Date', event.date),
                   const SizedBox(height: 12),
                   _buildDetailRow(Icons.location_on, 'Location', 
-                    // '${event.latitude.toStringAsFixed(4)}, ${event.longitude.toStringAsFixed(4)}'
-                    '${(event.latitude ?? 0.0).toStringAsFixed(4)}, ${(event.longitude ?? 0.0).toStringAsFixed(4)}'
-),
+                    '${event.latitude.toStringAsFixed(4)}, ${event.longitude.toStringAsFixed(4)}'),
                   if (event.description.isNotEmpty) ...[
                     const SizedBox(height: 12),
                     _buildDetailRow(Icons.description, 'Description', event.description),
@@ -765,7 +763,6 @@ class _MapScreenState extends State<MapScreen>
           child: const Icon(Icons.my_location, color: Colors.white),
         ),
       ),
-    );//j
+    );
   }
 }
-
