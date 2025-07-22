@@ -9,9 +9,15 @@ class Event {
   final double latitude;
   final double longitude;
   final String category;
-  final String? imageUrl;
   final String organizerId;
-  final double price;
+  final String? status;             
+  final DateTime? timestamp;        
+  final String? rejectionReason;   
+  final DateTime? approvedAt;      
+  final double? latitude;
+  final double? longitude;
+  final String? imageUrl;
+  final int? maxslots;
 
   Event({
     required this.id,
@@ -22,11 +28,18 @@ class Event {
     required this.latitude,
     required this.longitude,
     required this.category,
-    this.imageUrl,
     required this.organizerId,
-    required this.price,
+    this.maxslots,
+    this.status,
+    this.timestamp,
+    this.rejectionReason,
+    this.approvedAt,
+    this.latitude, 
+    this.longitude,
+    this.imageUrl,
   });
 
+  // Deserialize from Firestore
   factory Event.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
     return Event(
@@ -35,12 +48,19 @@ class Event {
       description: data['description'] ?? '',
       date: data['date'] ?? '',
       location: data['location'] ?? '',
-      latitude: (data['latitude'] ?? 0.0).toDouble(),
-      longitude: (data['longitude'] ?? 0.0).toDouble(),
-      category: data['category'] ?? 'Other',
-      imageUrl: data['imageUrl'],
+      price: (data['price'] as num?)?.toDouble() ?? 0.0,
+      maxslots: data['maxslots'],
+      category: data['category'] ?? '',
       organizerId: data['organizerId'] ?? '',
-      price: (data['price'] ?? 0.0).toDouble(),
+      status: data['status'],
+      timestamp: data['timestamp']?.toDate(),
+      rejectionReason: data['rejectionReason'],
+      approvedAt: data['approvedAt']?.toDate(), 
+      // latitude: null,
+      //  longitude: null,
+      latitude: (data['latitude'] as num?)?.toDouble() ?? 0.0,
+      longitude: (data['longitude'] as num?)?.toDouble() ?? 0.0,
+      imageUrl: data['imageUrl'],
     );
   }
 
@@ -51,6 +71,14 @@ class Event {
       'description': description,
       'date': date,
       'location': location,
+      'price': price,
+      'maxslots': maxslots,
+      'category': category,
+      'organizerId': organizerId,
+      'status': status,
+      'timestamp': timestamp,
+      'rejectionReason': rejectionReason,
+      'approvedAt': approvedAt,
       'latitude': latitude,
       'longitude': longitude,
       'category': category,

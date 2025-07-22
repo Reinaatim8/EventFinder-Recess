@@ -1,11 +1,14 @@
 import 'dart:convert';
+import 'dart:ui' as ui;
+import 'dart:typed_data';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:uuid/uuid.dart';
+import 'package:flutter/rendering.dart';
 import 'package:pretty_qr_code/pretty_qr_code.dart';
 import 'package:path_provider/path_provider.dart';
-//import 'package:screenshot/screenshot.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 
@@ -35,11 +38,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   PaymentNetwork? _selectedNetwork;
   String? _validatedPhone;
   String? _ticketId; // QR code ticket
+  final GlobalKey _qrKey = GlobalKey();
+  int numberOfTickets = 1;
+  double get totalAmount => widget.total * numberOfTickets;
+
 
   //final ScreenshotController _screenshotController = ScreenshotController();
   final String subscriptionKey = "aab1d593853c454c9fcec8e4e02dde3c";
   final String apiUser = "815d497c-9cb6-477c-8e30-23c3c2b3bea6";
   final String apiKey = "5594113210ab4f3da3a7329b0ae65f40";
+
+  
 
   @override
   Widget build(BuildContext context) {
@@ -56,7 +65,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         title: const Text("Checkout Your Ticket",
             style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
         centerTitle: true,
-        backgroundColor: Colors.purple.shade900,
+        backgroundColor: Color.fromARGB(255, 25, 25, 95),
+        toolbarHeight: 80,
           //color: Theme.of(context).primaryColor
       ),
       body: Padding(
@@ -65,7 +75,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           Card(
             elevation: 3,
             color: const Color.fromARGB(255, 212, 228, 245),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: 
+              BorderRadius.circular(12)
+              
+              ),
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(children: [
@@ -94,6 +108,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     const SizedBox(height: 10),
                     TextFormField(
                       decoration: const InputDecoration(labelText: "Email Address *"),
+                      initialValue: '', // Optional: pre-fill with user's email if available
+                      //autofocus: true,
+                      keyboardType: TextInputType.emailAddress,
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
+                      
                       onChanged: (val) => email = val,
                       validator: (val) => val!.isEmpty ? "Required" : null,
                     ),
@@ -113,6 +132,28 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               ]),
             ),
           ),
+          const SizedBox(height: 16),
+          Text("Number of Tickets", style: TextStyle(fontWeight: FontWeight.bold)),
+          Row(
+            children: [
+              IconButton(
+                icon: Icon(Icons.remove_circle_outline),
+                onPressed: numberOfTickets > 1
+                    ? () => setState(() => numberOfTickets--)
+                    : null,
+              ),
+              Text('$numberOfTickets', style: TextStyle(fontSize: 18)),
+              IconButton(
+                icon: Icon(Icons.add_circle_outline),
+                onPressed: () => setState(() => numberOfTickets++),
+              ),
+              Spacer(),
+              Text("Total: UGX ${totalAmount.toStringAsFixed(2)}",
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+            ],
+          ),
+         const SizedBox(height: 16),
+
           const SizedBox(height: 20),
           const Text("Mobile Money Payment", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
@@ -123,25 +164,23 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             bgColor: Colors.yellow.shade100,
             borderColor: Colors.orange,
           ),
-          _buildNetworkCard(
-            value: PaymentNetwork.airtel,
-            title: "Airtel Money",
-            image: "assets/images/airtel.png",
-            bgColor: Colors.red.shade50,
-            borderColor: Colors.redAccent,
-          ),
+         
           const Spacer(),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               minimumSize: const Size.fromHeight(50),
-              backgroundColor: Colors.purple.shade900,
+              backgroundColor: Color.fromARGB(255, 25, 25, 95),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             onPressed: () {
               if (_formKey.currentState!.validate()) {
                 if (_selectedNetwork == null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Please select a payment network")),
+                  Fluttertoast.showToast(
+                    msg: "❌ Please select a payment network.",
+                    toastLength: Toast.LENGTH_LONG,
+                    gravity: ToastGravity.TOP,
+                    backgroundColor: Colors.red,
+                    textColor: Colors.white,
                   );
                   return;
                 }
@@ -206,13 +245,25 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       builder: (_) {
         return StatefulBuilder(
           builder: (context, setState) => AlertDialog(
-            title: Text("Pay with $provider Mobile Money"),
+            title: Text("Pay with $provider Mobile Money" ,),
+            titleTextStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
+            icon: const Icon(Icons.mobile_friendly, color: Colors.orange, size: 30, ),
             content: SingleChildScrollView(
               child: Column(
                 children: [
                   TextFormField(
                     keyboardType: TextInputType.phone,
-                    decoration: const InputDecoration(labelText: "Phone Number"),
+                    decoration: const InputDecoration(labelText: "Phone Number",
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(8)),
+                        borderSide: BorderSide(
+                          color: Colors.yellow,
+                          width: 1.5,
+                        ),
+                      ),
+                    ),
                     onChanged: (val) async {
                       phone = val;
                       if (phone.length == 10 && !_hasShownToast) {
@@ -262,6 +313,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               TextButton(
                 onPressed: () => Navigator.pop(context),
                 child: const Text("Cancel"),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  backgroundColor: Colors.red,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8),
+                  
+                  ),
+                ),
               ),
               ElevatedButton(
                 onPressed: () async {
@@ -269,7 +327,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     final token = await getAccessToken();
                     if (token != null) {
                       try {
-                        await requestToPay(phoneNumber: _validatedPhone!, accessToken: token, amount: widget.total);
+                        await requestToPay(phoneNumber: _validatedPhone!, accessToken: token, amount: totalAmount);
                         _showSuccessDialog();
                       } catch (e) {
                         Fluttertoast.showToast(
@@ -292,7 +350,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   }
                 },
                 child: const Text("Confirm Payment"),
-              ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.yellow,
+                  foregroundColor: Colors.black,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),),
             ],
           ),
         );
@@ -309,19 +371,35 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         content:Column(
           mainAxisSize: MainAxisSize.min,
            children: [
-            Text("You booked your ticket for EUR${widget.total.toStringAsFixed(2)}."),
+            Text("Your Event-entry QR Code for UGX${totalAmount.toStringAsFixed(2)}."),
+            Text("Tickets Purchased: $numberOfTickets"),
             const SizedBox(height: 16),
             const Text("🎟 Your Ticket QR Code", style: TextStyle(fontWeight: FontWeight.bold,)),
              if (_ticketId != null)
-
-               SizedBox(
+              RepaintBoundary(
+                key: _qrKey,
+               child: SizedBox(
                  width: 180,
                  height: 180,
                  child: PrettyQrView.data(
                    data: _ticketId!,
                    errorCorrectLevel: QrErrorCorrectLevel.M,
+                   
+                 ),
                  ),
                ),
+               const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: _downloadQRCode,
+                    icon: Icon(Icons.download),
+                    label: Text("Download QR Code"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueAccent,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+
             const SizedBox(height: 8),
              if (_ticketId != null)
                Text('QR Code for: $_ticketId'),
@@ -345,6 +423,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       ),
     );
   }
+  
 
   Future<String?> getAccessToken() async {
     final credentials = base64Encode(utf8.encode('$apiUser:$apiKey'));
@@ -386,6 +465,39 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       throw Exception("Account not active: ${response.body}");
     }
   }
+  Future<void> _downloadQRCode() async {
+  try {
+    if (!(await Permission.storage.request().isGranted)) {
+      Fluttertoast.showToast(msg: "Storage permission denied.");
+      return;
+    }
+
+    RenderRepaintBoundary boundary = _qrKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+    ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+    ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    Uint8List pngBytes = byteData!.buffer.asUint8List();
+
+    final directory = await getExternalStorageDirectory();
+    final downloadPath = "${directory!.path}/EventTicket_${_ticketId!}.png";
+
+    final file = await File(downloadPath).create();
+    await file.writeAsBytes(pngBytes);
+
+    Fluttertoast.showToast(
+      msg: "🎉 QR Code saved to Downloads!",
+      toastLength: Toast.LENGTH_LONG,
+      backgroundColor: Colors.green,
+      textColor: Colors.white,
+    );
+  } catch (e) {
+    print("Error saving QR: $e");
+    Fluttertoast.showToast(
+      msg: "❌ Failed to save QR code.",
+      backgroundColor: Colors.red,
+      textColor: Colors.white,
+    );
+  }
+}
 
   Future<void> requestToPay({
     required String phoneNumber,

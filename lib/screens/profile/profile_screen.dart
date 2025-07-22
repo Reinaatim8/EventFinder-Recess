@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -9,10 +11,26 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Profile'),
-        backgroundColor: Theme.of(context).primaryColor,
+        // title: const Text('User Profile'),
+        backgroundColor: const Color.fromARGB(255, 25, 25, 95),
         foregroundColor: Colors.white,
+        toolbarHeight: 60,
+       title: Row(
+    mainAxisAlignment: MainAxisAlignment.start, // Aligns to the left
+    children: const [
+      Icon(Icons.person, color: Colors.orange), // Profile icon
+      SizedBox(width: 30), // Space between icon and text
+      Text(
+        'User Profile',
+        style: TextStyle(
+          fontSize: 22,
+          fontWeight: FontWeight.bold,
+        ),
       ),
+    ],
+  ),
+),
+      
       body: Consumer<AuthProvider>(
         builder: (context, authProvider, child) {
           final user = authProvider.user;
@@ -29,9 +47,10 @@ class ProfileScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
+                        color: const Color.fromARGB(255, 25, 25, 95),
+                        spreadRadius: 1,
                         blurRadius: 10,
-                        offset: const Offset(0, 5),
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
@@ -39,7 +58,7 @@ class ProfileScreen extends StatelessWidget {
                     children: [
                       CircleAvatar(
                         radius: 50,
-                        backgroundColor: Theme.of(context).primaryColor,
+                        backgroundColor: const Color.fromARGB(255, 25, 25, 95),
                         child: Text(
                           user?.name.substring(0, 1).toUpperCase() ?? 'U',
                           style: const TextStyle(
@@ -111,9 +130,21 @@ class ProfileScreen extends StatelessWidget {
                         ? null
                         : () async {
                             await authProvider.signOut();
+                            // Show toast message
+                        Fluttertoast.showToast(
+                          msg: "Successfully logged out! Sign in again to continue.",
+                          toastLength: Toast.LENGTH_LONG,
+                          gravity: ToastGravity.TOP,
+                          backgroundColor: Colors.green,
+                          textColor: Colors.white,
+                          fontSize: 16.0,);
+
+                          // Navigate to login and clear navigation stack
+                        Navigator.of(context).pushNamedAndRemoveUntil('_handleLogin', (route) => false);
+
                           },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
+                      backgroundColor: Colors.orange,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
@@ -157,7 +188,7 @@ class ProfileScreen extends StatelessWidget {
       child: ListTile(
         leading: Icon(
           icon,
-          color: Theme.of(context).primaryColor,
+          color:Colors.orange,
         ),
         title: Text(
           title,
@@ -175,7 +206,7 @@ class ProfileScreen extends StatelessWidget {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
         ),
-        tileColor: Colors.white,
+        tileColor: Colors.grey[100],
       ),
     );
   }
