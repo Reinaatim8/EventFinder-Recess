@@ -11,7 +11,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import '../../services/booking_service.dart';
 import '../../models/event.dart';
-import '../../models/booking.dart';
 import '../../providers/auth_provider.dart';
 
 // Booking State Manager
@@ -144,8 +143,20 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   void initState() {
     super.initState();
     _ticketId = widget.ticketId;
-    _loadUserData();
-    _initializeBookingState();
+    if (_auth.currentUser == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please log in to book an event'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        Navigator.pop(context);
+      });
+    } else {
+      _loadUserData();
+      _initializeBookingState();
+    }
   }
 
   Future<void> _initializeBookingState() async {
@@ -195,21 +206,29 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   Future<void> _saveBookingToFirestore(Map<String, dynamic> bookingData) async {
     try {
       final User? currentUser = _auth.currentUser;
-      if (currentUser != null) {
-        bookingData['userId'] = currentUser.uid;
+      if (currentUser == null) {
+        throw Exception('User must be logged in to book an event');
       }
-      await _firestore.collection('bookings').doc(_ticketId).set(bookingData);
-      if (currentUser != null) {
-        await _firestore
-            .collection('users')
-            .doc(currentUser.uid)
-            .collection('bookings')
-            .doc(_ticketId)
-            .set(bookingData);
-      }
-      await _bookingService.saveBookingToFirestore(bookingData);
+      bookingData['userId'] = currentUser.uid;
+      bookingData['event'] = bookingData['eventTitle'];
+      bookingData['price'] = bookingData['amount'];
+      bookingData['paid'] = bookingData['paymentStatus'] == 'completed';
+      bookingData['eventId'] = bookingData['eventId'];
+      bookingData['isVerified'] = widget.event.isVerified;
+      bookingData['verificationStatus'] = widget.event.verificationStatus;
+      bookingData['ticketId'] = bookingData['ticketId'];
+
+      // Save to bookings collection
+      final bookingRef = await _firestore.collection('bookings').add(bookingData);
+      // Save to user-specific subcollection
+      await _firestore
+          .collection('users')
+          .doc(currentUser.uid)
+          .collection('bookings')
+          .doc(bookingRef.id)
+          .set(bookingData);
       await _saveBookingLocally(bookingData);
-      print('Booking saved successfully: $_ticketId');
+      print('Booking saved successfully: ${bookingRef.id}');
     } catch (e) {
       print('Error saving booking: $e');
       await _saveBookingLocally(bookingData);
@@ -618,20 +637,24 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         'ticketId': _ticketId,
         'eventId': widget.event.id,
         'eventTitle': widget.event.title,
+        'event': widget.event.title,
         'firstName': _firstNameController.text.trim(),
         'lastName': _lastNameController.text.trim(),
         'email': _emailController.text.trim(),
-        'phone': _validatedPhone,
+        'phone': _validatedPhone ?? '',
         'amount': 0.0,
+        'price': 0.0,
         'currency': 'EUR',
         'paymentMethod': 'Free Event',
         'paymentStatus': 'completed',
+        'paid': true,
         'subscribeOrganizer': subscribeOrganizer,
         'subscribeUpdates': subscribeUpdates,
         'bookingDate': Timestamp.now(),
         'timestamp': FieldValue.serverTimestamp(),
         'createdAt': DateTime.now().toIso8601String(),
-        'paid': true,
+        'isVerified': widget.event.isVerified,
+        'verificationStatus': widget.event.verificationStatus,
       };
 
       _bookingManager.updateBookingStatus(
@@ -674,25 +697,34 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         'ticketId': _ticketId,
         'eventId': widget.event.id,
         'eventTitle': widget.event.title,
+        'event': widget.event.title,
         'firstName': _firstNameController.text.trim(),
         'lastName': _lastNameController.text.trim(),
         'email': _emailController.text.trim(),
         'phone': _validatedPhone,
         'amount': widget.total,
+        'price': widget.total,
         'currency': 'EUR',
         'paymentMethod': _selectedNetwork == PaymentNetwork.mtn ? 'MTN Mobile Money' : 'Airtel Money',
         'paymentStatus': 'completed',
+        'paid': true,
         'subscribeOrganizer': subscribeOrganizer,
         'subscribeUpdates': subscribeUpdates,
         'bookingDate': Timestamp.now(),
         'timestamp': FieldValue.serverTimestamp(),
         'createdAt': DateTime.now().toIso8601String(),
-        'paid': true,
+        'isVerified': widget.event.isVerified,
+        'verificationStatus': widget.event.verificationStatus,
       };
 
       _bookingManager.updateBookingStatus(
         widget.event.id,
-        BookingStatus(ticketId: _ticketId!, status: 'completed', timestamp: DateTime.now(), amount: widget.total),
+        BookingStatus(
+          ticketId: _ticketId!,
+          status: 'completed',
+          timestamp: DateTime.now(),
+          amount: widget.total,
+        ),
       );
 
       await _saveBookingToFirestore(bookingData);
@@ -760,25 +792,25 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       context: context,
       barrierDismissible: false,
       builder: (_) => AlertDialog(
-        title: const Text("Reservation Successful ✅", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+        title: const Text("Booking Failed", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.red)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(widget.total == 0 ? "Your spot for ${widget.event.title} has been reserved!" : "Your Event ticket for €${widget.total.toStringAsFixed(2)}."),
+            Text("Failed to book ${widget.event.title}: $error"),
             const SizedBox(height: 16),
-            const Text("🎟 Your Ticket QR Code", style: TextStyle(fontWeight: FontWeight.bold)),
-            if (_ticketId != null) SizedBox(width: 180, height: 180, child: PrettyQrView.data(data: _ticketId!, errorCorrectLevel: QrErrorCorrectLevel.M)),
-            const SizedBox(height: 8),
-            if (_ticketId != null) Text('QR Code for: $_ticketId'),
-            const SizedBox(height: 10),
-            const Text("⚠️ Please screenshot this QR code immediately as backup storage failed.", style: TextStyle(fontSize: 12, color: Colors.red)),
+            if (_ticketId != null) ...[
+              const Text("🎟 Your Ticket QR Code (Backup)", style: TextStyle(fontWeight: FontWeight.bold)),
+              SizedBox(width: 180, height: 180, child: PrettyQrView.data(data: _ticketId!, errorCorrectLevel: QrErrorCorrectLevel.M)),
+              const SizedBox(height: 8),
+              Text('QR Code for: $_ticketId'),
+              const SizedBox(height: 10),
+              const Text("⚠️ Please screenshot this QR code as backup storage failed.", style: TextStyle(fontSize: 12, color: Colors.red)),
+            ],
           ],
         ),
         actions: [
           ElevatedButton(
             onPressed: () {
-              Navigator.pop(context);
-              if (widget.onPaymentSuccess != null) widget.onPaymentSuccess!();
               Navigator.pop(context);
             },
             child: const Text("OK"),

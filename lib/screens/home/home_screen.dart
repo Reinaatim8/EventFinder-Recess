@@ -36,6 +36,12 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoading = true;
   Set<String> bookedEventIds = {};
 
+  bool _isAdmin() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final isAdmin = authProvider.user?.email == 'kennedymutebi7@gmail.com' ?? false;
+    return isAdmin;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -72,7 +78,7 @@ class _HomeScreenState extends State<HomeScreen> {
           .get();
       print('Retrieved ${snapshot.docs.length} documents');
       List<Event> fetchedEvents = snapshot.docs.map((doc) {
-        print('Event ID: ${doc.id}, Data: ${doc.data()}');
+        print('Raw Firestore data for ${doc.id}: ${doc.data()}');
         return Event.fromFirestore(doc);
       }).toList();
       fetchedEvents.sort((a, b) {
@@ -200,7 +206,7 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         events.add(event);
       });
-      print('Event added to Firestore: ${event.id}, organizerId: ${event.organizerId}');
+      print('Event added to Firestore: ${event.id}, organizerId: ${event.organizerId}, isVerified: ${event.isVerified}, verificationStatus: ${event.verificationStatus}');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Event added successfully')),
       );
@@ -316,6 +322,65 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _showEventSelectionDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Select Event to Verify'),
+        content: Container(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: events.length,
+            itemBuilder: (context, index) {
+              final event = events[index];
+              return ListTile(
+                title: Text(event.title),
+                subtitle: Text(
+                  event.isVerified ? 'Verified' : 'Unverified',
+                  style: TextStyle(
+                    color: event.isVerified ? Colors.green : Colors.red,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => VerificationScreen(
+                        event: event,
+                        isVerified: event.isVerified,
+                        verificationDocumentUrl: event.verificationDocumentUrl,
+                        verificationStatus: event.verificationStatus,
+                        rejectionReason: event.rejectionReason,
+                        onBookingAdded: (booking) {
+                          bookingsTabKey.currentState?.addBooking(booking);
+                        },
+                        onStatusUpdate: (status) {
+                          print('Status updated for event ${event.id}: $status');
+                          setState(() {
+                            _eventStatus[event.id] = status;
+                          });
+                          _fetchEvents(); // Refetch events to update UI
+                        },
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
   List<Widget> _getScreens() => [
         HomeTab(
           events: events,
@@ -363,6 +428,13 @@ class _HomeScreenState extends State<HomeScreen> {
           });
         },
       ),
+      floatingActionButton: _isAdmin()
+          ? FloatingActionButton(
+              onPressed: _showEventSelectionDialog,
+              backgroundColor: Colors.blue,
+              child: const Icon(Icons.admin_panel_settings, color: Colors.white),
+            )
+          : null,
     );
   }
 }
@@ -799,10 +871,13 @@ class EventCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    print('Rendering EventCard: ${event.title}, isBooked: $isBooked, isVerified: ${event.isVerified}, verificationStatus: ${event.verificationStatus}');
+    print('Rendering EventCard: ${event.title}, isBooked: $isBooked, isVerified: ${event.isVerified}, verificationStatus: ${event.verificationStatus}, verificationDocumentUrl: ${event.verificationDocumentUrl != null ? "present" : "null"}');
     final eventDate = parseEventDate(event.date);
     final isPast = eventDate.isBefore(DateTime.now());
-    final isVerified = event.isVerified || (event.verificationDocumentUrl != null && event.verificationDocumentUrl!.isNotEmpty && event.verificationStatus != 'rejected');
+    final isVerified = event.isVerified; // Fixed: Use only event.isVerified
+
+    // Debug log to confirm verification status rendering
+    print('EventCard verification status for ${event.title}: isVerified=$isVerified, verificationStatus=${event.verificationStatus}, displayed as ${isVerified ? "Verified" : "Unverified"}');
 
     return GestureDetector(
       onTap: () {
@@ -844,20 +919,20 @@ class EventCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: isVerified ? Colors.green : (event.verificationStatus == 'pending' ? Colors.orange : Colors.red),
+                      color: isVerified ? Colors.green : Colors.red,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          isVerified ? Icons.verified : (event.verificationStatus == 'pending' ? Icons.hourglass_empty : Icons.warning),
+                          isVerified ? Icons.verified : Icons.warning,
                           color: Colors.white,
                           size: 12,
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          isVerified ? 'Verified' : (event.verificationStatus == 'pending' ? 'Pending' : 'Unverified'),
+                          isVerified ? 'Verified' : 'Unverified',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 10,
@@ -901,8 +976,15 @@ class EventCard extends StatelessWidget {
                       width: double.infinity,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) {
-                        print('Image load error for ${event.imageUrl}: $error');
-                        return Image.asset('assets/placeholder.png');
+                        return Container(
+                          height: 200,
+                          color: const Color.fromARGB(255, 111, 110, 110),
+                          child: Icon(
+                            _getCategoryIcon(event.category),
+                            size: 60,
+                            color: Colors.grey[400],
+                          ),
+                        );
                       },
                     ),
                   ),

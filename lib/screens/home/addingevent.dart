@@ -1,5 +1,4 @@
 import 'package:event_locator_app/models/event.dart';
-import 'package:event_locator_app/screens/home/event_management_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -9,7 +8,6 @@ import 'package:flutter/foundation.dart';
 import 'dart:io';
 import 'dart:typed_data';
 import '../../providers/auth_provider.dart';
-import '../../models/event.dart';
 import '../map/location_picker_screen.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:file_picker/file_picker.dart';
@@ -152,7 +150,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
 
       if (result != null) {
         PlatformFile file = result.files.first;
-        
+
         if (kIsWeb) {
           setState(() {
             _webVerificationDocument = file.bytes;
@@ -217,12 +215,15 @@ class _AddEventDialogState extends State<AddEventDialog> {
 
       TaskSnapshot snapshot = await uploadTask;
       String downloadUrl = await snapshot.ref.getDownloadURL();
-      
+
       print('Image uploaded successfully. URL: $downloadUrl');
       return downloadUrl;
     } catch (e) {
       print('Error uploading image: $e');
       if (mounted) {
+        setState(() {
+          _isUploading = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error uploading image: $e'),
@@ -250,7 +251,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
       Reference storageRef = FirebaseStorage.instance.ref().child(fileName);
 
       String contentType = _getContentType(_verificationDocumentName ?? '');
-      
+
       UploadTask uploadTask;
       if (kIsWeb && _webVerificationDocument != null) {
         uploadTask = storageRef.putData(
@@ -284,7 +285,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
 
       TaskSnapshot snapshot = await uploadTask;
       String downloadUrl = await snapshot.ref.getDownloadURL();
-      
+
       print('Verification document uploaded successfully. URL: $downloadUrl');
       return downloadUrl;
     } catch (e) {
@@ -322,8 +323,13 @@ class _AddEventDialogState extends State<AddEventDialog> {
 
   Future<void> _saveEventToFirestore(Event event) async {
     try {
+      print('Saving event to Firestore: ${event.toFirestore()}');
       await _firestore.collection('events').doc(event.id).set(event.toFirestore());
-      print('Event saved to Firestore successfully: ${event.id}, organizerId: ${event.organizerId}');
+      print('Event saved to Firestore successfully: ${event.id}, organizerId: ${event.organizerId}, isVerified: ${event.isVerified}, verificationStatus: ${event.verificationStatus}');
+      // Verify the saved data
+      final savedDoc = await _firestore.collection('events').doc(event.id).get();
+      final savedData = savedDoc.data();
+      print('Retrieved saved event from Firestore: $savedData');
     } catch (e) {
       print('Error saving event to Firestore: $e');
       throw e;
@@ -953,17 +959,20 @@ class _AddEventDialogState extends State<AddEventDialog> {
           verificationStatus: _requiresVerification ? 'pending' : null,
           requiresVerification: _requiresVerification,
           verificationSubmittedAt: _requiresVerification ? DateTime.now().toIso8601String() : null,
+          isVerified: false, // Explicitly set to false to ensure initial unverified state
+          status: 'unverified', // Explicitly set to align with Event model default
         );
 
+        print('Event created: ${event.toFirestore()}');
         await _saveEventToFirestore(event);
-
+        print('Calling onAddEvent with event: id=${event.id}, isVerified=${event.isVerified}, verificationStatus=${event.verificationStatus}');
         widget.onAddEvent(event);
 
         if (mounted) {
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(_requiresVerification 
+              content: Text(_requiresVerification
                   ? 'Event added successfully! Your verification document is being reviewed.'
                   : 'Event added successfully!'),
               backgroundColor: Colors.green,
@@ -998,6 +1007,6 @@ class _AddEventDialogState extends State<AddEventDialog> {
 class LatLng {
   final double latitude;
   final double longitude;
-  
+
   const LatLng(this.latitude, this.longitude);
 }

@@ -39,6 +39,7 @@ dependencies:
   fluttertoast: ^8.2.12
   email_validator: ^3.0.0
   equatable: ^2.0.7
+  url_launcher: ^6.1.0
   
 
   # Map & Location
