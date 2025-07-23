@@ -1,9 +1,13 @@
 import 'dart:convert';
 import 'dart:async';
+import 'dart:ui' as ui;
+import 'dart:typed_data';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:uuid/uuid.dart';
+import 'package:flutter/rendering.dart';
 import 'package:pretty_qr_code/pretty_qr_code.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -131,6 +135,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   // Firebase instances
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final GlobalKey _qrKey = GlobalKey();
+  int numberOfTickets = 1;
+  double get totalAmount => widget.total * numberOfTickets;
+
 
   // Booking state manager
   final BookingStateManager _bookingManager = BookingStateManager();
@@ -615,13 +623,25 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       builder: (_) {
         return StatefulBuilder(
           builder: (context, setState) => AlertDialog(
-            title: Text("Pay with $provider Mobile Money"),
+            title: Text("Pay with $provider Mobile Money" ,),
+            titleTextStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
+            icon: const Icon(Icons.mobile_friendly, color: Colors.orange, size: 30, ),
             content: SingleChildScrollView(
               child: Column(
                 children: [
                   TextFormField(
                     keyboardType: TextInputType.phone,
-                    decoration: const InputDecoration(labelText: "Phone Number"),
+                    decoration: const InputDecoration(labelText: "Phone Number",
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(8)),
+                        borderSide: BorderSide(
+                          color: Colors.yellow,
+                          width: 1.5,
+                        ),
+                      ),
+                    ),
                     onChanged: (val) async {
                       phone = val;
                       if (phone.length == 10 && !_hasShownToast) {
@@ -671,6 +691,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               TextButton(
                 onPressed: () => Navigator.pop(context),
                 child: const Text("Cancel"),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  backgroundColor: Colors.red,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8),
+                  
+                  ),
+                ),
               ),
               ElevatedButton(
                 onPressed: () async {
@@ -702,7 +729,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   }
                 },
                 child: const Text("Confirm Payment"),
-              ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.yellow,
+                  foregroundColor: Colors.black,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),),
             ],
           ),
         );
@@ -861,22 +892,40 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
+           children: [
+            Text("Your Event-entry QR Code for UGX${totalAmount.toStringAsFixed(2)}."),
+            Text("Tickets Purchased: $numberOfTickets"),
           children: [
             Text(widget.total == 0
                 ? "Your spot for ${widget.eventTitle} has been reserved!"
                 : "Your Event ticket for €${widget.total.toStringAsFixed(2)}."),
             const SizedBox(height: 16),
-            const Text("🎟 Your Ticket QR Code",
-                style: TextStyle(fontWeight: FontWeight.bold)),
-            if (_ticketId != null)
-              SizedBox(
-                width: 180,
-                height: 180,
-                child: PrettyQrView.data(
-                  data: _ticketId!,
-                  errorCorrectLevel: QrErrorCorrectLevel.M,
-                ),
-              ),
+            const Text("🎟 Your Ticket QR Code", style: TextStyle(fontWeight: FontWeight.bold,)),
+             if (_ticketId != null)
+              RepaintBoundary(
+                key: _qrKey,
+               child: SizedBox(
+                 width: 180,
+                 height: 180,
+                 child: PrettyQrView.data(
+                   data: _ticketId!,
+                   errorCorrectLevel: QrErrorCorrectLevel.M,
+                   
+                 ),
+                 ),
+               ),
+               const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: _downloadQRCode,
+                    icon: Icon(Icons.download),
+                    label: Text("Download QR Code"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueAccent,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+
             const SizedBox(height: 8),
             if (_ticketId != null)
               Text('QR Code for: $_ticketId'),
@@ -1048,16 +1097,46 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         },
       );
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data['result'] == true;
-      }
-      return false;
-    } catch (e) {
-      print('Error validating account holder: $e');
-      return false;
+    if (response.statusCode == 200) {
+      print("✅ Account is active: $phone");
+    } else {
+      print("❌ Account not active: ${response.body}");
+      throw Exception("Account not active: ${response.body}");
     }
   }
+  Future<void> _downloadQRCode() async {
+  try {
+    if (!(await Permission.storage.request().isGranted)) {
+      Fluttertoast.showToast(msg: "Storage permission denied.");
+      return;
+    }
+
+    RenderRepaintBoundary boundary = _qrKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+    ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+    ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    Uint8List pngBytes = byteData!.buffer.asUint8List();
+
+    final directory = await getExternalStorageDirectory();
+    final downloadPath = "${directory!.path}/EventTicket_${_ticketId!}.png";
+
+    final file = await File(downloadPath).create();
+    await file.writeAsBytes(pngBytes);
+
+    Fluttertoast.showToast(
+      msg: "🎉 QR Code saved to Downloads!",
+      toastLength: Toast.LENGTH_LONG,
+      backgroundColor: Colors.green,
+      textColor: Colors.white,
+    );
+  } catch (e) {
+    print("Error saving QR: $e");
+    Fluttertoast.showToast(
+      msg: "❌ Failed to save QR code.",
+      backgroundColor: Colors.red,
+      textColor: Colors.white,
+    );
+  }
+}
 
   // Request payment
   Future<void> requestToPay({

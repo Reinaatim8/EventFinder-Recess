@@ -28,6 +28,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
   final _dateController = TextEditingController();
   final _locationController = TextEditingController();
   final _priceController = TextEditingController();
+  final _maxslotsController = TextEditingController();
   String _selectedCategory = 'Other';
   File? _selectedImage;
   Uint8List? _webImage;
@@ -703,7 +704,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
                   children: [
                     Icon(
                       Icons.add_circle,
-                      color: Theme.of(context).primaryColor,
+                      color: Color.fromARGB(255, 25, 25, 95),
                       size: 28,
                     ),
                     const SizedBox(width: 10),
@@ -769,6 +770,26 @@ class _AddEventDialogState extends State<AddEventDialog> {
                     return null;
                   },
                 ),
+                   const SizedBox(height: 15),
+                TextFormField(
+                  controller: _maxslotsController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Maximum/Capacity Slots',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter max slots';
+                    }
+                    if (int.tryParse(value) == null) {
+                      return 'Please enter a valid number';
+                    }
+                    return null;
+                  },
+                ),
+                
+
                 const SizedBox(height: 15),
                 TextFormField(
                   controller: _dateController,
@@ -855,7 +876,12 @@ class _AddEventDialogState extends State<AddEventDialog> {
                     Expanded(
                       child: TextButton(
                         onPressed: _isUploading ? null : () => Navigator.pop(context),
-                        child: const Text('Cancel'),
+                        child: Text('Cancel')
+                        ,
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          backgroundColor: Colors.red,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -863,7 +889,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
                       child: ElevatedButton(
                         onPressed: _isUploading ? null : _addEvent,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(context).primaryColor,
+                          backgroundColor: Color.fromARGB(255, 25, 25, 95),
                           foregroundColor: Colors.white,
                         ),
                         child: _isUploading
@@ -954,6 +980,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
           imageUrl: imageUrl,
           organizerId: organizerId,
           price: double.tryParse(_priceController.text) ?? 0.0,
+          maxslots: int.tryParse(_maxslotsController.text) ?? 0,
           verificationDocumentUrl: verificationDocumentUrl,
           verificationDocumentType: _requiresVerification ? _selectedDocumentType : null,
           verificationStatus: _requiresVerification ? 'pending' : null,
@@ -1000,13 +1027,13 @@ class _AddEventDialogState extends State<AddEventDialog> {
     _dateController.dispose();
     _locationController.dispose();
     _priceController.dispose();
+    _maxslotsController.dispose();
     super.dispose();
   }
 }
 
 class LatLng {
-  final double latitude;
-  final double longitude;
-
-  const LatLng(this.latitude, this.longitude);
+  double? get latitude => null;
+  
+  double? get longitude => null;
 }

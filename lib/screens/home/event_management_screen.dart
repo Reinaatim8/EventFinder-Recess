@@ -674,7 +674,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
           'Event Management',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
-        backgroundColor: Theme.of(context).primaryColor,
+        backgroundColor: Color.fromARGB(255, 25, 25, 95),
         elevation: 0,
         actions: [
           IconButton(
@@ -702,7 +702,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                   ),
                 );
               },
-              backgroundColor: Theme.of(context).primaryColor,
+              backgroundColor: Color.fromARGB(255, 25, 25, 95),
               child: const Icon(Icons.add, color: Colors.white),
             )
           : null,
@@ -754,7 +754,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
             icon: const Icon(Icons.arrow_back),
             label: const Text('Go Back'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).primaryColor,
+              backgroundColor: Color.fromARGB(255, 25, 25, 95),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
             ),
@@ -806,7 +806,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
             icon: const Icon(Icons.add),
             label: const Text('Create Event'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).primaryColor,
+              backgroundColor: Color.fromARGB(255, 25, 25, 95),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
             ),
@@ -836,18 +836,10 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                 child: FutureBuilder<Map<String, dynamic>>(
                   future: _getOverallStats(),
                   builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return _buildSummaryCard(
-                        'Total Revenue',
-                        'Loading...',
-                        Icons.attach_money,
-                        Colors.green,
-                      );
-                    }
-                    final stats = snapshot.data ?? {'revenue': 0.0, 'bookings': 0, 'paidBookings': 0};
+                    final stats = snapshot.data ?? {'revenue': 0.0, 'bookings': 0};
                     return _buildSummaryCard(
                       'Total Revenue',
-                      '€${stats['revenue'].toStringAsFixed(2)}',
+                      'UGX ${stats['revenue'].toStringAsFixed(2)}',
                       Icons.attach_money,
                       Colors.green,
                     );
@@ -889,12 +881,12 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: Theme.of(context).primaryColor.withOpacity(0.1),
+                                color: Color.fromARGB(255, 25, 25, 95).withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Icon(
                                 _getCategoryIcon(event.category),
-                                color: Theme.of(context).primaryColor,
+                                color: Color.fromARGB(255, 25, 25, 95),
                                 size: 24,
                               ),
                             ),
@@ -958,6 +950,9 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                             final bookings = snapshot.data ?? [];
                             final paidBookings = bookings.where((b) => b.paid).length;
                             final totalRevenue = bookings.where((b) => b.paid).fold(0.0, (sum, booking) => sum + booking.total);
+                                final bookedCount = bookings.length;
+                            final maxslots = event.maxslots ?? 0;
+                            final slotsRemaining = maxslots - bookedCount;
 
                             return Container(
                               padding: const EdgeInsets.all(12),
@@ -977,7 +972,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
-                                      const Text('Total Bookings'),
+                                      const Text('Bookings'),
                                     ],
                                   ),
                                   Column(
@@ -996,7 +991,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                                   Column(
                                     children: [
                                       Text(
-                                        '€${totalRevenue.toStringAsFixed(2)}',
+                                        'UGX ${totalRevenue.toStringAsFixed(2)}',
                                         style: const TextStyle(
                                           fontSize: 18,
                                           fontWeight: FontWeight.bold,
@@ -1006,6 +1001,19 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                                       const Text('Revenue'),
                                     ],
                                   ),
+                                  if (maxslots > 0) ...[
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      slotsRemaining > 0
+                                        ? 'Slots-Left: $slotsRemaining'
+                                        : 'Slots full',
+                                      style: TextStyle(
+                                        color: slotsRemaining > 0 ? Colors.orange : Colors.red,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+
                                 ],
                               ),
                             );
@@ -1130,18 +1138,19 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: Theme.of(context).primaryColor.withOpacity(0.1),
+          color: Color.fromARGB(255, 25, 25, 95).withOpacity(0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: Theme.of(context).primaryColor),
+            Icon(icon, size: 16, color: Color.fromARGB(255, 25, 25, 95)),
             const SizedBox(width: 4),
             Text(
               label,
               style: TextStyle(
-                color: Theme.of(context).primaryColor,
+                color: Color.fromARGB(255, 25, 25, 95),
+                fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -1150,8 +1159,35 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
       ),
     );
   }
+
+  IconData _getCategoryIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'concert':
+      case 'festival':
+        return Icons.music_note;
+      case 'conference':
+        return Icons.computer;
+      case 'workshop':
+        return Icons.build;
+      case 'sports':
+        return Icons.sports;
+      case 'networking':
+        return Icons.group;
+      case 'exhibition':
+        return Icons.museum;
+      case 'theater':
+        return Icons.theater_comedy;
+      case 'comedy':
+        return Icons.sentiment_very_satisfied;
+      default:
+        return Icons.event;
+    }
+  }
+}
+mixin maxSlots {
 }
 
+// Event Details Screen
 class EventDetailsScreen extends StatelessWidget {
   final Event event;
 
@@ -1162,7 +1198,7 @@ class EventDetailsScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(event.title),
-        backgroundColor: Theme.of(context).primaryColor,
+        backgroundColor: Color.fromARGB(255, 25, 25, 95),
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
@@ -1257,8 +1293,8 @@ class AttendeesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('${event.title} Attendees'),
-        backgroundColor: Theme.of(context).primaryColor,
+        title: Text('${widget.event.title} - Attendees'),
+        backgroundColor: Color.fromARGB(255, 25, 25, 95),
         foregroundColor: Colors.white,
       ),
       body: FutureBuilder<List<Booking>>(
@@ -1324,8 +1360,8 @@ class EventAnalyticsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('${event.title} Analytics'),
-        backgroundColor: Theme.of(context).primaryColor,
+        title: Text('${event.title} - Analytics'),
+        backgroundColor: Color.fromARGB(255, 25, 25, 95),
         foregroundColor: Colors.white,
       ),
       body: FutureBuilder<Map<String, dynamic>>(

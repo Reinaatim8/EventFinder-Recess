@@ -23,6 +23,7 @@ class Event {
   final bool? requiresVerification;
   final String? verificationSubmittedAt;
   
+  final int? maxslots;
 
   Event({
     required this.id,
@@ -33,6 +34,7 @@ class Event {
     required this.price,
     required this.category,
     required this.organizerId,
+    this.maxslots,
     this.status = 'unverified',
     this.timestamp,
     this.rejectionReason,
@@ -97,7 +99,8 @@ class Event {
         date: date,
         location: location,
         price: (data['price'] as num?)?.toDouble() ?? 0.0,
-        category: category,
+        maxslots: data['maxslots'],
+      category: category,
         organizerId: organizerId,
         status: data['status']?.toString() ?? 'unverified',
         timestamp: (data['timestamp'] as Timestamp?)?.toDate(),
@@ -137,6 +140,7 @@ class Event {
       'date': date,
       'location': location,
       'price': price,
+      'maxslots': maxslots,
       'category': category,
       'organizerId': organizerId,
       'status': status,

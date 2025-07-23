@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:provider/provider.dart';
 import '../../core/utils/validators.dart';
 import '../../providers/auth_provider.dart';
@@ -15,12 +16,14 @@ class CustomTextField extends StatelessWidget {
   final bool obscureText;
   final String? Function(String?)? validator;
   final Widget? prefixIcon;
+  final TextStyle? labelStyle;
 
   const CustomTextField({
     Key? key,
     required this.label,
     required this.hint,
     required this.controller,
+    this.labelStyle,
     this.keyboardType = TextInputType.text,
     this.obscureText = false,
     this.validator,
@@ -36,8 +39,8 @@ class CustomTextField extends StatelessWidget {
           label,
           style: const TextStyle(
             fontWeight: FontWeight.w600,
-            fontSize: 14,
-            color: Colors.white,
+            fontSize: 17,
+            color:  const Color.fromARGB(255, 25, 25, 95),
           ),
         ),
         const SizedBox(height: 8),
@@ -49,9 +52,7 @@ class CustomTextField extends StatelessWidget {
           decoration: InputDecoration(
             hintText: hint,
             prefixIcon: prefixIcon,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
+            border: InputBorder.none,
             filled: true,
             fillColor: Colors.white.withOpacity(0.9),
           ),
@@ -74,6 +75,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
 
+  
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -91,12 +94,16 @@ class _LoginScreenState extends State<LoginScreen> {
         password: _passwordController.text.trim(),
       );
       if (!success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(authProvider.errorMessage ?? 'Login failed'),
+        
+          Fluttertoast.showToast(
+            msg: "Login failed. Please check your credentials.",
+            toastLength: Toast.LENGTH_LONG,
+            gravity: ToastGravity.TOP,
             backgroundColor: Colors.red,
-          ),
-        );
+            textColor: Colors.white,
+            fontSize: 18.0,
+          );
+        
       }
     }
   }
@@ -109,13 +116,13 @@ class _LoginScreenState extends State<LoginScreen> {
         height: double.infinity,
         decoration: const BoxDecoration(
           image: DecorationImage(
-            image: AssetImage('assets/images/background.jpg'),
+            image: AssetImage('assets/images/orange.jpeg'),
             fit: BoxFit.cover,
           ),
         ),
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.4),
+            color: const Color.fromARGB(255, 25, 25, 95).withOpacity(0.4),
           ),
           child: SafeArea(
             child: SingleChildScrollView(
@@ -125,19 +132,19 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   const SizedBox(height: 60),
                   const Text(
-                    "Welcome Back",
+                    " Welcome Back!",
                     style: TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: Colors.orange,
                     ),
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    "Sign in to discover amazing events near you",
+                    "Sign in to continue discovering amazing events near you",
                     style: TextStyle(
                       fontSize: 16,
-                      color: Colors.white70,
+                      color: Colors.white,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -145,12 +152,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.2),
-                        width: 1,
-                      ),
+                      color: const Color.fromARGB(179, 249, 248, 248).withOpacity(0.95),
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Color.fromARGB(255, 25, 25, 95),
+                          blurRadius: 20,
+                          spreadRadius: 2,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
                     ),
                     child: Consumer<AuthProvider>(
                       builder: (context, authProvider, child) {
@@ -162,11 +173,13 @@ class _LoginScreenState extends State<LoginScreen> {
                               CustomTextField(
                                 label: "Email",
                                 hint: "Enter your email",
+                                
+                                
                                 controller: _emailController,
                                 keyboardType: TextInputType.emailAddress,
                                 validator: Validators.validateEmail,
                                 prefixIcon: IconButton(
-                                  icon: const Icon(Icons.email_outlined, color: Colors.black),
+                                  icon: const Icon(Icons.email_outlined, color: Colors.orange),
                                   onPressed: () {
                                     _emailController.clear();
                                   },
@@ -182,13 +195,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                 prefixIcon: IconButton(
                                   icon: Icon(
                                     _obscurePassword ? Icons.lock_outline : Icons.lock_open,
-                                    color: Colors.black,
+                                    color: Colors.orange,
                                   ),
                                   onPressed: () {
                                     setState(() {
                                       _obscurePassword = !_obscurePassword;
                                     });
                                   },
+                                  
                                 ),
                               ),
                               const SizedBox(height: 12),
@@ -205,8 +219,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                   },
                                   child: const Text(
                                     "Forgot Password?",
-                                    style: TextStyle(color: Colors.white70),
+                                    style: TextStyle(color: Color.fromARGB(255, 25, 25, 95), decoration: TextDecoration.underline, fontSize: 18,decorationColor: Color.fromARGB(255, 25, 25, 95),),
                                   ),
+                                  
                                 ),
                               ),
                               const SizedBox(height: 24),
@@ -214,6 +229,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 text: "Sign In",
                                 onPressed: () => _handleLogin(context),
                                 isLoading: authProvider.isLoading,
+                                backgroundColor: const Color.fromARGB(255, 25, 25, 95),
+                                textColor: Colors.orange,
                               ),
                               const SizedBox(height: 24),
                               Row(
@@ -221,7 +238,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 children: [
                                   const Text(
                                     "Don't have an account? ",
-                                    style: TextStyle(color: Colors.white70),
+                                    style: TextStyle(color: Color.fromARGB(255, 25, 25, 95)),
                                   ),
                                   TextButton(
                                     onPressed: () {
@@ -236,7 +253,11 @@ class _LoginScreenState extends State<LoginScreen> {
                                       "Sign Up",
                                       style: TextStyle(
                                         fontWeight: FontWeight.w600,
-                                        color: Colors.white,
+                                        color: Color.fromARGB(255, 25, 25, 95),
+                                        fontSize: 20,
+                                        decoration: TextDecoration.underline,
+                                        decorationColor:Color.fromARGB(255, 25, 25, 95),
+                                         
                                       ),
                                     ),
                                   ),
