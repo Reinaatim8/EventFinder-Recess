@@ -658,6 +658,7 @@ class HomeTab extends StatelessWidget {
                               context,
                               MaterialPageRoute(
                                 builder: (context) => SearchTab(
+                                  
                                   events: events,
                                   onEventTap: onEventTap,
                                   eventStatus: _eventStatus,
@@ -898,7 +899,7 @@ class EventCard extends StatelessWidget {
   final VoidCallback onBookToggle;
   final bool isBooked;
 
-  const EventCard({
+const EventCard({
     Key? key,
     required this.event,
     required this.onTap,
@@ -1198,7 +1199,7 @@ class EventCard extends StatelessWidget {
           } else {
             onTap?.call();
           }
-        },
+        }
           child: Opacity(
             opacity: isPast ? 0.3 : 1.0,
           child: Container(
