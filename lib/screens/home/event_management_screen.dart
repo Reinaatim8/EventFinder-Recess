@@ -201,7 +201,10 @@ class _EventAnalyticsScreenState extends State<EventAnalyticsScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.grey[300]!),
+                border: Border.all(
+                  color: Colors.grey[300] ?? Colors.grey,
+                  width: 1,
+                ),
               ),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
@@ -226,12 +229,15 @@ class _EventAnalyticsScreenState extends State<EventAnalyticsScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            // Summary Metrics
+            // View Metrics
             StreamBuilder<List<ViewRecord>>(
               stream: _getViewRecordsStream(widget.event.id),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
                 }
                 final viewRecords = snapshot.data ?? [];
                 final filteredViews = _filterViewsByTimeRange(viewRecords);
@@ -280,17 +286,100 @@ class _EventAnalyticsScreenState extends State<EventAnalyticsScreen> {
               },
             ),
             const SizedBox(height: 20),
-            // Temporal Analytics (Line Chart)
+            // Booking Metrics
+            StreamBuilder<List<Booking>>(
+              stream: _getBookingsStream(widget.event.id),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+                final bookings = snapshot.data ?? [];
+                final filteredBookings = _filterBookingsByTimeRange(bookings);
+                final totalBookings = filteredBookings.length;
+                final paidBookings = filteredBookings
+                    .where((b) => b.paid)
+                    .length;
+                final totalRevenue = filteredBookings
+                    .where((b) => b.paid)
+                    .fold(0.0, (sum, booking) => sum + booking.total);
+
+                return Row(
+                  children: [
+                    Expanded(
+                      child: _buildMetricCard(
+                        'Total Bookings',
+                        totalBookings.toString(),
+                        Icons.event_seat,
+                        Colors.purple,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildMetricCard(
+                        'Paid Bookings',
+                        paidBookings.toString(),
+                        Icons.check_circle,
+                        Colors.green,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildMetricCard(
+                        'Total Revenue',
+                        '€${totalRevenue.toStringAsFixed(2)}',
+                        Icons.attach_money,
+                        Colors.blue,
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+            const SizedBox(height: 20),
+            // View Trends (Line Chart)
             StreamBuilder<List<ViewRecord>>(
               stream: _getViewRecordsStream(widget.event.id),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
                 final viewRecords = snapshot.data ?? [];
                 final filteredViews = _filterViewsByTimeRange(viewRecords);
+                final viewCountsByTime = _aggregateByTime<ViewRecord>(
+                  filteredViews,
+                  (view) => view.timestamp,
+                );
 
-                final viewCountsByTime = _aggregateViewsByTime(filteredViews);
+                if (viewCountsByTime.every((count) => count == 0)) {
+                  return Container(
+                    height: 250,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.2),
+                          blurRadius: 5,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'No view data available',
+                        style: TextStyle(fontSize: 16, color: Colors.grey),
+                      ),
+                    ),
+                  );
+                }
+
                 return Container(
                   height: 250,
                   padding: const EdgeInsets.all(16),
@@ -395,12 +484,160 @@ class _EventAnalyticsScreenState extends State<EventAnalyticsScreen> {
               },
             ),
             const SizedBox(height: 20),
+            // Booking Trends (Line Chart)
+            StreamBuilder<List<Booking>>(
+              stream: _getBookingsStream(widget.event.id),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+                final bookings = snapshot.data ?? [];
+                final filteredBookings = _filterBookingsByTimeRange(bookings);
+                final bookingCountsByTime = _aggregateByTime<Booking>(
+                  filteredBookings,
+                  (booking) => booking.bookingDate,
+                );
+
+                if (bookingCountsByTime.every((count) => count == 0)) {
+                  return Container(
+                    height: 250,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.grey.withOpacity(0.2),
+                          blurRadius: 5,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'No booking data available',
+                        style: TextStyle(fontSize: 16, color: Colors.grey),
+                      ),
+                    ),
+                  );
+                }
+
+                return Container(
+                  height: 250,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.2),
+                        blurRadius: 5,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Booking Trends Over Time',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Expanded(
+                        child: LineChart(
+                          LineChartData(
+                            gridData: const FlGridData(show: true),
+                            titlesData: FlTitlesData(
+                              bottomTitles: AxisTitles(
+                                sideTitles: SideTitles(
+                                  showTitles: true,
+                                  reservedSize: 30,
+                                  getTitlesWidget: (value, meta) {
+                                    String title = '';
+                                    switch (_selectedTimeRange) {
+                                      case 'Today':
+                                        title = '${value.toInt()}:00';
+                                        break;
+                                      case 'This Week':
+                                        title = _getDayOfWeek(value.toInt());
+                                        break;
+                                      case 'This Month':
+                                        title = 'Week ${value.toInt() + 1}';
+                                        break;
+                                      case 'All Time':
+                                        title = 'Month ${value.toInt() + 1}';
+                                        break;
+                                    }
+                                    return Text(
+                                      title,
+                                      style: const TextStyle(fontSize: 10),
+                                    );
+                                  },
+                                  interval: _selectedTimeRange == 'Today'
+                                      ? 4
+                                      : 1,
+                                ),
+                              ),
+                              leftTitles: AxisTitles(
+                                sideTitles: SideTitles(
+                                  showTitles: true,
+                                  reservedSize: 40,
+                                  getTitlesWidget: (value, meta) {
+                                    return Text(
+                                      value.toInt().toString(),
+                                      style: const TextStyle(fontSize: 10),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+                            borderData: FlBorderData(show: true),
+                            lineBarsData: [
+                              LineChartBarData(
+                                spots: bookingCountsByTime
+                                    .asMap()
+                                    .entries
+                                    .map(
+                                      (e) => FlSpot(
+                                        e.key.toDouble(),
+                                        e.value.toDouble(),
+                                      ),
+                                    )
+                                    .toList(),
+                                isCurved: true,
+                                color: Colors.purple,
+                                dotData: const FlDotData(show: false),
+                                belowBarData: BarAreaData(
+                                  show: true,
+                                  color: Colors.purple.withOpacity(0.1),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 20),
             // Geographic Distribution
             StreamBuilder<List<ViewRecord>>(
               stream: _getViewRecordsStream(widget.event.id),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
                 }
                 final viewRecords = snapshot.data ?? [];
                 final filteredViews = _filterViewsByTimeRange(viewRecords);
@@ -430,40 +667,49 @@ class _EventAnalyticsScreenState extends State<EventAnalyticsScreen> {
                         ),
                       ),
                       const SizedBox(height: 10),
-                      ...locationCounts.entries.map((entry) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                '${entry.key['city'] ?? 'Unknown'}, ${entry.key['country'] ?? 'Unknown'}',
-                                style: const TextStyle(fontSize: 14),
-                              ),
-                              Text(
-                                '${entry.value} views',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.blue,
+                      if (locationCounts.isEmpty)
+                        const Text(
+                          'No location data available',
+                          style: TextStyle(fontSize: 14, color: Colors.grey),
+                        )
+                      else
+                        ...locationCounts.entries.map((entry) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  '${entry.key['city'] ?? 'Unknown'}, ${entry.key['country'] ?? 'Unknown'}',
+                                  style: const TextStyle(fontSize: 14),
                                 ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
+                                Text(
+                                  '${entry.value} views',
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.blue,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
                     ],
                   ),
                 );
               },
             ),
             const SizedBox(height: 20),
-            // Activity Feed
+            // View Activity Feed
             StreamBuilder<List<ViewRecord>>(
               stream: _getViewRecordsStream(widget.event.id),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
                 }
                 final viewRecords = snapshot.data ?? [];
                 final filteredViews = _filterViewsByTimeRange(viewRecords)
@@ -486,40 +732,127 @@ class _EventAnalyticsScreenState extends State<EventAnalyticsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Recent Activity',
+                        'Recent View Activity',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       const SizedBox(height: 10),
-                      ...filteredViews.take(10).map((view) {
-                        return ListTile(
-                          leading: Icon(
-                            Icons.visibility,
-                            color: Colors.grey[600],
-                            size: 20,
-                          ),
-                          title: Text(
-                            'User ${view.userId.substring(0, 8)} viewed from ${view.city ?? 'Unknown'}, ${view.country ?? 'Unknown'}',
-                            style: const TextStyle(fontSize: 14),
-                          ),
-                          subtitle: Text(
-                            'Platform: ${view.platform} | Time Spent: ${view.timeSpent}s | Interactions: ${view.interactions.join(', ')}',
-                            style: TextStyle(
-                              fontSize: 12,
+                      if (filteredViews.isEmpty)
+                        const Text(
+                          'No view activity available',
+                          style: TextStyle(fontSize: 14, color: Colors.grey),
+                        )
+                      else
+                        ...filteredViews.take(10).map((view) {
+                          return ListTile(
+                            leading: Icon(
+                              Icons.visibility,
                               color: Colors.grey[600],
+                              size: 20,
                             ),
-                          ),
-                          trailing: Text(
-                            DateFormat('MMM dd, HH:mm').format(view.timestamp),
-                            style: TextStyle(
-                              fontSize: 12,
+                            title: Text(
+                              'User ${view.userId.substring(0, 8)} viewed from ${view.city ?? 'Unknown'}, ${view.country ?? 'Unknown'}',
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                            subtitle: Text(
+                              'Platform: ${view.platform} | Time Spent: ${view.timeSpent}s | Interactions: ${view.interactions.join(', ')}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                            trailing: Text(
+                              DateFormat(
+                                'MMM dd, HH:mm',
+                              ).format(view.timestamp),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                    ],
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 20),
+            // Booking Activity Feed
+            StreamBuilder<List<Booking>>(
+              stream: _getBookingsStream(widget.event.id),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+                final bookings = snapshot.data ?? [];
+                final filteredBookings = _filterBookingsByTimeRange(bookings)
+                  ..sort((a, b) => b.bookingDate.compareTo(a.bookingDate));
+
+                return Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.grey.withOpacity(0.2),
+                        blurRadius: 5,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Recent Booking Activity',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      if (filteredBookings.isEmpty)
+                        const Text(
+                          'No booking activity available',
+                          style: TextStyle(fontSize: 14, color: Colors.grey),
+                        )
+                      else
+                        ...filteredBookings.take(10).map((booking) {
+                          return ListTile(
+                            leading: Icon(
+                              Icons.event_seat,
                               color: Colors.grey[600],
+                              size: 20,
                             ),
-                          ),
-                        );
-                      }).toList(),
+                            title: Text(
+                              '${booking.firstName} ${booking.lastName} booked',
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                            subtitle: Text(
+                              'Email: ${booking.email} | Status: ${booking.paid ? 'Paid' : 'Pending'} | Amount: €${booking.total.toStringAsFixed(2)}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                            trailing: Text(
+                              DateFormat(
+                                'MMM dd, HH:mm',
+                              ).format(booking.bookingDate),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          );
+                        }).toList(),
                     ],
                   ),
                 );
@@ -540,6 +873,17 @@ class _EventAnalyticsScreenState extends State<EventAnalyticsScreen> {
           (snapshot) => snapshot.docs
               .map((doc) => ViewRecord.fromFirestore(doc))
               .toList(),
+        );
+  }
+
+  Stream<List<Booking>> _getBookingsStream(String eventId) {
+    return FirebaseFirestore.instance
+        .collection('bookings')
+        .where('eventId', isEqualTo: eventId)
+        .snapshots()
+        .map(
+          (snapshot) =>
+              snapshot.docs.map((doc) => Booking.fromFirestore(doc)).toList(),
         );
   }
 
@@ -567,53 +911,86 @@ class _EventAnalyticsScreenState extends State<EventAnalyticsScreen> {
     return views.where((view) => view.timestamp.isAfter(startDate)).toList();
   }
 
-  List<int> _aggregateViewsByTime(List<ViewRecord> views) {
+  List<Booking> _filterBookingsByTimeRange(List<Booking> bookings) {
     final now = DateTime.now();
-    List<int> viewCounts;
+    DateTime startDate;
 
     switch (_selectedTimeRange) {
       case 'Today':
-        viewCounts = List.filled(24, 0); // Hourly buckets
-        for (var view in views) {
-          final hour = view.timestamp.hour;
-          viewCounts[hour]++;
+        startDate = DateTime(now.year, now.month, now.day);
+        break;
+      case 'This Week':
+        final daysFromMonday = now.weekday - 1;
+        startDate = now.subtract(Duration(days: daysFromMonday));
+        break;
+      case 'This Month':
+        startDate = DateTime(now.year, now.month, 1);
+        break;
+      case 'All Time':
+        return bookings; // No filtering
+      default:
+        startDate = DateTime(now.year, now.month, now.day);
+    }
+
+    return bookings
+        .where((booking) => booking.bookingDate.isAfter(startDate))
+        .toList();
+  }
+
+  List<int> _aggregateByTime<T>(
+    List<T> items,
+    DateTime Function(T) getTimestamp,
+  ) {
+    final now = DateTime.now();
+    List<int> counts;
+
+    switch (_selectedTimeRange) {
+      case 'Today':
+        counts = List.filled(24, 0); // Hourly buckets
+        for (var item in items) {
+          final hour = getTimestamp(item).hour;
+          counts[hour]++;
         }
         break;
       case 'This Week':
-        viewCounts = List.filled(7, 0); // Daily buckets
+        counts = List.filled(7, 0); // Daily buckets
         final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-        for (var view in views) {
-          final dayDiff = view.timestamp
-              .difference(startOfWeek)
-              .inDays
-              .clamp(0, 6);
-          viewCounts[dayDiff]++;
+        for (var item in items) {
+          final dayDiff = getTimestamp(
+            item,
+          ).difference(startOfWeek).inDays.clamp(0, 6);
+          counts[dayDiff]++;
         }
         break;
       case 'This Month':
-        viewCounts = List.filled(4, 0); // Weekly buckets
+        counts = List.filled(4, 0); // Weekly buckets
         final startOfMonth = DateTime(now.year, now.month, 1);
-        for (var view in views) {
-          final weekDiff = view.timestamp.difference(startOfMonth).inDays ~/ 7;
-          if (weekDiff < 4) viewCounts[weekDiff]++;
+        for (var item in items) {
+          final weekDiff =
+              getTimestamp(item).difference(startOfMonth).inDays ~/ 7;
+          if (weekDiff < 4) counts[weekDiff]++;
         }
         break;
       case 'All Time':
-        viewCounts = List.filled(12, 0); // Monthly buckets
-        final startYear = views.isNotEmpty
-            ? views.map((v) => v.timestamp.year).reduce((a, b) => a < b ? a : b)
+        counts = List.filled(12, 0); // Monthly buckets
+        final startYear = items.isNotEmpty
+            ? items
+                  .map((item) => getTimestamp(item).year)
+                  .reduce((a, b) => a < b ? a : b)
             : now.year;
-        for (var view in views) {
+        for (var item in items) {
           final monthDiff =
-              (view.timestamp.year - startYear) * 12 + view.timestamp.month - 1;
-          if (monthDiff < 12) viewCounts[monthDiff]++;
+              (getTimestamp(item).year - startYear) * 12 +
+              getTimestamp(item).month -
+              1;
+          if (monthDiff < 12) counts[monthDiff]++;
         }
         break;
       default:
-        viewCounts = List.filled(24, 0);
+        counts = List.filled(24, 0);
     }
 
-    return viewCounts;
+    return counts;
   }
 
   Map<Map<String, String?>, int> _aggregateViewsByLocation(
@@ -731,16 +1108,147 @@ class AttendeesScreen extends StatelessWidget {
 }
 
 // Event Details Screen
-class EventDetailsScreen extends StatelessWidget {
+class EventDetailsScreen extends StatefulWidget {
   final Event event;
 
   const EventDetailsScreen({Key? key, required this.event}) : super(key: key);
 
   @override
+  _EventDetailsScreenState createState() => _EventDetailsScreenState();
+}
+
+class _EventDetailsScreenState extends State<EventDetailsScreen> {
+  DateTime? _viewStartTime;
+  String? _viewRecordId;
+
+  @override
+  void initState() {
+    super.initState();
+    _recordViewStart(context, widget.event);
+  }
+
+  @override
+  void dispose() {
+    _recordViewEnd(context);
+    super.dispose();
+  }
+
+  Future<void> _recordViewStart(BuildContext context, Event event) async {
+    _viewStartTime = DateTime.now();
+    _viewRecordId = const Uuid().v4();
+    final userId =
+        Provider.of<AuthProvider>(context, listen: false).user?.uid ??
+        'anonymous';
+    String? city;
+    String? country;
+
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text(
+                'Location services are disabled. Please enable them to record location data.',
+              ),
+              action: SnackBarAction(
+                label: 'Retry',
+                onPressed: () => _recordViewStart(context, event),
+              ),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          return;
+        }
+      }
+
+      if (permission != LocationPermission.deniedForever) {
+        Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.low,
+        );
+        List<Placemark> placemarks = await placemarkFromCoordinates(
+          position.latitude,
+          position.longitude,
+        );
+        city = placemarks.isNotEmpty ? placemarks[0].locality : null;
+        country = placemarks.isNotEmpty ? placemarks[0].country : null;
+      }
+    } catch (e) {
+      debugPrint('Error getting location: $e');
+    }
+
+    final viewRecord = ViewRecord(
+      id: _viewRecordId!,
+      eventId: event.id,
+      timestamp: _viewStartTime!,
+      city: city,
+      country: country,
+      userId: userId,
+      platform: Theme.of(context).platform == TargetPlatform.android
+          ? 'Android'
+          : Theme.of(context).platform == TargetPlatform.iOS
+          ? 'iOS'
+          : 'Unknown',
+      viewType: 'detail_view',
+      organizerId: event.organizerId,
+      timeSpent: 0,
+      interactions: ['viewed_details'],
+    );
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('eventStats')
+          .doc(viewRecord.id)
+          .set(viewRecord.toFirestore());
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error recording view: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _recordViewEnd(BuildContext context) async {
+    if (_viewStartTime == null || _viewRecordId == null) return;
+
+    final timeSpent = DateTime.now().difference(_viewStartTime!).inSeconds;
+    try {
+      await FirebaseFirestore.instance
+          .collection('eventStats')
+          .doc(_viewRecordId)
+          .update({
+            'timeSpent': timeSpent,
+            'interactions': FieldValue.arrayUnion(['view_ended']),
+          });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating view: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(event.title),
+        title: Text(widget.event.title),
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
       ),
@@ -749,11 +1257,11 @@ class EventDetailsScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (event.imageUrl != null)
+            if (widget.event.imageUrl != null)
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Image.network(
-                  event.imageUrl!,
+                  widget.event.imageUrl!,
                   height: 200,
                   width: double.infinity,
                   fit: BoxFit.cover,
@@ -772,12 +1280,12 @@ class EventDetailsScreen extends StatelessWidget {
               ),
             const SizedBox(height: 16),
             Text(
-              event.title,
+              widget.event.title,
               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
-              event.category,
+              widget.event.category,
               style: TextStyle(fontSize: 16, color: Colors.grey[600]),
             ),
             const SizedBox(height: 16),
@@ -786,7 +1294,7 @@ class EventDetailsScreen extends StatelessWidget {
                 Icon(Icons.calendar_today, size: 20, color: Colors.grey[600]),
                 const SizedBox(width: 8),
                 Text(
-                  event.date,
+                  widget.event.date,
                   style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                 ),
               ],
@@ -798,7 +1306,7 @@ class EventDetailsScreen extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    event.location,
+                    widget.event.location,
                     style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                   ),
                 ),
@@ -806,7 +1314,7 @@ class EventDetailsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              event.description,
+              widget.event.description,
               style: const TextStyle(fontSize: 16, height: 1.5),
             ),
             const SizedBox(height: 16),
@@ -818,7 +1326,8 @@ class EventDetailsScreen extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => AttendeesScreen(event: event),
+                        builder: (context) =>
+                            AttendeesScreen(event: widget.event),
                       ),
                     );
                   },
@@ -835,7 +1344,7 @@ class EventDetailsScreen extends StatelessWidget {
                       context,
                       MaterialPageRoute(
                         builder: (context) =>
-                            EventAnalyticsScreen(event: event),
+                            EventAnalyticsScreen(event: widget.event),
                       ),
                     );
                   },
@@ -987,7 +1496,9 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
           final formatter = DateFormat('yyyy/MM/dd');
           return formatter.parseStrict(date);
         } catch (e) {
-          return DateTime(1900);
+          debugPrint('Error parsing date "$date": $e');
+          // Recommendation: Store dates in Firestore as Timestamp or ISO 8601 strings for consistency
+          return DateTime.now();
         }
       }
     }
@@ -1029,6 +1540,9 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
   }
 
   Stream<Map<String, dynamic>> _getOverallStatsStream() {
+    if (organizerEvents.isEmpty) {
+      return Stream.value({'revenue': 0.0, 'bookings': 0});
+    }
     return FirebaseFirestore.instance
         .collection('bookings')
         .where('eventId', whereIn: organizerEvents.map((e) => e.id).toList())
@@ -1088,75 +1602,6 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error deleting event: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _recordView(BuildContext context, Event event) async {
-    final userId =
-        Provider.of<AuthProvider>(context, listen: false).user?.uid ??
-        'anonymous';
-    String? city;
-    String? country;
-
-    try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (serviceEnabled) {
-        LocationPermission permission = await Geolocator.checkPermission();
-        if (permission == LocationPermission.denied) {
-          permission = await Geolocator.requestPermission();
-          if (permission == LocationPermission.denied) {
-            return;
-          }
-        }
-
-        if (permission != LocationPermission.deniedForever) {
-          Position position = await Geolocator.getCurrentPosition(
-            desiredAccuracy: LocationAccuracy.low,
-          );
-          List<Placemark> placemarks = await placemarkFromCoordinates(
-            position.latitude,
-            position.longitude,
-          );
-          city = placemarks.isNotEmpty ? placemarks[0].locality : null;
-          country = placemarks.isNotEmpty ? placemarks[0].country : null;
-        }
-      }
-    } catch (e) {
-      print('Error getting location: $e');
-    }
-
-    final viewRecord = ViewRecord(
-      id: const Uuid().v4(),
-      eventId: event.id,
-      timestamp: DateTime.now(),
-      city: city,
-      country: country,
-      userId: userId,
-      platform: Theme.of(context).platform == TargetPlatform.android
-          ? 'Android'
-          : Theme.of(context).platform == TargetPlatform.iOS
-          ? 'iOS'
-          : 'Unknown',
-      viewType: 'detail_view',
-      organizerId: event.organizerId,
-      timeSpent: 0,
-      interactions: ['viewed_details'],
-    );
-
-    try {
-      await FirebaseFirestore.instance
-          .collection('eventStats')
-          .doc(viewRecord.id)
-          .set(viewRecord.toFirestore());
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error recording view: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -1399,6 +1844,14 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                 child: StreamBuilder<Map<String, dynamic>>(
                   stream: _getOverallStatsStream(),
                   builder: (context, snapshot) {
+                    if (snapshot.hasError) {
+                      return _buildSummaryCard(
+                        'Total Revenue',
+                        'Error',
+                        Icons.attach_money,
+                        Colors.red,
+                      );
+                    }
                     final stats =
                         snapshot.data ?? {'revenue': 0.0, 'bookings': 0};
                     return _buildSummaryCard(
@@ -1427,7 +1880,6 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                 ),
                 child: InkWell(
                   onTap: () {
-                    _recordView(context, event);
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -1508,6 +1960,12 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                             if (snapshot.connectionState ==
                                 ConnectionState.waiting) {
                               return const LinearProgressIndicator();
+                            }
+                            if (snapshot.hasError) {
+                              return const Text(
+                                'Error loading bookings',
+                                style: TextStyle(color: Colors.red),
+                              );
                             }
                             final bookings = snapshot.data ?? [];
                             final paidBookings = bookings
