@@ -10,34 +10,54 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  another_flushbar: ^1.12.30
-  cloud_firestore: ^5.6.11
-  convex_bottom_bar: ^3.2.0
+  qr_flutter: ^4.1.0
+  another_flushbar: ^1.10.24
+  uuid: ^4.0.0
+  pretty_qr_code: ^3.4.0
+  qr: ^3.0.1
+  path_provider: ^2.1.2
+  permission_handler: ^11.3.1
+  fl_chart: ^0.64.0
+  flutter_map: ^8.1.1
+  carousel_slider: ^4.2.1
+
+  convex_bottom_bar: ^3.0.0
+  
+  # Firebase
+  firebase_core: ^3.15.0
+  firebase_auth: ^5.6.1
+  cloud_firestore: ^5.6.10
+  firebase_storage: ^12.4.8
+  #local storage
+  shared_preferences: ^2.2.2
+
+  # HTTP & Networking
+  http: ^1.4.0
+
+  # Utilities
+  intl: ^0.20.2
+  provider: ^6.1.5
+  fluttertoast: ^8.2.12
   email_validator: ^3.0.0
   equatable: ^2.0.7
-  firebase_auth: ^5.6.2
-  firebase_core: ^3.15.1
-  firebase_storage: ^12.4.9
-  fl_chart: ^0.68.0
-  flutter_inappwebview: ^6.1.5
-  flutter_map: ^8.1.1
-  fluttertoast: ^8.2.12
-  flutterwave_standard: ^1.1.0
+  url_launcher: ^6.1.0
+  
+
+  # Map & Location
+  google_maps_flutter: ^2.2.5
   geocoding: ^4.0.0
   geolocator: ^14.0.2
   google_maps_flutter: ^2.12.3
   http: ^1.4.0
   image_picker: ^1.1.2
-  intl: ^0.20.2
-  path_provider: ^2.1.5
-  permission_handler: ^11.4.0
-  pretty_qr_code: ^3.4.0
-  provider: ^6.1.5
-  qr: ^3.0.2
-  qr_flutter: ^4.1.0
-  uuid: ^4.5.1
-  web: ^1.1.1
-  web_socket_channel: ^2.4.0
+  file_picker:  ^6.2.1
+  
+
+  # Payment
+  flutterwave_standard: ^1.1.0
+
+  # Webview
+  flutter_inappwebview: ^6.1.5
   webview_flutter: ^4.13.0
   webview_flutter_android: ^4.7.0
   webview_flutter_platform_interface: ^2.13.1
@@ -61,3 +81,7 @@ flutter:
     - assets/images/mtn.jpg
     - assets/images/airtel.png
     - assets/images/logo.jpg
+    - assets/images/blue.jpeg
+    - assets/images/blue2.jpeg
+    - assets/images/orange.jpeg
+    - assets/images/logoo.jpeg

@@ -1,596 +1,564 @@
-import 'package:event_locator_app/models/event.dart';
-import 'package:event_locator_app/screens/home/event_management_screen.dart';
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+import 'package:pretty_qr_code/pretty_qr_code.dart';
+import 'package:uuid/uuid.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'checkout_screen.dart';
+import '../../models/event.dart';
 import 'package:provider/provider.dart';
-import 'dart:async';
-import 'home_screen.dart'; // Import Event class
-import '../../providers/auth_provider.dart';
+import '../../providers/auth_provider.dart' as custom_auth;
 
-// Admin verification screen with local filtering to avoid complex Firestore queries
-class AdminScreen extends StatefulWidget {
-  const AdminScreen({Key? key}) : super(key: key);
+class VerificationScreen extends StatefulWidget {
+  final Event event;
+  final Function(Map<String, dynamic>) onBookingAdded;
+  final Function(String) onStatusUpdate;
+  final bool isVerified;
+  final String? verificationDocumentUrl;
+  final String? verificationStatus;
+  final String? rejectionReason;
+  final String? verificationDocumentType;
+
+  const VerificationScreen({
+    Key? key,
+    required this.event,
+    required this.onBookingAdded,
+    required this.onStatusUpdate,
+    required this.isVerified,
+    this.verificationDocumentUrl,
+    this.verificationStatus,
+    this.rejectionReason,
+    this.verificationDocumentType,
+  }) : super(key: key);
 
   @override
-  State<AdminScreen> createState() => _AdminScreenState();
+  _VerificationScreenState createState() => _VerificationScreenState();
 }
 
-class _AdminScreenState extends State<AdminScreen> {
-  String _selectedStatus = 'pending';
-  List<Event> _events = [];
-  bool _isLoading = true;
-  StreamSubscription<QuerySnapshot>? _subscription;
-  String _searchQuery = '';
-  String _selectedCategory = 'All';
-  final List<String> _categories = [
-    'All',
-    'Concert',
-    'Conference',
-    'Workshop',
-    'Sports',
-    'Festival',
-    'Networking',
-    'Exhibition',
-    'Theater',
-    'Comedy',
-    'Other',
-  ];
+class _VerificationScreenState extends State<VerificationScreen> {
+  late String ticketId;
+  late bool currentVerificationStatus;
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _fetchEvents();
+    ticketId = const Uuid().v4();
+    currentVerificationStatus = widget.isVerified;
+
+    print('VerificationScreen initialized:');
+    print('  - eventTitle: ${widget.event.title}');
+    print('  - isVerified: ${widget.isVerified}');
+    print('  - verificationDocumentUrl: ${widget.verificationDocumentUrl}');
+    print('  - verificationStatus: ${widget.verificationStatus}');
+    print('  - verificationDocumentType: ${widget.verificationDocumentType}');
+    print('  - currentVerificationStatus: $currentVerificationStatus');
   }
 
-  @override
-  void dispose() {
-    _subscription?.cancel();
-    super.dispose();
+  bool _isAdmin(BuildContext context) {
+    final authProvider = Provider.of<custom_auth.AuthProvider>(context, listen: false);
+    final isAdmin = authProvider.user?.email == 'kennedymutebi7@gmail.com' ?? false;
+    print('Checking admin status: user=${authProvider.user?.email}, isAdmin=$isAdmin');
+    return isAdmin;
   }
 
-  // Fetch all events once and filter locally
-  void _fetchEvents() async {
+  Future<void> _handleVerification(bool approve, [String? rejectionReason]) async {
+    if (!_isAdmin(context)) {
+      Fluttertoast.showToast(
+        msg: 'Only admins can verify events',
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.CENTER,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0,
+      );
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
 
     try {
-      _subscription = FirebaseFirestore.instance
-          .collection('events')
-          .snapshots()
-          .listen((snapshot) {
-        setState(() {
-          _events = snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList();
-          _isLoading = false;
-        });
+      await FirebaseFirestore.instance.collection('events').doc(widget.event.id).update({
+        'isVerified': approve,
+        'verificationStatus': approve ? 'approved' : 'rejected',
+        'approvedAt': approve ? FieldValue.serverTimestamp() : null,
+        'rejectionReason': approve ? null : rejectionReason,
+        'status': null, // Remove redundant 'status' field
       });
+      setState(() {
+        currentVerificationStatus = approve;
+      });
+      widget.onStatusUpdate(approve ? 'Approved' : 'Rejected'); // Notify HomeScreen
+      print('Event ${widget.event.title} ${approve ? 'approved' : 'rejected'} in Firestore${approve ? '' : ' with reason: $rejectionReason'}');
+      Fluttertoast.showToast(
+        msg: approve ? 'Event Approved!' : 'Event Rejected!',
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.CENTER,
+        backgroundColor: approve ? Colors.green : Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0,
+      );
+      Navigator.pop(context);
     } catch (e) {
+      print('Error updating verification status: $e');
+      Fluttertoast.showToast(
+        msg: 'Error updating verification status: $e',
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.CENTER,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0,
+      );
+    } finally {
       setState(() {
         _isLoading = false;
       });
-      print('Error fetching events: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error loading events: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
     }
   }
 
-  // Filter events locally instead of complex Firestore queries
-  List<Event> _getFilteredEvents() {
-    return _events
-        .where((event) =>
-            event.status == _selectedStatus &&
-            (_selectedCategory == 'All' || event.category == _selectedCategory) &&
-            (event.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-                event.description
-                    .toLowerCase()
-                    .contains(_searchQuery.toLowerCase()) ||
-                event.location.toLowerCase().contains(_searchQuery.toLowerCase())))
-        .toList()
-      ..sort((a, b) {
-        // Sort by timestamp if available, otherwise by date
-        if (a.timestamp != null && b.timestamp != null) {
-          return b.timestamp!.compareTo(a.timestamp!);
-        }
-        return b.date.compareTo(a.date);
-      });
-  }
-
-  // Get count for each status
-  int _getStatusCount(String status) {
-    return _events.where((event) => event.status == status).length;
-  }
-
-  // Check admin privileges
-  Future<bool> _isAdmin() async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    return authProvider.user?.email == 'kennedymutebi7@gmail.com' ?? false;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<bool>(
-      future: _isAdmin(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
-        }
-        if (!snapshot.hasData || !snapshot.data!) {
-          return Scaffold(
-            appBar: AppBar(title: const Text('Access Denied')),
-            body: const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.security, size: 64, color: Colors.red),
-                  SizedBox(height: 16),
-                  Text(
-                    'Access Denied',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.red,
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    'You do not have admin privileges to access this page.',
-                    style: TextStyle(fontSize: 16, color: Colors.grey),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-          );
-        }
-
-        final filteredEvents = _getFilteredEvents();
-
-        return Scaffold(
-          backgroundColor: Colors.grey[50],
-          appBar: AppBar(
-            title: const Text('Admin Dashboard'),
-            backgroundColor: Theme.of(context).primaryColor,
-            foregroundColor: Colors.white,
-          ),
-          body: Column(
-            children: [
-              // Status tabs
-              Container(
-                color: Theme.of(context).primaryColor,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _StatusTab(
-                        title: 'Pending',
-                        count: _getStatusCount('pending'),
-                        isSelected: _selectedStatus == 'pending',
-                        onTap: () => setState(() => _selectedStatus = 'pending'),
-                      ),
-                    ),
-                    Expanded(
-                      child: _StatusTab(
-                        title: 'Approved',
-                        count: _getStatusCount('approved'),
-                        isSelected: _selectedStatus == 'approved',
-                        onTap: () => setState(() => _selectedStatus = 'approved'),
-                      ),
-                    ),
-                    Expanded(
-                      child: _StatusTab(
-                        title: 'Rejected',
-                        count: _getStatusCount('rejected'),
-                        isSelected: _selectedStatus == 'rejected',
-                        onTap: () => setState(() => _selectedStatus = 'rejected'),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // Search bar
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: TextField(
-                  decoration: InputDecoration(
-                    hintText: 'Search events...',
-                    prefixIcon: const Icon(Icons.search),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  onChanged: (value) {
-                    setState(() {
-                      _searchQuery = value;
-                    });
-                  },
-                ),
-              ),
-              // Category filter
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Row(
-                  children: [
-                    const Text('Category: '),
-                    DropdownButton<String>(
-                      value: _selectedCategory,
-                      items: _categories
-                          .map((category) => DropdownMenuItem(
-                                value: category,
-                                child: Text(category),
-                              ))
-                          .toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedCategory = value!;
-                        });
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              // Events list
-              Expanded(
-                child: _isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : filteredEvents.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.event_busy,
-                                  size: 80,
-                                  color: Colors.grey[400],
-                                ),
-                                const SizedBox(height: 20),
-                                Text(
-                                  'No $_selectedStatus events found',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    color: Colors.grey[600],
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )
-                        : ListView.builder(
-                            padding: const EdgeInsets.all(16),
-                            itemCount: filteredEvents.length,
-                            itemBuilder: (context, index) {
-                              return _AdminEventCard(
-                                event: filteredEvents[index],
-                                onApprove: () =>
-                                    _approveEvent(filteredEvents[index]),
-                                onReject: () =>
-                                    _rejectEvent(filteredEvents[index]),
-                              );
-                            },
-                          ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Future<void> _approveEvent(Event event) async {
-    try {
-      await FirebaseFirestore.instance.collection('events').doc(event.id).update({
-        'status': 'approved',
-        'approvedAt': FieldValue.serverTimestamp(),
-        'rejectionReason': null,
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Event approved successfully'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error approving event: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  Future<void> _rejectEvent(Event event) async {
-    String? reason = await _showRejectDialog();
-    if (reason != null) {
-      try {
-        await FirebaseFirestore.instance
-            .collection('events')
-            .doc(event.id)
-            .update({
-          'status': 'rejected',
-          'rejectedAt': FieldValue.serverTimestamp(),
-          'rejectionReason': reason,
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Event rejected successfully'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error rejecting event: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<String?> _showRejectDialog() async {
-    final controller = TextEditingController();
-    return showDialog<String>(
+  void _showVerificationDialog() {
+    String? rejectionReason;
+    showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Reject Event'),
+        title: const Text('Verify Event'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Please provide a reason for rejection:'),
+            const Text('Do you want to approve or reject this event?'),
             const SizedBox(height: 16),
             TextField(
-              controller: controller,
-              maxLines: 3,
               decoration: const InputDecoration(
-                hintText: 'Enter rejection reason...',
+                labelText: 'Rejection Reason (required for rejection)',
                 border: OutlineInputBorder(),
               ),
+              maxLines: 3,
+              onChanged: (value) {
+                rejectionReason = value;
+              },
             ),
           ],
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: const Text('Cancel', style: TextStyle(color: Colors.red)),
           ),
           ElevatedButton(
             onPressed: () {
-              if (controller.text.isNotEmpty) {
-                Navigator.pop(context, controller.text);
-              }
+              _handleVerification(true);
+              Navigator.pop(context);
             },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            child: const Text('Approve'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (rejectionReason == null || rejectionReason?.isEmpty == true) {
+                Fluttertoast.showToast(
+                  msg: 'Please provide a rejection reason',
+                  toastLength: Toast.LENGTH_LONG,
+                  gravity: ToastGravity.CENTER,
+                  backgroundColor: Colors.red,
+                  textColor: Colors.white,
+                  fontSize: 16.0,
+                );
+                return;
+              }
+              _handleVerification(false, rejectionReason);
+              Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('Reject'),
           ),
         ],
       ),
     );
   }
-}
 
-class _StatusTab extends StatelessWidget {
-  final String title;
-  final int count;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _StatusTab({
-    required this.title,
-    required this.count,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.white.withOpacity(0.2) : Colors.transparent,
-          border: Border(
-            bottom: BorderSide(
-              color: isSelected ? Colors.white : Colors.transparent,
-              width: 2,
+  Future<void> _viewDocument() async {
+    if (widget.verificationDocumentUrl != null) {
+      final url = widget.verificationDocumentUrl!;
+      print('Attempting to open document: $url');
+      try {
+        if (await canLaunchUrl(Uri.parse(url))) {
+          await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+        } else {
+          print('Could not launch URL: $url');
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Could not open the document.'),
+              backgroundColor: Colors.red,
             ),
+          );
+        }
+      } catch (e) {
+        print('Error launching URL: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error opening document: $e'),
+            backgroundColor: Colors.red,
           ),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No verification document available.'),
+          backgroundColor: Colors.orange,
         ),
-        child: Column(
-          children: [
-            Icon(
-              title == 'Pending'
-                  ? Icons.pending
-                  : title == 'Approved'
-                      ? Icons.check_circle
-                      : Icons.cancel,
-              color: Colors.white,
-              size: 20,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              title,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              count.toString(),
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _AdminEventCard extends StatelessWidget {
-  final Event event;
-  final VoidCallback onApprove;
-  final VoidCallback onReject;
-
-  const _AdminEventCard({
-    required this.event,
-    required this.onApprove,
-    required this.onReject,
-  });
-
-  String _formatTimestamp(Timestamp? timestamp) {
-    if (timestamp == null) return '';
-    final date = timestamp.toDate();
-    return '${date.day}/${date.month}/${date.year}';
+      );
+    }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    event.title,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    event.category,
-                    style: TextStyle(
-                      color: Theme.of(context).primaryColor,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              event.description,
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 14,
-              ),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
-                const SizedBox(width: 4),
-                Text(event.date, style: TextStyle(color: Colors.grey[600])),
-                const SizedBox(width: 16),
-                Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    event.location,
-                    style: TextStyle(color: Colors.grey[600]),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Price: €${event.price}',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.green,
-              ),
-            ),
-            if (event.status == 'pending') ...[
-              const SizedBox(height: 16),
+  Widget _buildDocumentPreview() {
+    if (widget.verificationDocumentUrl != null) {
+      final isImage = widget.verificationDocumentType?.toLowerCase().contains('jpg') == true ||
+          widget.verificationDocumentType?.toLowerCase().contains('jpeg') == true ||
+          widget.verificationDocumentType?.toLowerCase().contains('png') == true;
+
+      return Card(
+        elevation: 2,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Row(
                 children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: onApprove,
-                      icon: const Icon(Icons.check),
-                      label: const Text('Approve'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
+                  Icon(
+                    _getDocumentIcon(widget.verificationDocumentType ?? ''),
+                    color: Colors.blue,
+                    size: 24,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: onReject,
-                      icon: const Icon(Icons.close),
-                      label: const Text('Reject'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
+                    child: Text(
+                      'Verification Document: ${widget.verificationDocumentType ?? 'Document'}',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
                 ],
               ),
-            ],
-            if (event.status == 'rejected' && event.rejectionReason != null) ...[
               const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  'Rejection Reason: ${event.rejectionReason}',
-                  style: const TextStyle(
-                    color: Colors.red,
-                    fontSize: 12,
+              if (isImage)
+                GestureDetector(
+                  onTap: _viewDocument,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      widget.verificationDocumentUrl!,
+                      height: 150,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => const Icon(
+                        Icons.broken_image,
+                        size: 50,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ),
+                )
+              else
+                ElevatedButton.icon(
+                  onPressed: _viewDocument,
+                  icon: const Icon(Icons.description),
+                  label: const Text('View Document'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
                   ),
                 ),
-              ),
             ],
-            if (event.status == 'approved' && event.approvedAt != null) ...[
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  'Approved: ${_formatTimestamp(event.approvedAt as Timestamp?)}',
-                  style: const TextStyle(
-                    color: Colors.green,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-            ],
-          ],
+          ),
         ),
+      );
+    }
+    return const SizedBox.shrink();
+  }
+
+  IconData _getDocumentIcon(String documentType) {
+    final extension = documentType.toLowerCase();
+    if (extension.contains('pdf')) return Icons.picture_as_pdf;
+    if (extension.contains('doc') || extension.contains('docx')) return Icons.description;
+    if (extension.contains('jpg') || extension.contains('jpeg') || extension.contains('png')) return Icons.image;
+    return Icons.insert_drive_file;
+  }
+
+  Future<void> _handlePayment() async {
+    if (!currentVerificationStatus) {
+      Fluttertoast.showToast(
+        msg: "Event must be verified before payment",
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.CENTER,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0,
+      );
+      return;
+    }
+
+    try {
+      Navigator.pop(context);
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => CheckoutScreen(
+            event: widget.event,
+            ticketId: ticketId,
+            total: widget.event.price,
+            onPaymentSuccess: () {
+              final booking = {
+                'id': DateTime.now().millisecondsSinceEpoch,
+                'event': widget.event.title,
+                'total': widget.event.price,
+                'paid': true,
+                'ticketId': ticketId,
+                'isVerified': currentVerificationStatus,
+                'verificationStatus': widget.verificationStatus,
+              };
+              widget.onBookingAdded(booking);
+              widget.onStatusUpdate('Paid');
+              print('Payment successful for event: ${widget.event.title}');
+              Fluttertoast.showToast(
+                msg: "Payment Successful!",
+                toastLength: Toast.LENGTH_LONG,
+                gravity: ToastGravity.CENTER,
+                backgroundColor: Colors.green,
+                textColor: Colors.white,
+                fontSize: 19.0,
+              );
+            },
+          ),
+        ),
+      );
+    } catch (e) {
+      print('Error initiating payment: $e');
+      Fluttertoast.showToast(
+        msg: 'Error initiating payment: $e',
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.CENTER,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0,
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isAdmin = _isAdmin(context);
+
+    return AlertDialog(
+      title: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              widget.event.title,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: currentVerificationStatus ? Colors.green : (widget.verificationStatus == 'unverified' ? Colors.red : Colors.red),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      currentVerificationStatus ? Icons.verified : Icons.warning,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      currentVerificationStatus ? 'Verified' : 'Unverified',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (isAdmin)
+                IconButton(
+                  icon: const Icon(Icons.admin_panel_settings, color: Colors.blue, size: 24),
+                  tooltip: 'Verify Event',
+                  onPressed: _isLoading ? null : _showVerificationDialog,
+                ),
+            ],
+          ),
+        ],
       ),
+      content: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (isAdmin && widget.verificationDocumentUrl != null) ...[
+                    _buildDocumentPreview(),
+                    const SizedBox(height: 16),
+                  ],
+                  if (currentVerificationStatus) ...[
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.green.shade200),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.check_circle, color: Colors.green, size: 16),
+                              SizedBox(width: 4),
+                              Text(
+                                'Event Verified',
+                                style: TextStyle(
+                                  color: Colors.green,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Verification approved by admin.',
+                            style: const TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ] else ...[
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.red.shade200),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.warning, color: Colors.red, size: 16),
+                              SizedBox(width: 4),
+                              Text(
+                                'Unverified Event',
+                                style: TextStyle(
+                                  color: Colors.red,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            widget.rejectionReason != null
+                                ? 'Verification rejected: ${widget.rejectionReason}'
+                                : 'This event has not been verified. Proceed with caution.',
+                            style: const TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  if (widget.event.price <= 0.0) ...[
+                    const Text("Here's your QR code ticket:"),
+                    const SizedBox(height: 16),
+                    Center(
+                      child: SizedBox(
+                        width: 180,
+                        height: 180,
+                        child: PrettyQrView.data(
+                          data: ticketId,
+                          errorCorrectLevel: QrErrorCorrectLevel.M,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Center(
+                      child: Text(
+                        "Ticket ID: ${ticketId.substring(0, 8)}...",
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text("Please present this QR code at the event."),
+                  ] else ...[
+                    Text(
+                      "This event requires a payment of €${widget.event.price.toStringAsFixed(2)}. Please proceed to checkout.",
+                    ),
+                  ],
+                ],
+              ),
+            ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.pop(context);
+          },
+          child: const Text(
+            'Cancel',
+            style: TextStyle(color: Colors.red),
+          ),
+        ),
+        if (widget.event.price <= 0.0)
+          TextButton(
+            onPressed: () {
+              final booking = {
+                'id': DateTime.now().millisecondsSinceEpoch,
+                'event': widget.event.title,
+                'total': 0.0,
+                'paid': true,
+                'ticketId': ticketId,
+                'isVerified': currentVerificationStatus,
+                'verificationStatus': widget.verificationStatus,
+              };
+              widget.onBookingAdded(booking);
+              widget.onStatusUpdate('Paid');
+              print('Free ticket generated for event: ${widget.event.title}');
+              Navigator.pop(context);
+              Fluttertoast.showToast(
+                msg: "Free Event Ticket Generated!",
+                toastLength: Toast.LENGTH_LONG,
+                gravity: ToastGravity.CENTER,
+                backgroundColor: Colors.green,
+                textColor: Colors.white,
+                fontSize: 19.0,
+              );
+            },
+            child: const Text("Done"),
+          )
+        else
+          ElevatedButton(
+            onPressed: _isLoading ? null : _handlePayment,
+            child: const Text('Proceed to Checkout'),
+          ),
+      ],
     );
   }
 }
