@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
@@ -96,7 +97,13 @@ class _AddEventScreenState extends State<AddEventScreen> {
         description: _descriptionController.text,
         imageUrl: imageUrl,
         organizerId: authProvider.user!.uid,
-        price: double.tryParse(_priceController.text) ?? 0.0,
+        price: _priceController.text.toLowerCase() == 'free'
+            ? 0.0
+            : double.parse(_priceController.text),
+        isVerified: false,
+        verificationStatus: 'pending',
+        verificationDocumentUrl: null,
+        rejectionReason: null,
       );
 
       await FirebaseFirestore.instance
@@ -131,7 +138,7 @@ class _AddEventScreenState extends State<AddEventScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Add Event'),
-        backgroundColor: Theme.of(context).primaryColor,
+        backgroundColor: const Color.fromARGB(255, 25, 25, 95),
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
@@ -198,7 +205,7 @@ class _AddEventScreenState extends State<AddEventScreen> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _priceController,
-                decoration: const InputDecoration(labelText: 'Price (€) *'),
+                decoration: const InputDecoration(labelText: 'Price (UGX) *'),
                 keyboardType: TextInputType.number,
                 validator: (value) {
                   if (value!.isEmpty) return 'Required';
@@ -232,7 +239,7 @@ class _AddEventScreenState extends State<AddEventScreen> {
                       onPressed: _addEvent,
                       style: ElevatedButton.styleFrom(
                         minimumSize: const Size(double.infinity, 50),
-                        backgroundColor: Theme.of(context).primaryColor,
+                        backgroundColor: const Color.fromARGB(255, 25, 25, 95),
                         foregroundColor: Colors.white,
                       ),
                       child: const Text('Create Event'),
@@ -259,11 +266,8 @@ class EditEventScreen extends StatefulWidget {
   final Event event;
   final VoidCallback onEventUpdated;
 
-  const EditEventScreen({
-    Key? key,
-    required this.event,
-    required this.onEventUpdated,
-  }) : super(key: key);
+  const EditEventScreen({Key? key, required this.event, required this.onEventUpdated})
+      : super(key: key);
 
   @override
   State<EditEventScreen> createState() => _EditEventScreenState();
@@ -300,12 +304,8 @@ class _EditEventScreenState extends State<EditEventScreen> {
     _descriptionController.text = widget.event.description;
     _dateController.text = widget.event.date;
     _locationController.text = widget.event.location;
-    _priceController.text = widget.event.price == 0.0
-        ? 'free'
-        : widget.event.price.toString();
-    _selectedCategory = _categories.contains(widget.event.category)
-        ? widget.event.category
-        : 'Other';
+    _priceController.text = widget.event.price == 0.0 ? 'free' : widget.event.price.toString();
+    _selectedCategory = widget.event.category;
   }
 
   Future<void> _pickImage() async {
@@ -357,7 +357,13 @@ class _EditEventScreenState extends State<EditEventScreen> {
         organizerId: widget.event.organizerId,
         price: _priceController.text.toLowerCase() == 'free'
             ? 0.0
-            : double.tryParse(_priceController.text) ?? 0.0,
+            : _priceController.text.toLowerCase() == 'free'
+            ? 0.0
+            : double.parse(_priceController.text),
+        isVerified: widget.event.isVerified,
+        verificationStatus: widget.event.verificationStatus,
+        verificationDocumentUrl: widget.event.verificationDocumentUrl,
+        rejectionReason: widget.event.rejectionReason,
       );
 
       await FirebaseFirestore.instance
@@ -392,7 +398,7 @@ class _EditEventScreenState extends State<EditEventScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Edit Event'),
-        backgroundColor: Theme.of(context).primaryColor,
+        backgroundColor: const Color.fromARGB(255, 25, 25, 95),
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
@@ -459,7 +465,7 @@ class _EditEventScreenState extends State<EditEventScreen> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _priceController,
-                decoration: const InputDecoration(labelText: 'Price (€) *'),
+                decoration: const InputDecoration(labelText: 'Price (UGX) *'),
                 keyboardType: TextInputType.number,
                 validator: (value) {
                   if (value!.isEmpty) return 'Required';
@@ -495,7 +501,7 @@ class _EditEventScreenState extends State<EditEventScreen> {
                       onPressed: _updateEvent,
                       style: ElevatedButton.styleFrom(
                         minimumSize: const Size(double.infinity, 50),
-                        backgroundColor: Theme.of(context).primaryColor,
+                        backgroundColor: const Color.fromARGB(255, 25, 25, 95),
                         foregroundColor: Colors.white,
                       ),
                       child: const Text('Update Event'),
@@ -537,6 +543,23 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
   void initState() {
     super.initState();
     _initializeOrganizer();
+  }
+
+  DateTime parseEventDate(String input) {
+    try {
+      final parts = input.split('/');
+      if (parts.length != 3) {
+        print('Invalid date format: $input');
+        return DateTime(1900);
+      }
+      final day = int.tryParse(parts[0]) ?? 1;
+      final month = int.tryParse(parts[1]) ?? 1;
+      final year = int.tryParse(parts[2]) ?? 1900;
+      return DateTime(year, month, day);
+    } catch (e) {
+      print("Date parse error for '$input': $e");
+      return DateTime(1900);
+    }
   }
 
   @override
@@ -591,6 +614,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                 organizerEvents = snapshot.docs
                     .map((doc) => Event.fromFirestore(doc))
                     .toList();
+        organizerEvents.sort((a, b) => parseEventDate(a.date).compareTo(parseEventDate(b.date)));
                 _hasAccess = true;
                 _isLoading = false;
               });
@@ -614,7 +638,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _hasAccess = true; // Allow access to create events even if fetch fails
+        _hasAccess = true;
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -701,35 +725,31 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
         ),
       );
 
-      if (confirmed != true) return;
-
-      // Delete associated bookings
-      QuerySnapshot bookingsSnapshot = await FirebaseFirestore.instance
-          .collection('bookings')
-          .where('eventId', isEqualTo: event.id)
-          .get();
-      for (var doc in bookingsSnapshot.docs) {
-        await doc.reference.delete();
-      }
-
-      // Delete event
-      await FirebaseFirestore.instance
-          .collection('events')
-          .doc(event.id)
-          .delete();
-
-      // Delete event image if exists
-      if (event.imageUrl != null) {
-        try {
-          await FirebaseStorage.instance
-              .ref()
-              .child('events')
-              .child('${event.id}.jpg')
-              .delete();
-        } catch (e) {
-          print('Error deleting image: $e');
+      if (confirmed == true) {
+        QuerySnapshot bookingsSnapshot = await FirebaseFirestore.instance
+            .collection('bookings')
+            .where('eventId', isEqualTo: event.id)
+            .get();
+        for (var doc in bookingsSnapshot.docs) {
+          await doc.reference.delete();
         }
-      }
+
+        await FirebaseFirestore.instance
+            .collection('events')
+            .doc(event.id)
+            .delete();
+
+        if (event.imageUrl != null) {
+          try {
+            await FirebaseStorage.instance
+                .ref()
+                .child('events')
+                .child('${event.id}.jpg')
+                .delete();
+          } catch (e) {
+            print('Error deleting image: $e');
+          }
+        }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -821,7 +841,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
       case 'festival':
         return Icons.music_note;
       case 'conference':
-        return Icons.mic;
+        return Icons.computer;
       case 'workshop':
         return Icons.build;
       case 'sports':
@@ -1037,12 +1057,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: const Color.fromARGB(
-                                  255,
-                                  25,
-                                  25,
-                                  95,
-                                ).withOpacity(0.1),
+                                color: const Color.fromARGB(255, 25, 25, 95).withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Icon(
@@ -1113,18 +1128,12 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                               );
                             }
                             final bookings = snapshot.data ?? [];
-                            final paidBookings = bookings
-                                .where((b) => b.paid)
-                                .length;
-                            final totalRevenue = bookings
-                                .where((b) => b.paid)
-                                .fold(
-                                  0.0,
-                                  (sum, booking) => sum + booking.total,
-                                );
+                            final paidBookings = bookings.where((b) => b.paid).length;
+                            final totalRevenue =
+                                bookings.where((b) => b.paid).fold(0.0, (sum, booking) => sum + booking.total);
                             final bookedCount = bookings.length;
-                            final maxSlots = event.maxslots ?? 0;
-                            final slotsRemaining = maxSlots - bookedCount;
+                            final maxslots = event.maxslots ?? 0;
+                            final slotsRemaining = maxslots - bookedCount;
 
                             return Container(
                               padding: const EdgeInsets.all(12),
@@ -1174,25 +1183,20 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                                       const Text('Revenue'),
                                     ],
                                   ),
-                                  if (maxSlots > 0) ...[
+                                  if (maxslots > 0)
                                     Column(
                                       children: [
                                         Text(
-                                          slotsRemaining > 0
-                                              ? '$slotsRemaining'
-                                              : 'Full',
+                                          slotsRemaining > 0 ? '$slotsRemaining' : 'Full',
                                           style: TextStyle(
                                             fontSize: 18,
                                             fontWeight: FontWeight.bold,
-                                            color: slotsRemaining > 0
-                                                ? Colors.orange
-                                                : Colors.red,
+                                            color: slotsRemaining > 0 ? Colors.orange : Colors.red,
                                           ),
                                         ),
                                         const Text('Slots Left'),
                                       ],
                                     ),
-                                  ],
                                 ],
                               ),
                             );
@@ -1239,7 +1243,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                                   context,
                                   MaterialPageRoute(
                                     builder: (context) =>
-                                        AttendeesScreen(event: event),
+                                        AttendeesScreen(event: event, ),
                                   ),
                                 );
                               },
@@ -1284,6 +1288,69 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildSummaryCard(String title, String value, IconData icon, Color color) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 24),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: const Color.fromARGB(255, 25, 25, 95).withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: const Color.fromARGB(255, 25, 25, 95)),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: const Color.fromARGB(255, 25, 25, 95),
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -1351,9 +1418,9 @@ class EventDetailsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              event.price == 0.0
+              event.price == 0.0 ? 'Free Entry' : event.price == 0.0
                   ? 'Free'
-                  : '€${event.price.toStringAsFixed(2)}',
+                  : 'UGX ${event.price.toStringAsFixed(2)}',
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -1409,17 +1476,15 @@ class AttendeesScreen extends StatelessWidget {
             itemCount: bookings.length,
             itemBuilder: (context, index) {
               final booking = bookings[index];
-              String formattedDate;
-              if (booking.bookingDate is Timestamp) {
-                formattedDate = DateFormat(
-                  'dd/MM/yyyy HH:mm',
-                ).format((booking.bookingDate as Timestamp).toDate());
-              } else if (booking.bookingDate is DateTime) {
-                formattedDate = DateFormat(
-                  'dd/MM/yyyy HH:mm',
-                ).format(booking.bookingDate);
-              } else {
-                formattedDate = 'Unknown';
+              String formattedDate = 'Unknown';
+              if (booking.bookingDate != null) {
+                if (booking.bookingDate is Timestamp) {
+                  formattedDate = DateFormat('dd/MM/yyyy HH:mm')
+                      .format((booking.bookingDate as Timestamp).toDate());
+                } else if (booking.bookingDate is DateTime) {
+                  formattedDate = DateFormat('dd/MM/yyyy HH:mm')
+                      .format(booking.bookingDate as DateTime);
+                }
               }
               return Card(
                 margin: const EdgeInsets.only(bottom: 8),
@@ -1430,7 +1495,7 @@ class AttendeesScreen extends StatelessWidget {
                     children: [
                       Text(booking.email),
                       Text('Paid: ${booking.paid ? "Yes" : "No"}'),
-                      Text('Amount: €${booking.total.toStringAsFixed(2)}'),
+                      Text('Amount: UGX ${booking.total.toStringAsFixed(2)}'),
                       Text('Booked: $formattedDate'),
                     ],
                   ),
@@ -1454,9 +1519,11 @@ class EventAnalyticsScreen extends StatelessWidget {
     try {
       final bookings = await bookingService.getEventBookings(event.id);
       final paidBookings = bookings.where((b) => b.paid).length;
+    
       final totalRevenue = bookings
           .where((b) => b.paid)
           .fold(0.0, (sum, booking) => sum + booking.total);
+    print('Total Revenue for ${event.title}: UGX ${totalRevenue.toStringAsFixed(2)}');
       return {
         'totalBookings': bookings.length,
         'paidBookings': paidBookings,
@@ -1516,7 +1583,7 @@ class EventAnalyticsScreen extends StatelessWidget {
                 const SizedBox(height: 16),
                 _buildStatCard(
                   'Total Revenue',
-                  '€${stats['totalRevenue'].toStringAsFixed(2)}',
+                  'UGX ${stats['totalRevenue'].toStringAsFixed(2)}',
                   Icons.attach_money,
                   Colors.purple,
                 ),

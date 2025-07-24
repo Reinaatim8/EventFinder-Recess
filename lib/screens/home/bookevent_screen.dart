@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:async';
 import 'dart:ui' as ui;
 import 'dart:typed_data';
 import 'dart:io';
@@ -11,116 +10,23 @@ import 'package:flutter/rendering.dart';
 import 'package:pretty_qr_code/pretty_qr_code.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-// 1. Booking Status Model
-class BookingStatus {
-  final String ticketId;
-  final String status; // 'pending', 'completed', 'failed'
-  final DateTime timestamp;
-  final double amount;
 
-  BookingStatus({
-    required this.ticketId,
-    required this.status,
-    required this.timestamp,
-    required this.amount,
-  });
-
-  Map<String, dynamic> toJson() => {
-    'ticketId': ticketId,
-    'status': status,
-    'timestamp': timestamp.toIso8601String(),
-    'amount': amount,
-  };
-
-  factory BookingStatus.fromJson(Map<String, dynamic> json) => BookingStatus(
-    ticketId: json['ticketId'],
-    status: json['status'],
-    timestamp: DateTime.parse(json['timestamp']),
-    amount: json['amount'].toDouble(),
-  );
-}
-
-// 2. Booking State Manager
-class BookingStateManager {
-  static final BookingStateManager _instance = BookingStateManager._internal();
-  factory BookingStateManager() => _instance;
-  BookingStateManager._internal();
-
-  final Map<String, BookingStatus> _eventBookings = {};
-  final StreamController<Map<String, BookingStatus>> _bookingController =
-      StreamController<Map<String, BookingStatus>>.broadcast();
-
-  Stream<Map<String, BookingStatus>> get bookingStream =>
-      _bookingController.stream;
-
-  void updateBookingStatus(String eventId, BookingStatus status) {
-    _eventBookings[eventId] = status;
-    _bookingController.add(Map.from(_eventBookings));
-    _saveToPersistentStorage();
-  }
-
-  BookingStatus? getBookingStatus(String eventId) => _eventBookings[eventId];
-
-  Future<void> _saveToPersistentStorage() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final bookingData = _eventBookings.map(
-        (key, value) => MapEntry(key, value.toJson()),
-      );
-      await prefs.setString('event_bookings', jsonEncode(bookingData));
-    } catch (e) {
-      print('Error saving booking state: $e');
-    }
-  }
-
-  Future<void> loadFromPersistentStorage() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final bookingData = prefs.getString('event_bookings');
-      if (bookingData != null) {
-        final Map<String, dynamic> decoded = jsonDecode(bookingData);
-        _eventBookings.clear();
-        decoded.forEach((key, value) {
-          _eventBookings[key] = BookingStatus.fromJson(value);
-        });
-        _bookingController.add(Map.from(_eventBookings));
-      }
-    } catch (e) {
-      print('Error loading booking state: $e');
-    }
-  }
-
-  void dispose() {
-    _bookingController.close();
-  }
-}
-
-// 3. Payment Network Enum
-enum PaymentNetwork { mtn, airtel }
-
-// 4. Enhanced Checkout Screen
 class CheckoutScreen extends StatefulWidget {
   final double total;
-  final String? eventId;
-  final String? eventTitle;
   final VoidCallback? onPaymentSuccess;
 
   const CheckoutScreen({
     super.key,
     required this.total,
-    this.eventId,
-    this.eventTitle,
     this.onPaymentSuccess,
   });
 
   @override
   State<CheckoutScreen> createState() => _CheckoutScreenState();
 }
+
+enum PaymentNetwork { mtn, airtel }
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
   final _formKey = GlobalKey<FormState>();
@@ -131,524 +37,158 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   bool subscribeUpdates = true;
   PaymentNetwork? _selectedNetwork;
   String? _validatedPhone;
-  String? _ticketId;
-  int numberOfTickets = 1;
-  double get totalAmount => widget.total * numberOfTickets;
-
-  // Firebase instances
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  String? _ticketId; // QR code ticket
   final GlobalKey _qrKey = GlobalKey();
 
-  // Booking state manager
-  final BookingStateManager _bookingManager = BookingStateManager();
-  StreamSubscription<Map<String, BookingStatus>>? _bookingSubscription;
+  //final ScreenshotController _screenshotController = ScreenshotController();
+  final String subscriptionKey = "aab1d593853c454c9fcec8e4e02dde3c";
+  final String apiUser = "815d497c-9cb6-477c-8e30-23c3c2b3bea6";
+  final String apiKey = "5594113210ab4f3da3a7329b0ae65f40";
 
-  // API credentials (loaded from .env)
-  //String get subscriptionKey => dotenv.env['SUBSCRIPTION_KEY'] ?? '';
-  //String get apiUser => dotenv.env['API_USER'] ?? '';
-  //String get apiKey => dotenv.env['API_KEY'] ?? '';
-  String get subscriptionKey => dotenv.get('SUBSCRIPTION_KEY', fallback: '');
-  String get apiUser => dotenv.get('API_USER', fallback: '');
-  String get apiKey => dotenv.get('API_KEY', fallback: '');
-
-  @override
-  void initState() {
-    super.initState();
-    _loadUserData();
-    _initializeBookingState();
-  }
-
-  Future<void> _initializeBookingState() async {
-    await _bookingManager.loadFromPersistentStorage();
-    _bookingSubscription = _bookingManager.bookingStream.listen((bookings) {
-      if (mounted && widget.eventId != null) {
-        final booking = bookings[widget.eventId!];
-        if (booking != null && booking.status == 'completed') {
-          setState(() {});
-        }
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _bookingSubscription?.cancel();
-    _bookingManager.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadUserData() async {
-    final User? currentUser = _auth.currentUser;
-    if (currentUser != null) {
-      setState(() {
-        email = currentUser.email ?? '';
-        firstName = currentUser.displayName?.split(' ').first ?? '';
-        lastName = currentUser.displayName?.split(' ').skip(1).join(' ') ?? '';
-      });
-    } else {
-      final prefs = await SharedPreferences.getInstance();
-      setState(() {
-        firstName = prefs.getString('user_first_name') ?? '';
-        lastName = prefs.getString('user_last_name') ?? '';
-        email = prefs.getString('user_email') ?? '';
-      });
-    }
-  }
-
-  bool get isEventBooked {
-    if (widget.eventId == null) return false;
-    final booking = _bookingManager.getBookingStatus(widget.eventId!);
-    return booking?.status == 'completed';
-  }
-
-  Future<void> _saveBookingToFirestore(Map<String, dynamic> bookingData) async {
-    try {
-      final User? currentUser = _auth.currentUser;
-      if (currentUser != null) {
-        bookingData['userId'] = currentUser.uid;
-      }
-      await _firestore.collection('bookings').doc(_ticketId).set(bookingData);
-      if (currentUser != null) {
-        await _firestore
-            .collection('users')
-            .doc(currentUser.uid)
-            .collection('bookings')
-            .doc(_ticketId)
-            .set(bookingData);
-      }
-      await _saveBookingLocally(bookingData);
-    } catch (e) {
-      print('Error saving booking to Firestore: $e');
-      await _saveBookingLocally(bookingData);
-      throw e;
-    }
-  }
-
-  Future<void> _saveBookingLocally(Map<String, dynamic> bookingData) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('current_booking', jsonEncode(bookingData));
-      List<String> bookings = prefs.getStringList('booking_history') ?? [];
-      bookings.add(jsonEncode(bookingData));
-      await prefs.setStringList('booking_history', bookings);
-      await prefs.setString('user_first_name', firstName);
-      await prefs.setString('user_last_name', lastName);
-      await prefs.setString('user_email', email);
-    } catch (e) {
-      print('Error saving booking locally: $e');
-    }
-  }
-
-  Future<Map<String, dynamic>?> _loadBookingFromFirestore(
-    String ticketId,
-  ) async {
-    try {
-      final doc = await _firestore.collection('bookings').doc(ticketId).get();
-      return doc.exists ? doc.data() : null;
-    } catch (e) {
-      print('Error loading booking from Firestore: $e');
-      return null;
-    }
-  }
-
-  Future<List<Map<String, dynamic>>> _loadUserBookingHistory() async {
-    try {
-      final User? currentUser = _auth.currentUser;
-      if (currentUser != null) {
-        final querySnapshot = await _firestore
-            .collection('users')
-            .doc(currentUser.uid)
-            .collection('bookings')
-            .orderBy('timestamp', descending: true)
-            .get();
-        return querySnapshot.docs.map((doc) => doc.data()).toList();
-      }
-      final prefs = await SharedPreferences.getInstance();
-      final bookingList = prefs.getStringList('booking_history') ?? [];
-      return bookingList
-          .map((e) => jsonDecode(e) as Map<String, dynamic>)
-          .toList();
-    } catch (e) {
-      print('Error loading booking history: $e');
-      return [];
-    }
-  }
+  
 
   @override
   Widget build(BuildContext context) {
-    if (widget.total == 0) {
-      return _buildFreeEventUI();
-    }
-    if (isEventBooked) {
-      return _buildAlreadyBookedUI();
-    }
-    return _buildCheckoutUI();
-  }
-
-  Widget _buildFreeEventUI() {
     return Container(
-      decoration: const BoxDecoration(
+        decoration: const BoxDecoration(
         gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFFE8F5E8), Color(0xFFC8E6C9), Color(0xFFA5D6A7)],
-        ),
-      ),
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Color(0xFFE0F7FA), Color(0xFFB2EBF2), Color(0xFF81D4FA)],
+    ),
+    ),
       child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          title: const Text(
-            "Free Event",
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          centerTitle: true,
-          backgroundColor: Colors.green.shade700,
-        ),
-        body: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.event, size: 80, color: Colors.green),
-              const SizedBox(height: 20),
-              const Text(
-                "This is a free event!",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 10),
-              if (widget.eventTitle != null)
-                Text(
-                  widget.eventTitle!,
-                  style: const TextStyle(fontSize: 16, color: Colors.grey),
-                  textAlign: TextAlign.center,
-                ),
-              const SizedBox(height: 30),
-              ElevatedButton(
-                onPressed: _bookFreeEvent,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green.shade700,
-                  minimumSize: const Size(200, 50),
-                ),
-                child: const Text(
-                  "Reserve Your Spot",
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
-              const SizedBox(height: 10),
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("Back to Event"),
-              ),
-            ],
-          ),
-        ),
+      appBar: AppBar(
+        title: const Text("Checkout Your Ticket",
+            style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+        centerTitle: true,
+        backgroundColor: Color.fromARGB(255, 25, 25, 95),
+        toolbarHeight: 80,
+          //color: Theme.of(context).primaryColor
       ),
-    );
-  }
-
-  Widget _buildAlreadyBookedUI() {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFFE8F5E8), Color(0xFFC8E6C9), Color(0xFFA5D6A7)],
-        ),
-      ),
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          title: const Text(
-            "Already Booked ✅",
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          centerTitle: true,
-          backgroundColor: Colors.green.shade700,
-        ),
-        body: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.check_circle, size: 80, color: Colors.green),
-              const SizedBox(height: 20),
-              const Text(
-                "You have already booked this event!",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                textAlign: TextAlign.center,
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Card(
+            elevation: 3,
+            color: const Color.fromARGB(255, 212, 228, 245),
+            shape: RoundedRectangleBorder(
+              borderRadius: 
+              BorderRadius.circular(12)
+              
               ),
-              const SizedBox(height: 10),
-              if (widget.eventTitle != null)
-                Text(
-                  widget.eventTitle!,
-                  style: const TextStyle(fontSize: 16, color: Colors.grey),
-                  textAlign: TextAlign.center,
-                ),
-              const SizedBox(height: 30),
-              ElevatedButton(
-                onPressed: _showBookingHistory,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green.shade700,
-                  minimumSize: const Size(200, 50),
-                ),
-                child: const Text(
-                  "View My Tickets",
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
-              const SizedBox(height: 10),
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("Back to Event"),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCheckoutUI() {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFFE0F7FA), Color(0xFFB2EBF2), Color(0xFF81D4FA)],
-        ),
-      ),
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(
-          title: const Text(
-            "Checkout Your Ticket",
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          centerTitle: true,
-          backgroundColor: Colors.purple.shade900,
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.history, color: Colors.white),
-              onPressed: _showBookingHistory,
-            ),
-          ],
-        ),
-        body: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (widget.eventTitle != null) ...[
-                Card(
-                  elevation: 3,
-                  color: Colors.purple.shade50,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          "🎫 Event Details",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(children: [
+                const Text("💳 Billing Information", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 10),
+                Form(
+                  key: _formKey,
+                  child: Column(children: [
+                    Row(children: [
+                      Expanded(
+                        child: TextFormField(
+                          decoration: const InputDecoration(labelText: "First Name *", filled: false, ),
+                          onChanged: (val) => firstName = val,
+                          validator: (val) => val!.isEmpty ? "Required" : null,
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          "Event: ${widget.eventTitle}",
-                          style: const TextStyle(fontSize: 16),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: TextFormField(
+                          decoration: const InputDecoration(labelText: "Surname *"),
+                          onChanged: (val) => lastName = val,
+                          validator: (val) => val!.isEmpty ? "Required" : null,
                         ),
-                        Text(
-                          "Total: €${totalAmount.toStringAsFixed(2)} ($numberOfTickets ticket${numberOfTickets > 1 ? 's' : ''})",
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          children: [
-                            const Text(
-                              "Tickets: ",
-                              style: TextStyle(fontSize: 16),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.remove),
-                              onPressed: numberOfTickets > 1
-                                  ? () => setState(() => numberOfTickets--)
-                                  : null,
-                            ),
-                            Text(
-                              "$numberOfTickets",
-                              style: const TextStyle(fontSize: 16),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.add),
-                              onPressed: () =>
-                                  setState(() => numberOfTickets++),
-                            ),
-                          ],
-                        ),
-                      ],
+                      ),
+                    ]),
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      decoration: const InputDecoration(labelText: "Email Address *"),
+                      initialValue: '', // Optional: pre-fill with user's email if available
+                      //autofocus: true,
+                      keyboardType: TextInputType.emailAddress,
+                      autovalidateMode: AutovalidateMode.onUserInteraction,
+                      
+                      onChanged: (val) => email = val,
+                      validator: (val) => val!.isEmpty ? "Required" : null,
                     ),
-                  ),
+                    const SizedBox(height: 10),
+                    CheckboxListTile(
+                      title: const Text("Keep me updated on more events and news from this organiser."),
+                      value: subscribeOrganizer,
+                      onChanged: (val) => setState(() => subscribeOrganizer = val!),
+                    ),
+                    CheckboxListTile(
+                      title: const Text("Send me emails about the best events happening nearby or online."),
+                      value: subscribeUpdates,
+                      onChanged: (val) => setState(() => subscribeUpdates = val!),
+                    ),
+                  ]),
                 ),
-                const SizedBox(height: 20),
-              ],
-              Card(
-                elevation: 3,
-                color: const Color.fromARGB(255, 212, 228, 245),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      const Text(
-                        "💳 Billing Information",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Form(
-                        key: _formKey,
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: TextFormField(
-                                    initialValue: firstName,
-                                    decoration: const InputDecoration(
-                                      labelText: "First Name *",
-                                      filled: false,
-                                    ),
-                                    onChanged: (val) => firstName = val,
-                                    validator: (val) =>
-                                        val!.isEmpty ? "Required" : null,
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: TextFormField(
-                                    initialValue: lastName,
-                                    decoration: const InputDecoration(
-                                      labelText: "Surname *",
-                                    ),
-                                    onChanged: (val) => lastName = val,
-                                    validator: (val) =>
-                                        val!.isEmpty ? "Required" : null,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            TextFormField(
-                              initialValue: email,
-                              decoration: const InputDecoration(
-                                labelText: "Email Address *",
-                              ),
-                              onChanged: (val) => email = val,
-                              validator: (val) =>
-                                  val!.isEmpty ? "Required" : null,
-                            ),
-                            const SizedBox(height: 10),
-                            CheckboxListTile(
-                              title: const Text(
-                                "Keep me updated on more events and news from this organiser.",
-                              ),
-                              value: subscribeOrganizer,
-                              onChanged: (val) =>
-                                  setState(() => subscribeOrganizer = val!),
-                            ),
-                            CheckboxListTile(
-                              title: const Text(
-                                "Send me emails about the best events happening nearby or online.",
-                              ),
-                              value: subscribeUpdates,
-                              onChanged: (val) =>
-                                  setState(() => subscribeUpdates = val!),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              ]),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text("Number of Tickets", style: TextStyle(fontWeight: FontWeight.bold)),
+          Row(
+            children: [
+              IconButton(
+                icon: Icon(Icons.remove_circle_outline),
+                onPressed: numberOfTickets > 1
+                    ? () => setState(() => numberOfTickets--)
+                    : null,
               ),
-              const SizedBox(height: 20),
-              const Text(
-                "Mobile Money Payment",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              Text('$numberOfTickets', style: TextStyle(fontSize: 18)),
+              IconButton(
+                icon: Icon(Icons.add_circle_outline),
+                onPressed: () => setState(() => numberOfTickets++),
               ),
-              const SizedBox(height: 10),
-              _buildNetworkCard(
-                value: PaymentNetwork.mtn,
-                title: "MTN Mobile Money",
-                image: "assets/images/mtn.jpg",
-                bgColor: Colors.yellow.shade100,
-                borderColor: Colors.orange,
-              ),
-              _buildNetworkCard(
-                value: PaymentNetwork.airtel,
-                title: "Airtel Money",
-                image: "assets/images/airtel.png",
-                bgColor: Colors.red.shade50,
-                borderColor: Colors.redAccent,
-              ),
-              const Spacer(),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(50),
-                  backgroundColor: Colors.purple.shade900,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    if (_selectedNetwork == null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Please select a payment network"),
-                        ),
-                      );
-                      return;
-                    }
-                    _openMobileMoneyDialog(_selectedNetwork!);
-                  }
-                },
-                child: const Text(
-                  "Get Your Ticket",
-                  style: TextStyle(color: Colors.white, fontSize: 16),
-                ),
-              ),
+              Spacer(),
+              Text("Total: UGX ${totalAmount.toStringAsFixed(2)}",
+                  style: TextStyle(fontWeight: FontWeight.bold)),
             ],
           ),
-        ),
+         const SizedBox(height: 16),
+
+          const SizedBox(height: 20),
+          const Text("Mobile Money Payment", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 10),
+          _buildNetworkCard(
+            value: PaymentNetwork.mtn,
+            title: "MTN Mobile Money",
+            image: "assets/images/mtn.jpg",
+            bgColor: Colors.yellow.shade100,
+            borderColor: Colors.orange,
+          ),
+         
+          const Spacer(),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              minimumSize: const Size.fromHeight(50),
+              backgroundColor: Color.fromARGB(255, 25, 25, 95),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () {
+              if (_formKey.currentState!.validate()) {
+                if (_selectedNetwork == null) {
+                  Fluttertoast.showToast(
+                    msg: "❌ Please select a payment network.",
+                    toastLength: Toast.LENGTH_LONG,
+                    gravity: ToastGravity.TOP,
+                    backgroundColor: Colors.red,
+                    textColor: Colors.white,
+                  );
+                  return;
+                }
+                _openMobileMoneyDialog(_selectedNetwork!);
+              }
+            },
+            child: const Text("Get Your Ticket", style: TextStyle(color: Colors.white, fontSize: 16)),
+          ),
+        ]),
       ),
+    )
     );
   }
 
@@ -699,6 +239,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             ],
           ),
         ),
+
       ),
     );
   }
@@ -786,9 +327,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   const SizedBox(height: 16),
                   if (isLoading) const CircularProgressIndicator(),
                   const SizedBox(height: 10),
-                  const Text(
-                    "Hold on as we validate your phone number has a Mobile Money account for your payment.",
-                  ),
+                  const Text("Hold on as we Validate your Phone number has a MobileMoney Account For your payment."),
                 ],
               ),
             ),
@@ -810,13 +349,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     final token = await getAccessToken();
                     if (token != null) {
                       try {
-                        await requestToPay(
-                          phoneNumber: _validatedPhone!,
-                          accessToken: token,
-                          amount: totalAmount,
-                        );
-                        Navigator.pop(context);
-                        await _showSuccessDialog();
+                        await requestToPay(phoneNumber: _validatedPhone!, accessToken: token, amount: totalAmount);
+                        _showSuccessDialog();
                       } catch (e) {
                         Fluttertoast.showToast(
                           msg: "❌ Payment failed: ${e.toString()}",
@@ -853,363 +387,105 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  Future<void> _bookFreeEvent() async {
-    if (!_formKey.currentState!.validate()) return;
-
+  void _showSuccessDialog() {
     _ticketId = const Uuid().v4();
-    final bookingData = _createBookingData();
-
-    try {
-      if (widget.eventId != null) {
-        _bookingManager.updateBookingStatus(
-          widget.eventId!,
-          BookingStatus(
-            ticketId: _ticketId!,
-            status: 'completed',
-            timestamp: DateTime.now(),
-            amount: totalAmount,
-          ),
-        );
-      }
-      await _saveBookingToFirestore(bookingData);
-      await _showSuccessDialog();
-    } catch (e) {
-      await _showErrorDialog(e);
-    }
-  }
-
-  Map<String, dynamic> _createBookingData() {
-    return {
-      'ticketId': _ticketId,
-      'eventId': widget.eventId,
-      'eventTitle': widget.eventTitle,
-      'firstName': firstName,
-      'lastName': lastName,
-      'email': email,
-      'phone': _validatedPhone,
-      'amount': totalAmount,
-      'numberOfTickets': numberOfTickets,
-      'currency': 'EUR',
-      'paymentMethod': widget.total == 0
-          ? 'Free Event'
-          : (_selectedNetwork == PaymentNetwork.mtn
-                ? 'MTN Mobile Money'
-                : 'Airtel Money'),
-      'paymentStatus': 'completed',
-      'subscribeOrganizer': subscribeOrganizer,
-      'subscribeUpdates': subscribeUpdates,
-      'timestamp': FieldValue.serverTimestamp(),
-      'createdAt': DateTime.now().toIso8601String(),
-    };
-  }
-
-  Future<void> _showSuccessDialog() async {
-    _ticketId = _ticketId ?? const Uuid().v4();
-    final bookingData = _createBookingData();
-
-    try {
-      if (widget.eventId != null) {
-        _bookingManager.updateBookingStatus(
-          widget.eventId!,
-          BookingStatus(
-            ticketId: _ticketId!,
-            status: 'completed',
-            timestamp: DateTime.now(),
-            amount: totalAmount,
-          ),
-        );
-      }
-      await _saveBookingToFirestore(bookingData);
-
-      if (mounted) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (_) => AlertDialog(
-            title: const Text(
-              "Reservation Successful ✅",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  widget.total == 0
-                      ? "Your spot for ${widget.eventTitle} has been reserved!"
-                      : "Your event ticket for €${totalAmount.toStringAsFixed(2)} ($numberOfTickets ticket${numberOfTickets > 1 ? 's' : ''}).",
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  "🎟 Your Ticket QR Code",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                RepaintBoundary(
-                  key: _qrKey,
-                  child: SizedBox(
-                    width: 180,
-                    height: 180,
-                    child: PrettyQrView.data(
-                      data: _ticketId!,
-                      errorCorrectLevel: QrErrorCorrectLevel.M,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text('QR Code for: $_ticketId'),
-                const SizedBox(height: 10),
-                const Text(
-                  "Save or screenshot this QR for entry. Your ticket is also saved in your booking history.",
-                  style: TextStyle(fontSize: 12, color: Colors.black),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton.icon(
-                  onPressed: _downloadQRCode,
-                  icon: const Icon(Icons.download),
-                  label: const Text("Download QR Code"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blueAccent,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: _showBookingHistory,
-                child: const Text("View History"),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  if (widget.onPaymentSuccess != null) {
-                    widget.onPaymentSuccess!();
-                  }
-                  Navigator.pop(context);
-                },
-                child: const Text("OK"),
-              ),
-            ],
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) await _showErrorDialog(e);
-    }
-  }
-
-  Future<void> _showErrorDialog(dynamic error) async {
-    if (mounted) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => AlertDialog(
-          title: const Text(
-            "Reservation Failed",
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text("Error: ${error.toString()}"),
-              const SizedBox(height: 16),
-              if (_ticketId != null) ...[
-                const Text(
-                  "🎟 Your Ticket QR Code",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                RepaintBoundary(
-                  key: _qrKey,
-                  child: SizedBox(
-                    width: 180,
-                    height: 180,
-                    child: PrettyQrView.data(
-                      data: _ticketId!,
-                      errorCorrectLevel: QrErrorCorrectLevel.M,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text('QR Code for: $_ticketId'),
-                const SizedBox(height: 10),
-                const Text(
-                  "⚠️ Please screenshot this QR code immediately as backup storage failed.",
-                  style: TextStyle(fontSize: 12, color: Colors.red),
-                ),
-              ],
-            ],
-          ),
-          actions: [
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                if (_ticketId != null && widget.onPaymentSuccess != null) {
-                  widget.onPaymentSuccess!();
-                }
-                Navigator.pop(context);
-              },
-              child: const Text("OK"),
-            ),
-          ],
-        ),
-      );
-    }
-  }
-
-  void _showBookingHistory() {
     showDialog(
       context: context,
-      builder: (context) => Dialog(
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          constraints: const BoxConstraints(maxHeight: 500, maxWidth: 400),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                "🎫 Booking History",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 20),
-              Expanded(
-                child: FutureBuilder<List<Map<String, dynamic>>>(
-                  future: _loadUserBookingHistory(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    if (snapshot.hasError) {
-                      return Center(child: Text('Error: ${snapshot.error}'));
-                    }
-                    final bookings = snapshot.data ?? [];
-                    if (bookings.isEmpty) {
-                      return const Center(
-                        child: Text(
-                          'No bookings found',
-                          style: TextStyle(fontSize: 16, color: Colors.grey),
-                        ),
-                      );
-                    }
-                    return ListView.builder(
-                      itemCount: bookings.length,
-                      itemBuilder: (context, index) {
-                        final booking = bookings[index];
-                        return Card(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          child: ListTile(
-                            title: Text(
-                              booking['eventTitle'] ?? 'Unknown Event',
-                            ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '€${booking['amount']} - ${booking['firstName']} ${booking['lastName']}',
-                                ),
-                                Text(
-                                  '${booking['createdAt'] ?? 'Unknown date'}',
-                                ),
-                              ],
-                            ),
-                            trailing: const Icon(Icons.qr_code),
-                            onTap: () => _showQRCode(booking['ticketId']),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("Close"),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showQRCode(String ticketId) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Ticket QR Code"),
-        content: Column(
+      builder: (_) => AlertDialog(
+        title: const Text("Payment Successful ✅", style: TextStyle(fontSize:20,fontWeight: FontWeight.bold,)),
+        content:Column(
           mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: 180,
-              height: 180,
-              child: PrettyQrView.data(
-                data: ticketId,
-                errorCorrectLevel: QrErrorCorrectLevel.M,
-              ),
-            ),
+           children: [
+            Text("Your Event-entry QR Code for UGX${totalAmount.toStringAsFixed(2)}."),
+            Text("Tickets Purchased: $numberOfTickets"),
+            const SizedBox(height: 16),
+            const Text("🎟 Your Ticket QR Code", style: TextStyle(fontWeight: FontWeight.bold,)),
+             if (_ticketId != null)
+              RepaintBoundary(
+                key: _qrKey,
+               child: SizedBox(
+                 width: 180,
+                 height: 180,
+                 child: PrettyQrView.data(
+                   data: _ticketId!,
+                   errorCorrectLevel: QrErrorCorrectLevel.M,
+                   
+                 ),
+                 ),
+               ),
+               const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: _downloadQRCode,
+                    icon: Icon(Icons.download),
+                    label: Text("Download QR Code"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueAccent,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+
             const SizedBox(height: 8),
-            Text('Ticket ID: $ticketId'),
-            const SizedBox(height: 10),
-            const Text(
-              "Present this QR code at the event",
-              style: TextStyle(fontSize: 12, color: Colors.grey),
-              textAlign: TextAlign.center,
-            ),
-          ],
+             if (_ticketId != null)
+               Text('QR Code for: $_ticketId'),
+
+             const SizedBox(height:10),
+            const Text("Save or screenshot this QR for entry.",
+               style: TextStyle(fontSize:12,color:Colors.black)),
+            ],
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Close"),
+            onPressed: () {
+              if (widget.onPaymentSuccess != null) {
+                widget.onPaymentSuccess!();
+              }
+              Navigator.popUntil(context, (route) => route.isFirst);
+            },
+            child: const Text("OK"),
           ),
         ],
       ),
     );
   }
+  
 
   Future<String?> getAccessToken() async {
-    try {
-      final response = await http.post(
-        Uri.parse('https://sandbox.momodeveloper.mtn.com/collection/token/'),
-        headers: {
-          'Authorization':
-              'Basic ${base64Encode(utf8.encode('$apiUser:$apiKey'))}',
-          'Ocp-Apim-Subscription-Key': subscriptionKey,
-        },
-      );
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data['access_token'];
-      }
-      print('Failed to get access token: ${response.statusCode}');
-      return null;
-    } catch (e) {
-      print('Error getting access token: $e');
+    final credentials = base64Encode(utf8.encode('$apiUser:$apiKey'));
+    final headers = {
+      'Authorization': 'Basic $credentials',
+      'Ocp-Apim-Subscription-Key': subscriptionKey,
+    };
+
+    final response = await http.post(
+      Uri.parse("https://sandbox.momodeveloper.mtn.com/collection/token/"),
+      headers: headers,
+    );
+
+    if (response.statusCode == 200) {
+      print("Access token obtained successfully");
+      return jsonDecode(response.body)['access_token'];
+    } else {
+      print("Token error: ${response.body}");
       return null;
     }
   }
 
-  Future<bool> validateAccountHolder(
-    String phoneNumber,
-    String accessToken,
-  ) async {
-    try {
-      final response = await http.get(
-        Uri.parse(
-          'https://sandbox.momodeveloper.mtn.com/collection/v1_0/accountholder/msisdn/$phoneNumber/active',
-        ),
-        headers: {
-          'Authorization': 'Bearer $accessToken',
-          'Ocp-Apim-Subscription-Key': subscriptionKey,
-          'X-Target-Environment': 'sandbox',
-        },
-      );
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data['result'] == true;
-      }
+  Future<void> validateAccountHolder(String phone, String accessToken) async {
+    final headers = {
+      'Authorization': 'Bearer $accessToken',
+      'X-Target-Environment': 'sandbox',
+      'Ocp-Apim-Subscription-Key': subscriptionKey,
+    };
+
+    final response = await http.get(
+      Uri.parse("https://sandbox.momodeveloper.mtn.com/collection/v1_0/accountholder/msisdn/$phone/active"),
+      headers: headers,
+    );
+
+    if (response.statusCode == 200) {
+      print("✅ Account is active: $phone");
+    } else {
       print("❌ Account not active: ${response.body}");
       throw Exception("Account not active: ${response.body}");
     } catch (e) {
@@ -1258,71 +534,48 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     required String accessToken,
     required double amount,
   }) async {
-    try {
-      final referenceId = const Uuid().v4();
-      final body = jsonEncode({
-        'amount': amount.toString(),
-        'currency': 'EUR',
-        'externalId': referenceId,
-        'payer': {'partyIdType': 'MSISDN', 'partyId': phoneNumber},
-        'payerMessage': 'Event ticket payment for ${widget.eventTitle}',
-        'payeeNote': 'Ticket purchase',
-      });
-      final response = await http.post(
-        Uri.parse(
-          'https://sandbox.momodeveloper.mtn.com/collection/v1_0/requesttopay',
-        ),
-        headers: {
-          'Authorization': 'Bearer $accessToken',
-          'X-Reference-Id': referenceId,
-          'X-Target-Environment': 'sandbox',
-          'Ocp-Apim-Subscription-Key': subscriptionKey,
-          'Content-Type': 'application/json',
-        },
-        body: body,
-      );
-      if (response.statusCode == 202) {
-        await _checkPaymentStatus(referenceId, accessToken);
-      } else {
-        throw Exception('Failed to initiate payment: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Error requesting payment: $e');
-      throw e;
-    }
-  }
+    final uuid = const Uuid().v4();
+    final headers = {
+      'Authorization': 'Bearer $accessToken',
+      'X-Reference-Id': uuid,
+      'X-Target-Environment': 'sandbox',
+      'Content-Type': 'application/json',
+      'Ocp-Apim-Subscription-Key': subscriptionKey,
+    };
 
-  Future<void> _checkPaymentStatus(
-    String referenceId,
-    String accessToken,
-  ) async {
-    try {
-      for (int i = 0; i < 5; i++) {
-        await Future.delayed(const Duration(seconds: 3));
-        final response = await http.get(
-          Uri.parse(
-            'https://sandbox.momodeveloper.mtn.com/collection/v1_0/requesttopay/$referenceId',
-          ),
-          headers: {
-            'Authorization': 'Bearer $accessToken',
-            'X-Target-Environment': 'sandbox',
-            'Ocp-Apim-Subscription-Key': subscriptionKey,
-          },
-        );
-        if (response.statusCode == 200) {
-          final data = jsonDecode(response.body);
-          if (data['status'] == 'SUCCESSFUL') {
-            return;
-          } else if (data['status'] == 'FAILED' ||
-              data['status'] == 'REJECTED') {
-            throw Exception('Payment ${data['status'].toLowerCase()}');
-          }
-        }
-      }
-      throw Exception('Payment timeout');
-    } catch (e) {
-      print('Error checking payment status: $e');
-      throw e;
+    final body = jsonEncode({
+      "amount": amount.toStringAsFixed(2),
+      "currency": "EUR",
+      "externalId": "123456",
+      "payer": {
+        "partyIdType": "MSISDN",
+        "partyId": phoneNumber,
+      },
+      "payerMessage": "Ticket Payment",
+      "payeeNote": "Thank you for booking!",
+    });
+
+    final url = Uri.parse("https://sandbox.momodeveloper.mtn.com/collection/v1_0/requesttopay");
+    print("📤 Sending request to pay to $phoneNumber...");
+    print("Request Headers: $headers");
+    print("Request Body: $body");
+
+    final response = await http.post(url, headers: headers, body: body);
+    print("Response Status: ${response.statusCode}");
+    print("Response Body: ${response.body}");
+
+    if (response.statusCode == 202) {
+      print("✅ RequestToPay sent successfully. Awaiting user action.");
+      Fluttertoast.showToast(
+        msg: "✅ Payment request sent. Please approve it on your phone.",
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.TOP,
+        backgroundColor: Colors.green,
+        textColor: Colors.white,
+      );
+    } else {
+      print("❌ Failed to initiate payment: ${response.body}");
+      throw Exception("Failed to initiate payment: ${response.body}");
     }
   }
 }

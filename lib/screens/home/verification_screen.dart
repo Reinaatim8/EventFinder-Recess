@@ -86,12 +86,12 @@ class _VerificationScreenState extends State<VerificationScreen> {
         'verificationStatus': approve ? 'approved' : 'rejected',
         'approvedAt': approve ? FieldValue.serverTimestamp() : null,
         'rejectionReason': approve ? null : rejectionReason,
-        'status': null, // Remove redundant 'status' field
+        'status': null,
       });
       setState(() {
         currentVerificationStatus = approve;
       });
-      widget.onStatusUpdate(approve ? 'Approved' : 'Rejected'); // Notify HomeScreen
+      widget.onStatusUpdate(approve ? 'Approved' : 'Rejected');
       print('Event ${widget.event.title} ${approve ? 'approved' : 'rejected'} in Firestore${approve ? '' : ' with reason: $rejectionReason'}');
       Fluttertoast.showToast(
         msg: approve ? 'Event Approved!' : 'Event Rejected!',
@@ -295,15 +295,32 @@ class _VerificationScreenState extends State<VerificationScreen> {
 
   Future<void> _handlePayment() async {
     if (!currentVerificationStatus) {
-      Fluttertoast.showToast(
-        msg: "Event must be verified before payment",
-        toastLength: Toast.LENGTH_LONG,
-        gravity: ToastGravity.CENTER,
-        backgroundColor: Colors.red,
-        textColor: Colors.white,
-        fontSize: 16.0,
+      // Show caution dialog for unverified events
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Caution: Unverified Event'),
+          content: const Text(
+            'This event is not yet verified. Paying for an unverified event may carry risks, as the event details have not been confirmed by an administrator. Do you wish to proceed with payment?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel', style: TextStyle(color: Colors.red)),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+              child: const Text('Proceed'),
+            ),
+          ],
+        ),
       );
-      return;
+
+      if (proceed != true) {
+        print('User cancelled payment for unverified event: ${widget.event.title}');
+        return;
+      }
     }
 
     try {
@@ -324,6 +341,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
                 'ticketId': ticketId,
                 'isVerified': currentVerificationStatus,
                 'verificationStatus': widget.verificationStatus,
+                'eventId': widget.event.id,
               };
               widget.onBookingAdded(booking);
               widget.onStatusUpdate('Paid');
@@ -353,9 +371,64 @@ class _VerificationScreenState extends State<VerificationScreen> {
     }
   }
 
+  Future<void> _handleBooking() async {
+    try {
+      final booking = {
+        'id': DateTime.now().millisecondsSinceEpoch,
+        'event': widget.event.title,
+        'total': widget.event.price,
+        'paid': widget.event.price == '0' || widget.event.price == '0.0' || widget.event.price == '0.00' ? true : false,
+        'ticketId': ticketId,
+        'isVerified': currentVerificationStatus,
+        'verificationStatus': widget.verificationStatus,
+        'eventId': widget.event.id,
+      };
+      widget.onBookingAdded(booking);
+      widget.onStatusUpdate('Reserved');
+      print('Booking successful for event: ${widget.event.title}, isVerified: ${currentVerificationStatus}');
+      Navigator.pop(context);
+      Fluttertoast.showToast(
+        msg: "Event Reservation Successful!",
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.CENTER,
+        backgroundColor: Colors.orange,
+        textColor: Colors.white,
+        fontSize: 19.0,
+      );
+    } catch (e) {
+      print('Error booking event: $e');
+      Fluttertoast.showToast(
+        msg: 'Error booking event: $e',
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.CENTER,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isAdmin = _isAdmin(context);
+    // final isPast = widget.event.date.isNotEmpty
+    //     ? DateTime.parse(widget.event.date).isBefore(DateTime.now())
+    //     : false;
+    final isPast = widget.event.date.isNotEmpty
+      ? () {
+          try {
+            final parts = widget.event.date.split('/');
+            final parsedDate = DateTime(
+              int.parse(parts[2]), // year
+              int.parse(parts[1]), // month
+              int.parse(parts[0])  // day
+            );
+            return parsedDate.isBefore(DateTime.now());
+          } catch (e) {
+            return false; // fallback in case of format error
+          }
+        }()
+      : false;
 
     return AlertDialog(
       title: Row(
@@ -368,196 +441,131 @@ class _VerificationScreenState extends State<VerificationScreen> {
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
           ),
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: currentVerificationStatus ? Colors.green : (widget.verificationStatus == 'unverified' ? Colors.red : Colors.red),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      currentVerificationStatus ? Icons.verified : Icons.warning,
-                      color: Colors.white,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      currentVerificationStatus ? 'Verified' : 'Unverified',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: currentVerificationStatus ? Colors.green : Colors.red,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              currentVerificationStatus ? 'Verified' : 'Unverified',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
               ),
-              if (isAdmin)
-                IconButton(
-                  icon: const Icon(Icons.admin_panel_settings, color: Colors.blue, size: 24),
-                  tooltip: 'Verify Event',
-                  onPressed: _isLoading ? null : _showVerificationDialog,
-                ),
-            ],
+            ),
           ),
         ],
       ),
-      content: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.event.description,
+              style: const TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Date: ${widget.event.date}',
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Location: ${widget.event.location}',
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Price: ${widget.event.price == '0' || widget.event.price == '0.0' || widget.event.price == '0.00' ? 'Free' : 'UGX ${widget.event.price}'}',
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 16),
+            if (widget.verificationStatus != null)
+              Text(
+                'Verification Status: ${widget.verificationStatus}',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: widget.verificationStatus == 'approved' ? Colors.green : Colors.red,
+                ),
+              ),
+            if (widget.rejectionReason != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Rejection Reason: ${widget.rejectionReason}',
+                style: const TextStyle(fontSize: 14, color: Colors.red),
+              ),
+            ],
+            const SizedBox(height: 16),
+            _buildDocumentPreview(),
+            const SizedBox(height: 16),
+            if (_isLoading)
+              const Center(child: CircularProgressIndicator())
+            else if (isPast)
+              const Text(
+                'This event has already passed.',
+                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+              )
+            else ...[
+              if (isAdmin)
+                ElevatedButton(
+                  onPressed: _showVerificationDialog,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Verify/Reject Event'),
+                ),
+              const SizedBox(height: 8),
+              ElevatedButton(
+                onPressed: _handleBooking,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Book Event'),
+              ),
+              const SizedBox(height: 8),
+              if (widget.event.price != '0' && widget.event.price != '0.0' && widget.event.price != '0.00')
+                ElevatedButton(
+                  onPressed: _handlePayment,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('Pay for Event'),
+                ),
+            ],
+            const SizedBox(height: 16),
+            if (!isPast)
+              Column(
                 children: [
-                  if (isAdmin && widget.verificationDocumentUrl != null) ...[
-                    _buildDocumentPreview(),
-                    const SizedBox(height: 16),
-                  ],
-                  if (currentVerificationStatus) ...[
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.green.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.green.shade200),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Row(
-                            children: [
-                              Icon(Icons.check_circle, color: Colors.green, size: 16),
-                              SizedBox(width: 4),
-                              Text(
-                                'Event Verified',
-                                style: TextStyle(
-                                  color: Colors.green,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Verification approved by admin.',
-                            style: const TextStyle(fontSize: 12, color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                  ] else ...[
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.red.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.red.shade200),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Row(
-                            children: [
-                              Icon(Icons.warning, color: Colors.red, size: 16),
-                              SizedBox(width: 4),
-                              Text(
-                                'Unverified Event',
-                                style: TextStyle(
-                                  color: Colors.red,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            widget.rejectionReason != null
-                                ? 'Verification rejected: ${widget.rejectionReason}'
-                                : 'This event has not been verified. Proceed with caution.',
-                            style: const TextStyle(fontSize: 12, color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                  if (widget.event.price <= 0.0) ...[
-                    const Text("Here's your QR code ticket:"),
-                    const SizedBox(height: 16),
-                    Center(
-                      child: SizedBox(
-                        width: 180,
-                        height: 180,
-                        child: PrettyQrView.data(
-                          data: ticketId,
-                          errorCorrectLevel: QrErrorCorrectLevel.M,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Center(
-                      child: Text(
-                        "Ticket ID: ${ticketId.substring(0, 8)}...",
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text("Please present this QR code at the event."),
-                  ] else ...[
-                    Text(
-                      "This event requires a payment of €${widget.event.price.toStringAsFixed(2)}. Please proceed to checkout.",
-                    ),
-                  ],
+                  const Text(
+                    'Event Ticket QR Code',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  PrettyQr(
+                    data: ticketId,
+                    size: 150,
+                    roundEdges: true,
+                    errorCorrectLevel: QrErrorCorrectLevel.M,
+                  ),
                 ],
               ),
-            ),
+          ],
+        ),
+      ),
       actions: [
         TextButton(
-          onPressed: () {
-            Navigator.pop(context);
-          },
+          onPressed: () => Navigator.pop(context),
           child: const Text(
-            'Cancel',
+            'Close',
             style: TextStyle(color: Colors.red),
           ),
         ),
-        if (widget.event.price <= 0.0)
-          TextButton(
-            onPressed: () {
-              final booking = {
-                'id': DateTime.now().millisecondsSinceEpoch,
-                'event': widget.event.title,
-                'total': 0.0,
-                'paid': true,
-                'ticketId': ticketId,
-                'isVerified': currentVerificationStatus,
-                'verificationStatus': widget.verificationStatus,
-              };
-              widget.onBookingAdded(booking);
-              widget.onStatusUpdate('Paid');
-              print('Free ticket generated for event: ${widget.event.title}');
-              Navigator.pop(context);
-              Fluttertoast.showToast(
-                msg: "Free Event Ticket Generated!",
-                toastLength: Toast.LENGTH_LONG,
-                gravity: ToastGravity.CENTER,
-                backgroundColor: Colors.green,
-                textColor: Colors.white,
-                fontSize: 19.0,
-              );
-            },
-            child: const Text("Done"),
-          )
-        else
-          ElevatedButton(
-            onPressed: _isLoading ? null : _handlePayment,
-            child: const Text('Proceed to Checkout'),
-          ),
       ],
     );
   }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:event_locator_app/screens/auth/auth_wrapper.dart';
 import 'package:event_locator_app/core/theme/app_theme.dart';
 import 'package:event_locator_app/screens/auth/splash_screen.dart';
+import 'package:event_locator_app/screens/auth/login_screen.dart';
 import 'package:event_locator_app/screens/home/event_details_screen.dart';
 
 class LocalEventFinderApp extends StatelessWidget {
@@ -19,6 +20,10 @@ class LocalEventFinderApp extends StatelessWidget {
       themeMode: ThemeMode.system,
       home: const SplashScreen(),
       //home: const AuthWrapper(),
+      // routes: {
+      //   '/login': (context) => const LoginScreen(), // Register the login route
+      //   // Add other named routes if needed
+      // },
     );
   }
 }
