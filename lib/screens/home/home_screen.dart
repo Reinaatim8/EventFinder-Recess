@@ -1346,6 +1346,7 @@ class EventCard extends StatelessWidget {
                                     MaterialPageRoute(
                                       builder: (context) => CheckoutScreen(
                                         event: event,
+                                        ticketId: const Uuid().v4(),
                                         total: price,
                                         onPaymentSuccess: () {
                                           Fluttertoast.showToast(
@@ -1814,6 +1815,7 @@ class _BookingsTabState extends State<BookingsTab> {
                               MaterialPageRoute(
                                 builder: (_) => CheckoutScreen(
                                   event: event,
+                                  ticketId: const Uuid().v4(),
                                   total:
                                       double.tryParse(
                                         booking['price'].toString(),
