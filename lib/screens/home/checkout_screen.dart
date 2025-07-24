@@ -143,20 +143,22 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   void initState() {
     super.initState();
     _ticketId = widget.ticketId;
-    if (_auth.currentUser == null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please log in to book an event'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        Navigator.pop(context);
-      });
-    } else {
-      _loadUserData();
-      _initializeBookingState();
-    }
+    _auth.authStateChanges().listen((User? user) {
+      if (user == null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Please log in to book an event'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          Navigator.pop(context);
+        });
+      } else {
+        _loadUserData();
+        _initializeBookingState();
+      }
+    });
   }
 
   Future<void> _initializeBookingState() async {
@@ -204,38 +206,159 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   Future<void> _saveBookingToFirestore(Map<String, dynamic> bookingData) async {
-    try {
-      final User? currentUser = _auth.currentUser;
-      if (currentUser == null) {
-        throw Exception('User must be logged in to book an event');
-      }
-      bookingData['userId'] = currentUser.uid;
-      bookingData['event'] = bookingData['eventTitle'];
-      bookingData['price'] = bookingData['amount'];
-      bookingData['paid'] = bookingData['paymentStatus'] == 'completed';
-      bookingData['eventId'] = bookingData['eventId'];
-      bookingData['isVerified'] = widget.event.isVerified;
-      bookingData['verificationStatus'] = widget.event.verificationStatus;
-      bookingData['ticketId'] = bookingData['ticketId'];
+  try {
+    final User? currentUser = _auth.currentUser;
+    if (currentUser == null) {
+      throw Exception('User must be logged in to book an event');
+    }
 
-      // Save to bookings collection
-      final bookingRef = await _firestore.collection('bookings').add(bookingData);
-      // Save to user-specific subcollection
+    // Debug: Print current user info
+    print('=== BOOKING DEBUG INFO ===');
+    print('Current User UID: ${currentUser.uid}');
+    print('Current User Email: ${currentUser.email}');
+    print('Current User Display Name: ${currentUser.displayName}');
+    print('User is anonymous: ${currentUser.isAnonymous}');
+    
+    // Check if user has custom claims (admin status)
+    final idTokenResult = await currentUser.getIdTokenResult();
+    print('User custom claims: ${idTokenResult.claims}');
+
+    // Ensure userId is set correctly
+    bookingData['userId'] = currentUser.uid;
+
+    // Debug: Print the booking data being sent
+    print('Booking data being sent to Firestore:');
+    bookingData.forEach((key, value) {
+      print('  $key: $value (${value.runtimeType})');
+    });
+
+    // Validate required fields for Firestore rules
+    final requiredFields = ['userId', 'eventId', 'eventTitle', 'ticketId'];
+    for (String field in requiredFields) {
+      if (bookingData[field] == null || bookingData[field].toString().trim().isEmpty) {
+        throw Exception('Missing or empty required field: $field');
+      }
+    }
+
+    // Additional field mapping with better validation
+    bookingData['event'] = bookingData['eventTitle'] ?? widget.event.title;
+    bookingData['price'] = (bookingData['amount'] ?? widget.total).toDouble();
+    bookingData['paid'] = bookingData['paymentStatus'] == 'completed';
+    bookingData['eventId'] = bookingData['eventId'] ?? widget.event.id;
+    bookingData['isVerified'] = widget.event.isVerified ?? false;
+    bookingData['verificationStatus'] = widget.event.verificationStatus ?? 'pending';
+    bookingData['ticketId'] = bookingData['ticketId'] ?? _ticketId;
+
+    print('Final booking data after mapping:');
+    bookingData.forEach((key, value) {
+      print('  $key: $value');
+    });
+
+    print('Attempting to save to Firestore...');
+
+    // Try to save to main bookings collection with better error handling
+    DocumentReference? bookingRef;
+    try {
+      bookingRef = await _firestore.collection('bookings').add(bookingData);
+      print('✅ Booking saved to main collection: ${bookingRef.id}');
+    } catch (firestoreError) {
+      print('❌ Error saving to main bookings collection: $firestoreError');
+      
+      // Check if it's a permission error
+      if (firestoreError.toString().contains('permission-denied') || 
+          firestoreError.toString().contains('Missing or insufficient permissions')) {
+        print('🔒 This is a permission error. Checking Firestore rules...');
+        
+        // Log what the rules are expecting vs what we're sending
+        print('Rules expect: authenticated user with userId matching auth.uid');
+        print('We are sending: userId = ${bookingData['userId']}, auth.uid = ${currentUser.uid}');
+        print('Match: ${bookingData['userId'] == currentUser.uid}');
+      }
+      
+      throw firestoreError;
+    }
+
+    // Try to save to user's subcollection
+    try {
       await _firestore
           .collection('users')
           .doc(currentUser.uid)
           .collection('bookings')
-          .doc(bookingRef.id)
+          .doc(bookingRef!.id)
           .set(bookingData);
-      await _saveBookingLocally(bookingData);
-      print('Booking saved successfully: ${bookingRef.id}');
-    } catch (e) {
-      print('Error saving booking: $e');
-      await _saveBookingLocally(bookingData);
-      throw e;
+      print('✅ Booking saved to user subcollection');
+    } catch (userSubcollectionError) {
+      print('❌ Error saving to user subcollection: $userSubcollectionError');
+      // Don't throw here as main booking was successful
     }
-  }
 
+    // Save locally as backup
+    await _saveBookingLocally(bookingData);
+    print('✅ Booking saved locally');
+
+    print('=== BOOKING SUCCESS ===');
+
+  } catch (e) {
+    print('=== BOOKING FAILED ===');
+    print('Error details: $e');
+    print('Error type: ${e.runtimeType}');
+    
+    // Save locally as fallback
+    try {
+      await _saveBookingLocally(bookingData);
+      print('✅ Fallback: Booking saved locally');
+    } catch (localError) {
+      print('❌ Even local save failed: $localError');
+    }
+    
+    rethrow;
+  }
+}
+
+// Add this method to check user authentication status
+Future<void> _debugUserAuth() async {
+  final User? currentUser = _auth.currentUser;
+  
+  print('=== AUTH DEBUG ===');
+  if (currentUser == null) {
+    print('❌ No user is currently signed in');
+    return;
+  }
+  
+  print('✅ User is signed in');
+  print('UID: ${currentUser.uid}');
+  print('Email: ${currentUser.email}');
+  print('Email Verified: ${currentUser.emailVerified}');
+  print('Display Name: ${currentUser.displayName}');
+  print('Phone Number: ${currentUser.phoneNumber}');
+  print('Is Anonymous: ${currentUser.isAnonymous}');
+  print('Provider Data: ${currentUser.providerData.map((e) => e.providerId).toList()}');
+  
+  try {
+    final idToken = await currentUser.getIdToken();
+    if (idToken != null) {
+      print('✅ ID Token obtained (length: ${idToken.length})');
+    } else {
+      print('❌ ID Token is null');
+    }
+    
+    final idTokenResult = await currentUser.getIdTokenResult();
+    print('Token Claims: ${idTokenResult.claims}');
+    print('Auth Time: ${idTokenResult.authTime}');
+    print('Issued At: ${idTokenResult.issuedAtTime}');
+    print('Expiration: ${idTokenResult.expirationTime}');
+  } catch (tokenError) {
+    print('❌ Error getting ID token: $tokenError');
+  }
+  
+  // Test Firestore access
+  try {
+    await _firestore.collection('users').doc(currentUser.uid).get();
+    print('✅ Can access Firestore with current auth');
+  } catch (firestoreError) {
+    print('❌ Cannot access Firestore: $firestoreError');
+  }
+}
   Future<void> _saveBookingLocally(Map<String, dynamic> bookingData) async {
     try {
       final prefs = await SharedPreferences.getInstance();
