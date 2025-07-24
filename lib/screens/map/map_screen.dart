@@ -644,7 +644,35 @@ class _MapScreenState extends State<MapScreen>
       backgroundColor: const Color.fromARGB(255, 25, 25, 95),
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('EVENTS MAP'),
+        title: Row(
+    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    children: [
+      RichText(
+        text: TextSpan(
+          children: [
+            TextSpan(
+              text: 'EVENTS ',
+              style: TextStyle(
+                color: Colors.orange,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            TextSpan(
+              text: 'MAP',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+      const Icon(Icons.map, color: Colors.white, size: 28), // Map icon on the right
+    ],
+  ),
+
         backgroundColor:const Color.fromARGB(255, 25, 25, 95),
         toolbarHeight: 70,
         elevation: 0,

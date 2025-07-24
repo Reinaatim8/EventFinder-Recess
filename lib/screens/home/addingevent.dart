@@ -1007,7 +1007,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
           );
         }
       } catch (e) {
-        print('Error adding event: $e');
+        //print('Error adding event: $e');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -1032,8 +1032,3 @@ class _AddEventDialogState extends State<AddEventDialog> {
   }
 }
 
-class LatLng {
-  double? get latitude => null;
-  
-  double? get longitude => null;
-}

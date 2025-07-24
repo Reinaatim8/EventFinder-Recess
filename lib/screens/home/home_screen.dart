@@ -180,9 +180,9 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     } catch (e) {
       print('Error booking event: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error booking event: $e')),
-      );
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   //SnackBar(content: Text('Error booking event: $e')),
+      // );
     }
   }
 
@@ -209,9 +209,9 @@ class _HomeScreenState extends State<HomeScreen> {
       bookingsTabKey.currentState?._fetchBookings();
     } catch (e) {
       print('Error loading booked events: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading booked events: $e')),
-      );
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   SnackBar(content: Text('Error loading booked events: $e')),
+      // );
     }
   }
 
@@ -327,14 +327,21 @@ class _HomeScreenState extends State<HomeScreen> {
                   showDialog(
                     context: context,
                     builder: (context) => AlertDialog(
-                      title: const Text('Caution: Unverified Event'),
+                      shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15),
+                      ),
+                      
+                      title: const
+                          Text('Caution: Unverified Event', style: TextStyle(color: Colors.red)),
+                        
+                      
                       content: const Text(
                         'This event is not yet verified. Paying for an unverified event may carry risks, as the event details have not been confirmed by an administrator. Do you wish to proceed with payment?',
                       ),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(context),
-                          child: const Text('Cancel', style: TextStyle(color: Colors.red)),
+                          child: const Text('Cancel', style: TextStyle( color: Colors.red, fontSize: 16)),
                         ),
                         ElevatedButton(
                           onPressed: () {
@@ -499,7 +506,7 @@ class _HomeScreenState extends State<HomeScreen> {
           items: const [
             TabItem(icon: Icons.home, title: 'Home'),
             TabItem(icon: Icons.search, title: 'Search'),
-            TabItem(icon: Icons.bookmark, title: 'Bookings'),
+            TabItem(icon: Icons.history, title: 'Pay-History'),
             TabItem(icon: Icons.person, title: 'Profile'),
             TabItem(icon: Icons.map, title: 'Map'),
           ],
@@ -546,7 +553,7 @@ class HomeTab extends StatelessWidget {
     List<Widget> eventWidgets = events
         .map(
           (event) => Padding(
-            padding: const EdgeInsets.only(bottom: 15, left: 20, right: 20),
+            padding: const EdgeInsets.only(bottom: 15, left: 0, right: 0),
             child: EventCard(
               event: event,
               onTap: () => onEventTap(event),
@@ -582,7 +589,7 @@ class HomeTab extends StatelessWidget {
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black,
-                          spreadRadius: 1,
+                          spreadRadius: 2,
                           blurRadius: 10,
                           offset: Offset(0, 2),
                         ),
@@ -1083,14 +1090,17 @@ class EventCard extends StatelessWidget {
       child: Opacity(
         opacity: isPast ? 0.3 : 1.0,
         child: Container(
-          margin: const EdgeInsets.only(bottom: 15),
+          margin: const EdgeInsets.only(bottom: 5, right: 0, left: 0),
           padding: const EdgeInsets.all(16),
+          
+          width: MediaQuery.of(context).size.width - 20,
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
                 color: Colors.grey.withOpacity(0.3),
+                spreadRadius: 2,
                 blurRadius: 5,
                 offset: const Offset(0, 2),
               ),
@@ -1105,7 +1115,7 @@ class EventCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: isVerified ? Colors.green : Colors.red,
+                      color: isVerified ? Colors.blue : Colors.red,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
@@ -1114,14 +1124,14 @@ class EventCard extends StatelessWidget {
                         Icon(
                           isVerified ? Icons.verified : Icons.warning,
                           color: Colors.white,
-                          size: 12,
+                          size: 15,
                         ),
                         const SizedBox(width: 4),
                         Text(
                           isVerified ? 'Verified' : 'Unverified',
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 10,
+                            fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -1142,7 +1152,7 @@ class EventCard extends StatelessWidget {
                         style: TextStyle(
                           color: status == 'Paid' ? Colors.green : Colors.orange,
                           fontWeight: FontWeight.bold,
-                          fontSize: 10,
+                          fontSize: 15,
                         ),
                       ),
                     ),
@@ -1151,14 +1161,14 @@ class EventCard extends StatelessWidget {
               const SizedBox(height: 12),
               if (event.imageUrl != null)
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(13),
                   child: ColorFiltered(
                     colorFilter: isPast
                         ? const ColorFilter.mode(Colors.grey, BlendMode.saturation)
                         : const ColorFilter.mode(Colors.transparent, BlendMode.multiply),
                     child: Image.network(
                       event.imageUrl!,
-                      height: 200,
+                      height: 250,
                       width: double.infinity,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) {
@@ -1243,7 +1253,7 @@ class EventCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      event.title,
+                      event.title.toUpperCase(),
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 18,
@@ -1266,7 +1276,7 @@ class EventCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
+                        Icon(Icons.location_on, size: 22, color: Colors.red),
                         const SizedBox(width: 5),
                         Expanded(
                           child: Text(
@@ -1379,14 +1389,22 @@ class EventCard extends StatelessWidget {
                           showDialog(
                             context: context,
                             builder: (context) => AlertDialog(
-                              title: const Text('Caution: Unverified Event'),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(15),
+                              ),
+                              title:const
+                                  Text('Caution: Unverified Event' ,
+                                    style: TextStyle(fontSize: 13, color: Colors.red),
+                                  ),
+                                
+                              
                               content: const Text(
                                 'This event is not yet verified. Paying for an unverified event may carry risks, as the event details have not been confirmed by an administrator. Do you wish to proceed with payment?',
-                              ),
+                              ), 
                               actions: [
                                 TextButton(
                                   onPressed: () => Navigator.pop(context),
-                                  child: const Text('Cancel', style: TextStyle(color: Colors.red)),
+                                  child: const Text('Cancel', style: TextStyle(backgroundColor: Colors.white, fontSize: 19, color: Colors.red)),
                                 ),
                                 ElevatedButton(
                                   onPressed: () {
@@ -1620,7 +1638,7 @@ class _SearchTabState extends State<SearchTab> {
                   showDialog(
                     context: context,
                     builder: (context) => AlertDialog(
-                      title: const Text('Caution: Unverified Event'),
+                      title: const Text('Caution: Unverified Event', style: TextStyle(fontSize: 13, color: Colors.red)),
                       content: const Text(
                         'This event is not yet verified. Paying for an unverified event may carry risks, as the event details have not been confirmed by an administrator. Do you wish to proceed with payment?',
                       ),
@@ -2022,7 +2040,7 @@ class _BookingsTabState extends State<BookingsTab> {
       appBar: AppBar(
         backgroundColor: const Color.fromARGB(255, 25, 25, 95),
         foregroundColor: Colors.white,
-        title: const Text('My Bookings'),
+        title: const Text('Payments History'),
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -2032,13 +2050,13 @@ class _BookingsTabState extends State<BookingsTab> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(
-                        Icons.bookmark_border,
+                        Icons.history,
                         size: 80,
                         color: Colors.grey[400],
                       ),
                       const SizedBox(height: 20),
                       Text(
-                        'No bookings found',
+                        'No Payments history found',
                         style: TextStyle(
                           fontSize: 18,
                           color: Colors.grey[600],
@@ -2047,7 +2065,7 @@ class _BookingsTabState extends State<BookingsTab> {
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        'Book events from the Home or Search tab',
+                        'Book/Pay events from the Home or Search tab',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey[500],

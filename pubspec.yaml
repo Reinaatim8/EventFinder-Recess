@@ -49,7 +49,7 @@ dependencies:
 
   # Image Handling
   image_picker: ^1.1.2
-  file_picker:  ^6.2.1
+  file_picker:  ^8.0.0
   
 
   # Payment
