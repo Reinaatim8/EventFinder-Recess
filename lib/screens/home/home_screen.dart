@@ -174,15 +174,15 @@ class _HomeScreenState extends State<HomeScreen> {
           eventStatus[eventId] = 'Reserved';
         });
         bookingsTabKey.currentState?._fetchBookings();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Event Reservation Successful')),
-        );
+        // ScaffoldMessenger.of(context).showSnackBar(
+        //   const SnackBar(content: Text('Event Reservation Successful')),
+        // );
       }
     } catch (e) {
       print('Error booking event: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error booking event: $e')),
-      );
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   SnackBar(content: Text('Error booking event: $e')),
+      // );
     }
   }
 
@@ -1277,7 +1277,7 @@ class EventCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        Icon(Icons.location_on, size: 22, color: Colors.red),
+                        Icon(Icons.location_on, size: 32, color: Colors.red),
                         const SizedBox(width: 5),
                         Expanded(
                           child: Text(

@@ -1360,8 +1360,9 @@ class EventAnalyticsScreen extends StatelessWidget {
     final bookingService = BookingService();
     final bookings = await bookingService.getEventBookings(event.id);
     final paidBookings = bookings.where((b) => b.paid).length;
-    final totalRevenue = bookings.where((b) => b.paid).fold(0.0, (sum, booking) => sum + booking.total);
     
+    final totalRevenue = bookings.where((b) => b.paid).fold(0.0, (sum, booking) => sum + booking.total);
+    print('Total Revenue for ${event.title}: UGX ${totalRevenue.toStringAsFixed(2)}');
     return {
       'totalBookings': bookings.length,
       'paidBookings': paidBookings,
