@@ -1123,7 +1123,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                                   (sum, booking) => sum + booking.total,
                                 );
                             final bookedCount = bookings.length;
-                            final maxSlots = event.maxSlots ?? 0;
+                            final maxSlots = event.maxslots ?? 0;
                             final slotsRemaining = maxSlots - bookedCount;
 
                             return Container(
