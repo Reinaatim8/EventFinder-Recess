@@ -1192,7 +1192,7 @@ class EventCard extends StatelessWidget {
             fontSize: 18.0,
           );
         } else {
-          onTap();
+          onTap?.call();
         }
       },
       child: Opacity(
