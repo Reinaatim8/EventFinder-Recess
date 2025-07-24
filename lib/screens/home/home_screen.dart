@@ -180,9 +180,9 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     } catch (e) {
       print('Error booking event: $e');
-      // ScaffoldMessenger.of(context).showSnackBar(
-      //   //SnackBar(content: Text('Error booking event: $e')),
-      // );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error booking event: $e')),
+      );
     }
   }
 
@@ -665,7 +665,7 @@ class HomeTab extends StatelessWidget {
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(width: 10),
+                                  //const SizedBox(width:10, ),
                                   IconButton(
                                     onPressed: () {
                                       final authProvider = Provider.of<AuthProvider>(
@@ -688,8 +688,9 @@ class HomeTab extends StatelessWidget {
                                       }
                                     },
                                     icon: const Icon(
-                                      Icons.event_note,
+                                      Icons.event,
                                       color: Colors.white,
+                                      size: 20,
                                     ),
                                   ),
                                 ],
@@ -2032,6 +2033,7 @@ class _BookingsTabState extends State<BookingsTab> {
       );
     }
   }
+  
 
   @override
   Widget build(BuildContext context) {
@@ -2081,6 +2083,7 @@ class _BookingsTabState extends State<BookingsTab> {
                     final booking = bookings[index];
                     final isVerified = booking['isVerified'] ?? false;
                     final isPaid = booking['paid'] ?? false;
+
                     return Card(
                       elevation: 2,
                       margin: const EdgeInsets.only(bottom: 12),

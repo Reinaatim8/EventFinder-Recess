@@ -411,9 +411,24 @@ class _VerificationScreenState extends State<VerificationScreen> {
   @override
   Widget build(BuildContext context) {
     final isAdmin = _isAdmin(context);
+    // final isPast = widget.event.date.isNotEmpty
+    //     ? DateTime.parse(widget.event.date).isBefore(DateTime.now())
+    //     : false;
     final isPast = widget.event.date.isNotEmpty
-        ? DateTime.parse(widget.event.date).isBefore(DateTime.now())
-        : false;
+      ? () {
+          try {
+            final parts = widget.event.date.split('/');
+            final parsedDate = DateTime(
+              int.parse(parts[2]), // year
+              int.parse(parts[1]), // month
+              int.parse(parts[0])  // day
+            );
+            return parsedDate.isBefore(DateTime.now());
+          } catch (e) {
+            return false; // fallback in case of format error
+          }
+        }()
+      : false;
 
     return AlertDialog(
       title: Row(

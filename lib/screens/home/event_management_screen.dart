@@ -1081,7 +1081,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => AttendeesScreen(event: event),
+                                    builder: (context) => AttendeesScreen(event: event, ),
                                   ),
                                 );
                               },
@@ -1361,6 +1361,7 @@ class EventAnalyticsScreen extends StatelessWidget {
     final bookings = await bookingService.getEventBookings(event.id);
     final paidBookings = bookings.where((b) => b.paid).length;
     final totalRevenue = bookings.where((b) => b.paid).fold(0.0, (sum, booking) => sum + booking.total);
+    
     return {
       'totalBookings': bookings.length,
       'paidBookings': paidBookings,
