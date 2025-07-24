@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'app.dart';
 import 'providers/auth_provider.dart'; //im touching this !
 import 'firebase_options.dart'; // Add this
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+//import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,7 +35,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
-Future<void> main() async {
-  await dotenv.load(fileName: ".env");
-  runApp(MyApp());
-}
+//Future<void> main() async {
+  //await dotenv.load(fileName: ".env");
+  //runApp(MyApp());
+//}

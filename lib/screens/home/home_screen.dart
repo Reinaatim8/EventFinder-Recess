@@ -1345,6 +1345,7 @@ class EventCard extends StatelessWidget {
                                     context,
                                     MaterialPageRoute(
                                       builder: (context) => CheckoutScreen(
+                                        event: event,
                                         total: price,
                                         onPaymentSuccess: () {
                                           Fluttertoast.showToast(
@@ -1811,18 +1812,26 @@ class _BookingsTabState extends State<BookingsTab> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => VerificationScreen(
+                                builder: (_) => CheckoutScreen(
                                   event: event,
-                                  isVerified: event.isVerified,
-                                  verificationDocumentUrl:
-                                      event.verificationDocumentUrl,
-                                  verificationStatus: event.verificationStatus,
-                                  rejectionReason: event.rejectionReason,
-                                  onBookingAdded: (booking) =>
-                                      addBooking(booking),
-                                  onStatusUpdate: (status) => setState(() {
-                                    bookings[index]['paid'] = status == 'Paid';
-                                  }),
+                                  total:
+                                      double.tryParse(
+                                        booking['price'].toString(),
+                                      ) ??
+                                      0.0,
+                                  onPaymentSuccess: () {
+                                    setState(() {
+                                      bookings[index]['paid'] = true;
+                                    });
+                                    Fluttertoast.showToast(
+                                      msg: "Payment Successful!",
+                                      backgroundColor: Colors.green,
+                                      textColor: Colors.white,
+                                      toastLength: Toast.LENGTH_LONG,
+                                      gravity: ToastGravity.CENTER,
+                                      fontSize: 16.0,
+                                    );
+                                  },
                                 ),
                               ),
                             );
