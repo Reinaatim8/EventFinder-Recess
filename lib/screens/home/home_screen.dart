@@ -16,6 +16,8 @@ import '../map/map_screen.dart';
 import 'verification_screen.dart';
 import '../../services/booking_service.dart';
 
+typedef EventCallback = void Function(Event);
+
 final GlobalKey<_BookingsTabState> bookingsTabKey =
     GlobalKey<_BookingsTabState>();
 
@@ -843,6 +845,20 @@ class HomeTab extends StatefulWidget {
                             bookEvent: bookEvent,
                             eventStatus: eventStatus,
                             bookedEventIds: bookedEventIds,
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => SearchTab(
+                                    events: events,
+                                    onEventTap: onEventTap,
+                                    eventStatus: eventStatus,
+                                    bookedEventIds: bookedEventIds,
+                                    bookEvent: bookEvent,
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                           const SizedBox(width: 10),
                           _CategoryChip(
@@ -1013,6 +1029,10 @@ class _CategoryChip extends StatelessWidget {
   final VoidCallback onTap;
   final Map<String, String> eventStatus;
   final Set<String> bookedEventIds;
+  final List<Event> events; // Missing
+  final void Function(Event) onEventTap; // Missing
+  //final VoidCallback bookEvent;
+  final Future<void> Function(String) bookEvent;
 
   const _CategoryChip({
     required this.label,
@@ -1020,6 +1040,9 @@ class _CategoryChip extends StatelessWidget {
     required this.onTap,
     required this.eventStatus,
     required this.bookedEventIds,
+    required this.events,
+    required this.onEventTap,
+    required this.bookEvent,
   });
 
   @override
