@@ -43,7 +43,6 @@ class _AddEventDialogState extends State<AddEventDialog> {
 
   final ImagePicker _picker = ImagePicker();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
   double? _latitude;
   double? _longitude;
 
@@ -72,17 +71,6 @@ class _AddEventDialogState extends State<AddEventDialog> {
     'Other Official Document',
   ];
 
-  @override
-  void dispose() {
-    _titleController.dispose();
-    _descriptionController.dispose();
-    _dateController.dispose();
-    _locationController.dispose();
-    _priceController.dispose();
-    _maxslotsController.dispose();
-    super.dispose();
-  }
-
   Future<void> _pickImage() async {
     try {
       final XFile? image = await _picker.pickImage(
@@ -91,6 +79,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
         maxHeight: 1080,
         imageQuality: 85,
       );
+
       if (image != null) {
         if (kIsWeb) {
           final bytes = await image.readAsBytes();
@@ -125,6 +114,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
         maxHeight: 1080,
         imageQuality: 85,
       );
+
       if (image != null) {
         if (kIsWeb) {
           final bytes = await image.readAsBytes();
@@ -158,8 +148,10 @@ class _AddEventDialogState extends State<AddEventDialog> {
         allowedExtensions: ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'],
         allowMultiple: false,
       );
+
       if (result != null) {
         PlatformFile file = result.files.first;
+
         if (kIsWeb) {
           setState(() {
             _webVerificationDocument = file.bytes;
@@ -188,10 +180,12 @@ class _AddEventDialogState extends State<AddEventDialog> {
 
   Future<String?> _uploadImageToFirebase() async {
     try {
-      setState(() => _isUploading = true);
-      String fileName =
-          'events/${DateTime.now().millisecondsSinceEpoch}_${_titleController.text.replaceAll(' ', '_').replaceAll(RegExp(r'[^\w\s-]'), '')}.jpg';
-      Reference storageRef = _storage.ref().child(fileName);
+      setState(() {
+        _isUploading = true;
+      });
+
+      String fileName = 'events/${DateTime.now().millisecondsSinceEpoch}_${_titleController.text.replaceAll(' ', '_').replaceAll(RegExp(r'[^\w\s-]'), '')}.jpg';
+      Reference storageRef = FirebaseStorage.instance.ref().child(fileName);
 
       UploadTask uploadTask;
       if (kIsWeb && _webImage != null) {
@@ -222,12 +216,15 @@ class _AddEventDialogState extends State<AddEventDialog> {
 
       TaskSnapshot snapshot = await uploadTask;
       String downloadUrl = await snapshot.ref.getDownloadURL();
+
       print('Image uploaded successfully. URL: $downloadUrl');
       return downloadUrl;
     } catch (e) {
       print('Error uploading image: $e');
       if (mounted) {
-        setState(() => _isUploading = false);
+        setState(() {
+          _isUploading = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error uploading image: $e'),
@@ -237,18 +234,23 @@ class _AddEventDialogState extends State<AddEventDialog> {
       }
       return null;
     } finally {
-      if (mounted) setState(() => _isUploading = false);
+      if (mounted) {
+        setState(() {
+          _isUploading = false;
+        });
+      }
     }
   }
 
   Future<String?> _uploadVerificationDocumentToFirebase() async {
     try {
-      if (_verificationDocument == null && _webVerificationDocument == null)
+      if (_verificationDocument == null && _webVerificationDocument == null) {
         return null;
+      }
 
-      String fileName =
-          'verification_documents/${DateTime.now().millisecondsSinceEpoch}_${_verificationDocumentName ?? 'document'}';
-      Reference storageRef = _storage.ref().child(fileName);
+      String fileName = 'verification_documents/${DateTime.now().millisecondsSinceEpoch}_${_verificationDocumentName ?? 'document'}';
+      Reference storageRef = FirebaseStorage.instance.ref().child(fileName);
+
       String contentType = _getContentType(_verificationDocumentName ?? '');
 
       UploadTask uploadTask;
@@ -284,6 +286,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
 
       TaskSnapshot snapshot = await uploadTask;
       String downloadUrl = await snapshot.ref.getDownloadURL();
+
       print('Verification document uploaded successfully. URL: $downloadUrl');
       return downloadUrl;
     } catch (e) {
@@ -322,17 +325,10 @@ class _AddEventDialogState extends State<AddEventDialog> {
   Future<void> _saveEventToFirestore(Event event) async {
     try {
       print('Saving event to Firestore: ${event.toFirestore()}');
-      await _firestore
-          .collection('events')
-          .doc(event.id)
-          .set(event.toFirestore());
-      print(
-        'Event saved to Firestore successfully: ${event.id}, organizerId: ${event.organizerId}, isVerified: ${event.isVerified}, verificationStatus: ${event.verificationStatus}',
-      );
-      final savedDoc = await _firestore
-          .collection('events')
-          .doc(event.id)
-          .get();
+      await _firestore.collection('events').doc(event.id).set(event.toFirestore());
+      print('Event saved to Firestore successfully: ${event.id}, organizerId: ${event.organizerId}, isVerified: ${event.isVerified}, verificationStatus: ${event.verificationStatus}');
+      // Verify the saved data
+      final savedDoc = await _firestore.collection('events').doc(event.id).get();
       final savedData = savedDoc.data();
       print('Retrieved saved event from Firestore: $savedData');
     } catch (e) {
@@ -389,14 +385,22 @@ class _AddEventDialogState extends State<AddEventDialog> {
             top: 8,
             right: 8,
             child: GestureDetector(
-              onTap: () => setState(() => _webImage = null),
+              onTap: () {
+                setState(() {
+                  _webImage = null;
+                });
+              },
               child: Container(
                 padding: const EdgeInsets.all(4),
                 decoration: const BoxDecoration(
                   color: Colors.red,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.close, color: Colors.white, size: 16),
+                child: const Icon(
+                  Icons.close,
+                  color: Colors.white,
+                  size: 16,
+                ),
               ),
             ),
           ),
@@ -418,14 +422,22 @@ class _AddEventDialogState extends State<AddEventDialog> {
             top: 8,
             right: 8,
             child: GestureDetector(
-              onTap: () => setState(() => _selectedImage = null),
+              onTap: () {
+                setState(() {
+                  _selectedImage = null;
+                });
+              },
               child: Container(
                 padding: const EdgeInsets.all(4),
                 decoration: const BoxDecoration(
                   color: Colors.red,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.close, color: Colors.white, size: 16),
+                child: const Icon(
+                  Icons.close,
+                  color: Colors.white,
+                  size: 16,
+                ),
               ),
             ),
           ),
@@ -437,16 +449,26 @@ class _AddEventDialogState extends State<AddEventDialog> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.add_a_photo, size: 50, color: Colors.grey[400]),
+            Icon(
+              Icons.add_a_photo,
+              size: 50,
+              color: Colors.grey[400],
+            ),
             const SizedBox(height: 10),
             Text(
               'Tap to add event image',
-              style: TextStyle(color: Colors.grey[600], fontSize: 16),
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 16,
+              ),
             ),
             const SizedBox(height: 5),
             Text(
               kIsWeb ? 'Gallery' : 'Gallery or Camera',
-              style: TextStyle(color: Colors.grey[500], fontSize: 12),
+              style: TextStyle(
+                color: Colors.grey[500],
+                fontSize: 12,
+              ),
             ),
           ],
         ),
@@ -464,7 +486,11 @@ class _AddEventDialogState extends State<AddEventDialog> {
           children: [
             Row(
               children: [
-                Icon(Icons.verified_user, color: Colors.green[600], size: 24),
+                Icon(
+                  Icons.verified_user,
+                  color: Colors.green[600],
+                  size: 24,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   'Event Verification',
@@ -479,15 +505,21 @@ class _AddEventDialogState extends State<AddEventDialog> {
             const SizedBox(height: 12),
             Text(
               'Upload a verification document to establish credibility for your event. This helps attendees trust your event.',
-              style: TextStyle(color: Colors.grey[600], fontSize: 14),
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 14,
+              ),
             ),
             const SizedBox(height: 16),
             Row(
               children: [
                 Checkbox(
                   value: _requiresVerification,
-                  onChanged: (value) =>
-                      setState(() => _requiresVerification = value ?? false),
+                  onChanged: (value) {
+                    setState(() {
+                      _requiresVerification = value ?? false;
+                    });
+                  },
                 ),
                 const Expanded(
                   child: Text(
@@ -506,14 +538,17 @@ class _AddEventDialogState extends State<AddEventDialog> {
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.description),
                 ),
-                items: _documentTypes
-                    .map(
-                      (type) =>
-                          DropdownMenuItem(value: type, child: Text(type)),
-                    )
-                    .toList(),
-                onChanged: (value) =>
-                    setState(() => _selectedDocumentType = value!),
+                items: _documentTypes.map((type) {
+                  return DropdownMenuItem(
+                    value: type,
+                    child: Text(type),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedDocumentType = value!;
+                  });
+                },
               ),
               const SizedBox(height: 16),
               Container(
@@ -524,9 +559,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.grey[300]!),
                 ),
-                child:
-                    _verificationDocument != null ||
-                        _webVerificationDocument != null
+                child: _verificationDocument != null || _webVerificationDocument != null
                     ? Row(
                         children: [
                           Icon(
@@ -556,12 +589,17 @@ class _AddEventDialogState extends State<AddEventDialog> {
                             ),
                           ),
                           IconButton(
-                            onPressed: () => setState(() {
-                              _verificationDocument = null;
-                              _webVerificationDocument = null;
-                              _verificationDocumentName = null;
-                            }),
-                            icon: const Icon(Icons.close, color: Colors.red),
+                            onPressed: () {
+                              setState(() {
+                                _verificationDocument = null;
+                                _webVerificationDocument = null;
+                                _verificationDocumentName = null;
+                              });
+                            },
+                            icon: const Icon(
+                              Icons.close,
+                              color: Colors.red,
+                            ),
                           ),
                         ],
                       )
@@ -606,12 +644,19 @@ class _AddEventDialogState extends State<AddEventDialog> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.info, color: Colors.blue[600], size: 20),
+                    Icon(
+                      Icons.info,
+                      color: Colors.blue[600],
+                      size: 20,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'Your document will be reviewed by our team. Verified events get a trust badge.',
-                        style: TextStyle(color: Colors.blue[700], fontSize: 12),
+                        style: TextStyle(
+                          color: Colors.blue[700],
+                          fontSize: 12,
+                        ),
                       ),
                     ),
                   ],
@@ -638,125 +683,6 @@ class _AddEventDialogState extends State<AddEventDialog> {
         return Icons.image;
       default:
         return Icons.insert_drive_file;
-    }
-  }
-
-  Future<void> _addEvent() async {
-    if (_formKey.currentState!.validate()) {
-      if (_requiresVerification &&
-          _verificationDocument == null &&
-          _webVerificationDocument == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Please upload a verification document or uncheck the verification option.',
-            ),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        return;
-      }
-
-      try {
-        final authProvider = Provider.of<AuthProvider>(context, listen: false);
-        final organizerId = authProvider.user?.uid;
-        if (organizerId == null) throw Exception('User not authenticated');
-
-        print('Creating event with organizerId: $organizerId');
-
-        String? imageUrl = _selectedImage != null || _webImage != null
-            ? await _uploadImageToFirebase()
-            : null;
-        if (imageUrl == null && (_selectedImage != null || _webImage != null)) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Failed to upload image. Please try again.'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-          return;
-        }
-
-        String? verificationDocumentUrl = null;
-        if (_requiresVerification &&
-            (_verificationDocument != null ||
-                _webVerificationDocument != null)) {
-          verificationDocumentUrl =
-              await _uploadVerificationDocumentToFirebase();
-          if (verificationDocumentUrl == null) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    'Failed to upload verification document. Please try again.',
-                  ),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
-            return;
-          }
-        }
-
-        final event = Event(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          title: _titleController.text.trim(),
-          description: _descriptionController.text.trim(),
-          date: _dateController.text.trim(),
-          location: _locationController.text.trim(),
-          latitude: _latitude ?? 0.0,
-          longitude: _longitude ?? 0.0,
-          category: _selectedCategory,
-          imageUrl: imageUrl,
-          organizerId: organizerId,
-          price: double.tryParse(_priceController.text) ?? 0.0,
-          maxslots: int.tryParse(_maxslotsController.text) ?? 0,
-          verificationDocumentUrl: verificationDocumentUrl,
-          verificationDocumentType: _requiresVerification
-              ? _selectedDocumentType
-              : null,
-          verificationStatus: _requiresVerification ? 'pending' : null,
-          requiresVerification: _requiresVerification,
-          verificationSubmittedAt: _requiresVerification
-              ? DateTime.now().toIso8601String()
-              : null,
-          isVerified: false,
-          status: 'unverified',
-        );
-
-        print('Event created: ${event.toFirestore()}');
-        await _saveEventToFirestore(event);
-        print(
-          'Calling onAddEvent with event: id=${event.id}, isVerified=${event.isVerified}, verificationStatus=${event.verificationStatus}',
-        );
-        widget.onAddEvent(event);
-
-        if (mounted) {
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                _requiresVerification
-                    ? 'Event added successfully! Your verification document is being reviewed.'
-                    : 'Event added successfully!',
-              ),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      } catch (e) {
-        print('Error adding event: $e');
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error adding event: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
     }
   }
 
@@ -809,9 +735,12 @@ class _AddEventDialogState extends State<AddEventDialog> {
                     labelText: 'Event Title *',
                     border: OutlineInputBorder(),
                   ),
-                  validator: (value) => value == null || value.isEmpty
-                      ? 'Please enter event title'
-                      : null,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter event title';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 15),
                 TextFormField(
@@ -832,14 +761,16 @@ class _AddEventDialogState extends State<AddEventDialog> {
                     border: OutlineInputBorder(),
                   ),
                   validator: (value) {
-                    if (value == null || value.isEmpty)
+                    if (value == null || value.isEmpty) {
                       return 'Please enter a price';
-                    if (double.tryParse(value) == null)
+                    }
+                    if (double.tryParse(value) == null) {
                       return 'Please enter a valid number';
+                    }
                     return null;
                   },
                 ),
-                const SizedBox(height: 15),
+                   const SizedBox(height: 15),
                 TextFormField(
                   controller: _maxslotsController,
                   keyboardType: TextInputType.number,
@@ -848,13 +779,17 @@ class _AddEventDialogState extends State<AddEventDialog> {
                     border: OutlineInputBorder(),
                   ),
                   validator: (value) {
-                    if (value == null || value.isEmpty)
+                    if (value == null || value.isEmpty) {
                       return 'Please enter max slots';
-                    if (int.tryParse(value) == null)
+                    }
+                    if (int.tryParse(value) == null) {
                       return 'Please enter a valid number';
+                    }
                     return null;
                   },
                 ),
+                
+
                 const SizedBox(height: 15),
                 TextFormField(
                   controller: _dateController,
@@ -863,9 +798,12 @@ class _AddEventDialogState extends State<AddEventDialog> {
                     border: OutlineInputBorder(),
                     suffixIcon: Icon(Icons.calendar_today),
                   ),
-                  validator: (value) => value == null || value.isEmpty
-                      ? 'Please enter event date'
-                      : null,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter event date';
+                    }
+                    return null;
+                  },
                   onTap: () async {
                     FocusScope.of(context).requestFocus(FocusNode());
                     final date = await showDatePicker(
@@ -874,9 +812,10 @@ class _AddEventDialogState extends State<AddEventDialog> {
                       firstDate: DateTime.now(),
                       lastDate: DateTime(2030),
                     );
-                    if (date != null)
+                    if (date != null) {
                       _dateController.text =
-                          '${date.year}/${date.month}/${date.day}';
+                          '${date.day}/${date.month}/${date.year}';
+                    }
                   },
                 ),
                 const SizedBox(height: 15),
@@ -886,9 +825,12 @@ class _AddEventDialogState extends State<AddEventDialog> {
                     labelText: 'Location *',
                     border: OutlineInputBorder(),
                   ),
-                  validator: (value) => value == null || value.isEmpty
-                      ? 'Please enter event location'
-                      : null,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter event location';
+                    }
+                    return null;
+                  },
                   onTap: () async {
                     final result = await Navigator.push<Map<String, dynamic>?>(
                       context,
@@ -898,8 +840,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
                     );
                     if (result != null) {
                       final LatLng location = result['location'];
-                      final String locationName =
-                          result['locationName'] ?? 'Unknown location';
+                      final String locationName = result['locationName'] ?? 'Unknown location';
                       setState(() {
                         _latitude = location.latitude;
                         _longitude = location.longitude;
@@ -915,16 +856,17 @@ class _AddEventDialogState extends State<AddEventDialog> {
                     labelText: 'Category',
                     border: OutlineInputBorder(),
                   ),
-                  items: _categories
-                      .map(
-                        (category) => DropdownMenuItem(
-                          value: category,
-                          child: Text(category),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) =>
-                      setState(() => _selectedCategory = value!),
+                  items: _categories.map((category) {
+                    return DropdownMenuItem(
+                      value: category,
+                      child: Text(category),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedCategory = value!;
+                    });
+                  },
                 ),
                 const SizedBox(height: 20),
                 _buildVerificationSection(),
@@ -933,10 +875,9 @@ class _AddEventDialogState extends State<AddEventDialog> {
                   children: [
                     Expanded(
                       child: TextButton(
-                        onPressed: _isUploading
-                            ? null
-                            : () => Navigator.pop(context),
-                        child: const Text('Cancel'),
+                        onPressed: _isUploading ? null : () => Navigator.pop(context),
+                        child: Text('Cancel')
+                        ,
                         style: TextButton.styleFrom(
                           foregroundColor: Colors.white,
                           backgroundColor: Colors.red,
@@ -957,9 +898,8 @@ class _AddEventDialogState extends State<AddEventDialog> {
                                 width: 16,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white,
-                                  ),
+                                  valueColor:
+                                      AlwaysStoppedAnimation<Color>(Colors.white),
                                 ),
                               )
                             : const Text('Add Event'),
@@ -974,4 +914,121 @@ class _AddEventDialogState extends State<AddEventDialog> {
       ),
     );
   }
+
+  Future<void> _addEvent() async {
+    if (_formKey.currentState!.validate()) {
+      // Validate verification document if required
+      if (_requiresVerification && _verificationDocument == null && _webVerificationDocument == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please upload a verification document or uncheck the verification option.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      try {
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        final organizerId = authProvider.user?.uid;
+        if (organizerId == null) {
+          throw Exception('User not authenticated');
+        }
+        print('Creating event with organizerId: $organizerId');
+
+        String? imageUrl;
+        if (_selectedImage != null || _webImage != null) {
+          imageUrl = await _uploadImageToFirebase();
+          if (imageUrl == null) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Failed to upload image. Please try again.'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+            return;
+          }
+        }
+
+        String? verificationDocumentUrl;
+        if (_requiresVerification && (_verificationDocument != null || _webVerificationDocument != null)) {
+          verificationDocumentUrl = await _uploadVerificationDocumentToFirebase();
+          if (verificationDocumentUrl == null) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Failed to upload verification document. Please try again.'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+            return;
+          }
+        }
+
+        final event = Event(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          title: _titleController.text.trim(),
+          description: _descriptionController.text.trim(),
+          date: _dateController.text.trim(),
+          location: _locationController.text.trim(),
+          latitude: _latitude ?? 0.0,
+          longitude: _longitude ?? 0.0,
+          category: _selectedCategory,
+          imageUrl: imageUrl,
+          organizerId: organizerId,
+          price: double.tryParse(_priceController.text) ?? 0.0,
+          maxslots: int.tryParse(_maxslotsController.text) ?? 0,
+          verificationDocumentUrl: verificationDocumentUrl,
+          verificationDocumentType: _requiresVerification ? _selectedDocumentType : null,
+          verificationStatus: _requiresVerification ? 'pending' : null,
+          requiresVerification: _requiresVerification,
+          verificationSubmittedAt: _requiresVerification ? DateTime.now().toIso8601String() : null,
+          isVerified: false, // Explicitly set to false to ensure initial unverified state
+          status: 'unverified', // Explicitly set to align with Event model default
+        );
+
+        print('Event created: ${event.toFirestore()}');
+        await _saveEventToFirestore(event);
+        print('Calling onAddEvent with event: id=${event.id}, isVerified=${event.isVerified}, verificationStatus=${event.verificationStatus}');
+        widget.onAddEvent(event);
+
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(_requiresVerification
+                  ? 'Event added successfully! Your verification document is being reviewed.'
+                  : 'Event added successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        //print('Error adding event: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error adding event: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _descriptionController.dispose();
+    _dateController.dispose();
+    _locationController.dispose();
+    _priceController.dispose();
+    _maxslotsController.dispose();
+    super.dispose();
+  }
 }
+

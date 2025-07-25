@@ -11,13 +11,11 @@ import '../../providers/auth_provider.dart';
 import '../../models/event.dart';
 import '../../models/booking.dart';
 import '../../services/booking_service.dart';
-import 'dart:async';
 
 class AddEventScreen extends StatefulWidget {
   final VoidCallback onEventAdded;
 
-  const AddEventScreen({Key? key, required this.onEventAdded})
-    : super(key: key);
+  const AddEventScreen({Key? key, required this.onEventAdded}) : super(key: key);
 
   @override
   State<AddEventScreen> createState() => _AddEventScreenState();
@@ -44,7 +42,7 @@ class _AddEventScreenState extends State<AddEventScreen> {
     'Exhibition',
     'Theater',
     'Comedy',
-    'Other',
+    'Other'
   ];
 
   Future<void> _pickImage() async {
@@ -68,13 +66,6 @@ class _AddEventScreenState extends State<AddEventScreen> {
       return await storageRef.getDownloadURL();
     } catch (e) {
       print('Error uploading image: $e');
-      Fluttertoast.showToast(
-        msg: 'Error uploading image: $e',
-        toastLength: Toast.LENGTH_LONG,
-        gravity: ToastGravity.TOP,
-        backgroundColor: Colors.red,
-        textColor: Colors.white,
-      );
       return null;
     }
   }
@@ -158,15 +149,12 @@ class _AddEventScreenState extends State<AddEventScreen> {
                 value: _selectedCategory,
                 decoration: const InputDecoration(labelText: 'Category *'),
                 items: _categories
-                    .map(
-                      (category) => DropdownMenuItem(
-                        value: category,
-                        child: Text(category),
-                      ),
-                    )
+                    .map((category) => DropdownMenuItem(
+                          value: category,
+                          child: Text(category),
+                        ))
                     .toList(),
-                onChanged: (value) =>
-                    setState(() => _selectedCategory = value!),
+                onChanged: (value) => setState(() => _selectedCategory = value!),
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -178,15 +166,8 @@ class _AddEventScreenState extends State<AddEventScreen> {
                 validator: (value) {
                   if (value!.isEmpty) return 'Required';
                   final regex = RegExp(r'^\d{1,2}/\d{1,2}/\d{4}$');
-                  if (!regex.hasMatch(value)) {
-                    return 'Invalid format (DD/MM/YYYY)';
-                  }
-                  try {
-                    DateFormat('dd/MM/yyyy').parseStrict(value);
-                    return null;
-                  } catch (e) {
-                    return 'Invalid date';
-                  }
+                  if (!regex.hasMatch(value)) return 'Invalid format (DD/MM/YYYY)';
+                  return null;
                 },
               ),
               const SizedBox(height: 16),
@@ -209,8 +190,7 @@ class _AddEventScreenState extends State<AddEventScreen> {
                 keyboardType: TextInputType.number,
                 validator: (value) {
                   if (value!.isEmpty) return 'Required';
-                  if (value.toLowerCase() == 'free') return null;
-                  if (double.tryParse(value) == null) {
+                  if (double.tryParse(value) == null && value.toLowerCase() != 'free') {
                     return 'Enter a valid number or "free"';
                   }
                   return null;
@@ -294,7 +274,7 @@ class _EditEventScreenState extends State<EditEventScreen> {
     'Exhibition',
     'Theater',
     'Comedy',
-    'Other',
+    'Other'
   ];
 
   @override
@@ -329,13 +309,6 @@ class _EditEventScreenState extends State<EditEventScreen> {
       return await storageRef.getDownloadURL();
     } catch (e) {
       print('Error uploading image: $e');
-      Fluttertoast.showToast(
-        msg: 'Error uploading image: $e',
-        toastLength: Toast.LENGTH_LONG,
-        gravity: ToastGravity.TOP,
-        backgroundColor: Colors.red,
-        textColor: Colors.white,
-      );
       return widget.event.imageUrl;
     }
   }
@@ -356,8 +329,6 @@ class _EditEventScreenState extends State<EditEventScreen> {
         imageUrl: imageUrl,
         organizerId: widget.event.organizerId,
         price: _priceController.text.toLowerCase() == 'free'
-            ? 0.0
-            : _priceController.text.toLowerCase() == 'free'
             ? 0.0
             : double.parse(_priceController.text),
         isVerified: widget.event.isVerified,
@@ -418,15 +389,12 @@ class _EditEventScreenState extends State<EditEventScreen> {
                 value: _selectedCategory,
                 decoration: const InputDecoration(labelText: 'Category *'),
                 items: _categories
-                    .map(
-                      (category) => DropdownMenuItem(
-                        value: category,
-                        child: Text(category),
-                      ),
-                    )
+                    .map((category) => DropdownMenuItem(
+                          value: category,
+                          child: Text(category),
+                        ))
                     .toList(),
-                onChanged: (value) =>
-                    setState(() => _selectedCategory = value!),
+                onChanged: (value) => setState(() => _selectedCategory = value!),
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -438,15 +406,8 @@ class _EditEventScreenState extends State<EditEventScreen> {
                 validator: (value) {
                   if (value!.isEmpty) return 'Required';
                   final regex = RegExp(r'^\d{1,2}/\d{1,2}/\d{4}$');
-                  if (!regex.hasMatch(value)) {
-                    return 'Invalid format (DD/MM/YYYY)';
-                  }
-                  try {
-                    DateFormat('dd/MM/yyyy').parseStrict(value);
-                    return null;
-                  } catch (e) {
-                    return 'Invalid date';
-                  }
+                  if (!regex.hasMatch(value)) return 'Invalid format (DD/MM/YYYY)';
+                  return null;
                 },
               ),
               const SizedBox(height: 16),
@@ -469,8 +430,7 @@ class _EditEventScreenState extends State<EditEventScreen> {
                 keyboardType: TextInputType.number,
                 validator: (value) {
                   if (value!.isEmpty) return 'Required';
-                  if (value.toLowerCase() == 'free') return null;
-                  if (double.tryParse(value) == null) {
+                  if (double.tryParse(value) == null && value.toLowerCase() != 'free') {
                     return 'Enter a valid number or "free"';
                   }
                   return null;
@@ -490,8 +450,8 @@ class _EditEventScreenState extends State<EditEventScreen> {
                   child: _imageFile != null
                       ? Image.file(_imageFile!, fit: BoxFit.cover)
                       : widget.event.imageUrl != null
-                      ? Image.network(widget.event.imageUrl!, fit: BoxFit.cover)
-                      : const Center(child: Text('Tap to select image')),
+                          ? Image.network(widget.event.imageUrl!, fit: BoxFit.cover)
+                          : const Center(child: Text('Tap to select image')),
                 ),
               ),
               const SizedBox(height: 24),
@@ -536,7 +496,6 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
   bool _isLoading = true;
   String? organizerId;
   bool _hasAccess = false;
-  StreamSubscription<QuerySnapshot>? _eventsSubscription;
   final BookingService _bookingService = BookingService();
 
   @override
@@ -562,12 +521,6 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
     }
   }
 
-  @override
-  void dispose() {
-    _eventsSubscription?.cancel();
-    super.dispose();
-  }
-
   Future<void> _initializeOrganizer() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     organizerId = authProvider.user?.uid;
@@ -585,57 +538,30 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
   }
 
   Future<void> _checkAccessAndFetchEvents() async {
-    if (organizerId == null) {
-      setState(() {
-        _isLoading = false;
-        _hasAccess = false;
-      });
-      return;
-    }
+    if (organizerId == null) return;
 
     setState(() {
       _isLoading = true;
     });
 
     try {
-      _eventsSubscription?.cancel();
-      _eventsSubscription = FirebaseFirestore.instance
+      print('Fetching events for organizerId: $organizerId');
+      QuerySnapshot snapshot = await FirebaseFirestore.instance
           .collection('events')
           .where('organizerId', isEqualTo: organizerId)
-          .snapshots()
-          .listen(
-            (snapshot) {
-              if (!mounted) return;
-              print('Found ${snapshot.docs.length} events');
-              snapshot.docs.forEach(
-                (doc) => print('Event data: ${doc.data()}'),
-              );
-              setState(() {
-                organizerEvents = snapshot.docs
-                    .map((doc) => Event.fromFirestore(doc))
-                    .toList();
+          .get();
+
+      print('Found ${snapshot.docs.length} events');
+      snapshot.docs.forEach((doc) => print('Event data: ${doc.data()}'));
+
+      setState(() {
+        organizerEvents = snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList();
         organizerEvents.sort((a, b) => parseEventDate(a.date).compareTo(parseEventDate(b.date)));
-                _hasAccess = true;
-                _isLoading = false;
-              });
-            },
-            onError: (e) {
-              if (!mounted) return;
-              setState(() {
-                _isLoading = false;
-                _hasAccess =
-                    true; // Allow access to create events even if fetch fails
-              });
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Error loading events: $e'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            },
-          );
+        _hasAccess = true;
+        _isLoading = false;
+      });
     } catch (e) {
-      if (!mounted) return;
+      print('Error loading events: $e');
       setState(() {
         _isLoading = false;
         _hasAccess = true;
@@ -654,14 +580,12 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
       final bookings = await _bookingService.getEventBookings(eventId);
       return bookings;
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error fetching bookings: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error fetching bookings: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
       return [];
     }
   }
@@ -671,35 +595,12 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
       return await _bookingService.getOverallStats(organizerEvents);
     } catch (e) {
       print('Error getting overall stats: $e');
-      return {'revenue': 0.0, 'bookings': 0, 'paidBookings': 0};
+      return {
+        'revenue': 0.0,
+        'bookings': 0,
+        'paidBookings': 0,
+      };
     }
-  }
-
-  Stream<Map<String, dynamic>> _getOverallStatsStream() {
-    if (organizerEvents.isEmpty) {
-      return Stream.value({'revenue': 0.0, 'bookings': 0, 'paidBookings': 0});
-    }
-    return FirebaseFirestore.instance
-        .collection('bookings')
-        .where('eventId', whereIn: organizerEvents.map((e) => e.id).toList())
-        .snapshots()
-        .map((snapshot) {
-          double totalRevenue = 0.0;
-          int totalBookings = snapshot.docs.length;
-          int paidBookings = 0;
-          for (var doc in snapshot.docs) {
-            final data = doc.data();
-            if (data['paid'] == true) {
-              totalRevenue += (data['total'] as num?)?.toDouble() ?? 0.0;
-              paidBookings++;
-            }
-          }
-          return {
-            'revenue': totalRevenue,
-            'bookings': totalBookings,
-            'paidBookings': paidBookings,
-          };
-        });
   }
 
   Future<void> _deleteEvent(Event event) async {
@@ -708,9 +609,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Delete Event'),
-          content: Text(
-            'Are you sure you want to delete "${event.title}"? This action cannot be undone.',
-          ),
+          content: Text('Are you sure you want to delete "${event.title}"? This action cannot be undone.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
@@ -751,88 +650,23 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
           }
         }
 
-      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Event deleted successfully'),
             backgroundColor: Colors.green,
           ),
         );
-      }
 
-      await _checkAccessAndFetchEvents();
+        await _checkAccessAndFetchEvents();
+      }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error deleting event: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error deleting event: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
-  }
-
-  Widget _buildSummaryCard(
-    String title,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            Text(
-              title,
-              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: Color.fromARGB(255, 25, 25, 95).withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 16, color: Color.fromARGB(255, 25, 25, 95)),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: Color.fromARGB(255, 25, 25, 95),
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   IconData _getCategoryIcon(String category) {
@@ -880,10 +714,10 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : !_hasAccess
-          ? _buildNoAccessState()
-          : organizerEvents.isEmpty
-          ? _buildEmptyState()
-          : _buildEventsList(),
+              ? _buildNoAccessState()
+              : organizerEvents.isEmpty
+                  ? _buildEmptyState()
+                  : _buildEventsList(),
       floatingActionButton: _hasAccess
           ? FloatingActionButton(
               onPressed: () {
@@ -908,7 +742,11 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.lock_outline, size: 100, color: Colors.grey[400]),
+          Icon(
+            Icons.lock_outline,
+            size: 100,
+            color: Colors.grey[400],
+          ),
           const SizedBox(height: 20),
           Text(
             'Access Restricted',
@@ -921,18 +759,26 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
           const SizedBox(height: 10),
           Text(
             'This section is only available to event organizers',
-            style: TextStyle(fontSize: 16, color: Colors.grey[500]),
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey[500],
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 10),
           Text(
             'Create your first event to access management features',
-            style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[500],
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 30),
           ElevatedButton.icon(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              Navigator.pop(context);
+            },
             icon: const Icon(Icons.arrow_back),
             label: const Text('Go Back'),
             style: ElevatedButton.styleFrom(
@@ -951,7 +797,11 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.event_note, size: 100, color: Colors.grey[400]),
+          Icon(
+            Icons.event_note,
+            size: 100,
+            color: Colors.grey[400],
+          ),
           const SizedBox(height: 20),
           Text(
             'No Events Yet',
@@ -964,7 +814,10 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
           const SizedBox(height: 10),
           Text(
             'Create your first event to get started',
-            style: TextStyle(fontSize: 16, color: Colors.grey[500]),
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey[500],
+            ),
           ),
           const SizedBox(height: 30),
           ElevatedButton.icon(
@@ -972,8 +825,9 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) =>
-                      AddEventScreen(onEventAdded: _checkAccessAndFetchEvents),
+                  builder: (context) => AddEventScreen(
+                    onEventAdded: _checkAccessAndFetchEvents,
+                  ),
                 ),
               );
             },
@@ -1007,15 +861,13 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: StreamBuilder<Map<String, dynamic>>(
-                  stream: _getOverallStatsStream(),
+                child: FutureBuilder<Map<String, dynamic>>(
+                  future: _getOverallStats(),
                   builder: (context, snapshot) {
-                    final stats =
-                        snapshot.data ??
-                        {'revenue': 0.0, 'bookings': 0, 'paidBookings': 0};
+                    final stats = snapshot.data ?? {'revenue': 0.0, 'bookings': 0};
                     return _buildSummaryCard(
                       'Total Revenue',
-                      '€${stats['revenue'].toStringAsFixed(2)}',
+                      'UGX ${stats['revenue'].toStringAsFixed(2)}',
                       Icons.attach_money,
                       Colors.green,
                     );
@@ -1089,7 +941,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                                 ],
                               ),
                             ),
-                            PopupMenuButton<String>(
+                            PopupMenuButton(
                               onSelected: (value) {
                                 if (value == 'delete') {
                                   _deleteEvent(event);
@@ -1114,17 +966,13 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                         FutureBuilder<List<Booking>>(
                           future: _getEventBookings(event.id),
                           builder: (context, snapshot) {
-                            if (snapshot.connectionState ==
-                                ConnectionState.waiting) {
+                            if (snapshot.connectionState == ConnectionState.waiting) {
                               return const LinearProgressIndicator();
                             }
                             if (snapshot.hasError) {
                               return Text(
                                 'Error loading bookings',
-                                style: TextStyle(
-                                  color: Colors.red,
-                                  fontSize: 12,
-                                ),
+                                style: TextStyle(color: Colors.red, fontSize: 12),
                               );
                             }
                             final bookings = snapshot.data ?? [];
@@ -1142,8 +990,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceAround,
+                                mainAxisAlignment: MainAxisAlignment.spaceAround,
                                 children: [
                                   Column(
                                     children: [
@@ -1173,7 +1020,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                                   Column(
                                     children: [
                                       Text(
-                                        '€${totalRevenue.toStringAsFixed(2)}',
+                                        'UGX ${totalRevenue.toStringAsFixed(2)}',
                                         style: const TextStyle(
                                           fontSize: 18,
                                           fontWeight: FontWeight.bold,
@@ -1205,22 +1052,14 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                         const SizedBox(height: 16),
                         Row(
                           children: [
-                            Icon(
-                              Icons.calendar_today,
-                              size: 16,
-                              color: Colors.grey[600],
-                            ),
+                            Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
                             const SizedBox(width: 8),
                             Text(
                               event.date,
                               style: TextStyle(color: Colors.grey[600]),
                             ),
                             const SizedBox(width: 20),
-                            Icon(
-                              Icons.location_on,
-                              size: 16,
-                              color: Colors.grey[600],
-                            ),
+                            Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -1242,8 +1081,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) =>
-                                        AttendeesScreen(event: event, ),
+                                    builder: (context) => AttendeesScreen(event: event, ),
                                   ),
                                 );
                               },
@@ -1257,8 +1095,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                                   MaterialPageRoute(
                                     builder: (context) => EditEventScreen(
                                       event: event,
-                                      onEventUpdated:
-                                          _checkAccessAndFetchEvents,
+                                      onEventUpdated: _checkAccessAndFetchEvents,
                                     ),
                                   ),
                                 );
@@ -1271,8 +1108,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) =>
-                                        EventAnalyticsScreen(event: event),
+                                    builder: (context) => EventAnalyticsScreen(event: event),
                                   ),
                                 );
                               },
@@ -1388,19 +1224,28 @@ class EventDetailsScreen extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               event.title,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
               event.category,
-              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[600],
+              ),
             ),
             const SizedBox(height: 16),
             Row(
               children: [
                 Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
                 const SizedBox(width: 8),
-                Text(event.date, style: TextStyle(color: Colors.grey[600])),
+                Text(
+                  event.date,
+                  style: TextStyle(color: Colors.grey[600]),
+                ),
               ],
             ),
             const SizedBox(height: 8),
@@ -1418,9 +1263,7 @@ class EventDetailsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              event.price == 0.0 ? 'Free Entry' : event.price == 0.0
-                  ? 'Free'
-                  : 'UGX ${event.price.toStringAsFixed(2)}',
+              event.price == 0.0 ? 'Free Entry' : 'Price: UGX ${event.price.toStringAsFixed(2)}',
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -1428,7 +1271,10 @@ class EventDetailsScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            Text(event.description, style: const TextStyle(fontSize: 16)),
+            Text(
+              event.description,
+              style: const TextStyle(fontSize: 16),
+            ),
           ],
         ),
       ),
@@ -1443,11 +1289,7 @@ class AttendeesScreen extends StatelessWidget {
 
   Future<List<Booking>> _getEventBookings() async {
     final bookingService = BookingService();
-    try {
-      return await bookingService.getEventBookings(event.id);
-    } catch (e) {
-      return [];
-    }
+    return await bookingService.getEventBookings(event.id);
   }
 
   @override
@@ -1516,22 +1358,16 @@ class EventAnalyticsScreen extends StatelessWidget {
 
   Future<Map<String, dynamic>> _getEventStats() async {
     final bookingService = BookingService();
-    try {
-      final bookings = await bookingService.getEventBookings(event.id);
-      final paidBookings = bookings.where((b) => b.paid).length;
+    final bookings = await bookingService.getEventBookings(event.id);
+    final paidBookings = bookings.where((b) => b.paid).length;
     
-      final totalRevenue = bookings
-          .where((b) => b.paid)
-          .fold(0.0, (sum, booking) => sum + booking.total);
+    final totalRevenue = bookings.where((b) => b.paid).fold(0.0, (sum, booking) => sum + booking.total);
     print('Total Revenue for ${event.title}: UGX ${totalRevenue.toStringAsFixed(2)}');
-      return {
-        'totalBookings': bookings.length,
-        'paidBookings': paidBookings,
-        'totalRevenue': totalRevenue,
-      };
-    } catch (e) {
-      return {'totalBookings': 0, 'paidBookings': 0, 'totalRevenue': 0.0};
-    }
+    return {
+      'totalBookings': bookings.length,
+      'paidBookings': paidBookings,
+      'totalRevenue': totalRevenue,
+    };
   }
 
   @override
@@ -1551,9 +1387,7 @@ class EventAnalyticsScreen extends StatelessWidget {
           if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
           }
-          final stats =
-              snapshot.data ??
-              {'totalBookings': 0, 'paidBookings': 0, 'totalRevenue': 0.0};
+          final stats = snapshot.data ?? {'totalBookings': 0, 'paidBookings': 0, 'totalRevenue': 0.0};
           return Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -1595,12 +1429,7 @@ class EventAnalyticsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatCard(
-    String title,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
+  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -1622,7 +1451,10 @@ class EventAnalyticsScreen extends StatelessWidget {
                 ),
                 Text(
                   title,
-                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
                 ),
               ],
             ),

@@ -16,14 +16,46 @@ import '../map/map_screen.dart';
 import 'verification_screen.dart';
 import '../../services/booking_service.dart';
 
-typedef EventCallback = void Function(Event);
+final GlobalKey<_BookingsTabState> bookingsTabKey = GlobalKey<_BookingsTabState>();
 
-final GlobalKey<_BookingsTabState> bookingsTabKey =
-    GlobalKey<_BookingsTabState>();
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({Key? key}) : super(key: key);
 
-// Utility class for date filtering
-class DateFilterUtils {
-  static DateTime _parseDate(String input) {
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  int selectedIndex = 0;
+  List<Event> events = [];
+  bool isLoading = true;
+  Set<String> bookedEventIds = {};
+  final Map<String, String> eventStatus = {};
+  final BookingService _bookingService = BookingService();
+
+  bool _isAdmin() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final userEmail = authProvider.user?.email?.toLowerCase().trim();
+    final isAdmin = userEmail == 'kennedymutebi7@gmail.com';
+    print('Checking admin status: user=$userEmail, isAdmin=$isAdmin');
+    return isAdmin;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    if (authProvider.user == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.pushReplacementNamed(context, '/login');
+      });
+    } else {
+      fetchEvents();
+      loadBookedEvents();
+    }
+  }
+
+  DateTime parseEventDate(String input) {
     try {
       final parts = input.split('/');
       if (parts.length != 3) {
@@ -40,86 +72,30 @@ class DateFilterUtils {
     }
   }
 
-  static bool isEventInDateRange(Event event, String dateRange) {
-    final eventDate = _parseDate(event.date);
-    final now = DateTime.now();
-    switch (dateRange) {
-      case 'Today':
-        return eventDate.day == now.day &&
-            eventDate.month == now.month &&
-            eventDate.year == now.year;
-      case 'This Week':
-        final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-        final endOfWeek = startOfWeek.add(const Duration(days: 6));
-        return eventDate.isAfter(
-              startOfWeek.subtract(const Duration(days: 1)),
-            ) &&
-            eventDate.isBefore(endOfWeek.add(const Duration(days: 1)));
-      case 'This Month':
-        return eventDate.month == now.month && eventDate.year == now.year;
-      case 'All Dates':
-        return true;
-      default:
-        return true;
-    }
-  }
-}
-
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
-
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  int selectedIndex = 0;
-  List<Event> events = [];
-  bool isLoading = true;
-  Set<String> bookedEventIds = {};
-  final Map<String, String> eventStatus = {};
-  final BookingService _bookingService = BookingService();
-  final Map<String, String> _eventStatus = {};
-
-  bool _isAdmin() {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final userEmail = authProvider.user?.email?.toLowerCase().trim();
-    final isAdmin = userEmail == 'kennedymutebi7@gmail.com';
-    print('Checking admin status: user=$userEmail, isAdmin=$isAdmin');
-    return isAdmin;
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchEvents();
-    _loadBookedEvents();
-  }
-
   Future<void> fetchEvents() async {
-    setState(() => isLoading = true);
+    setState(() {
+      isLoading = true;
+    });
     try {
       print('Fetching events from Firestore...');
-      final snapshot = await FirebaseFirestore.instance
+      QuerySnapshot snapshot = await FirebaseFirestore.instance
           .collection('events')
           .where('title', isNotEqualTo: '')
           .get();
       print('Retrieved ${snapshot.docs.length} documents');
-      final fetchedEvents =
-          snapshot.docs.map((doc) {
-            print('Raw Firestore data for ${doc.id}: ${doc.data()}');
-            return Event.fromFirestore(doc);
-          }).toList()..sort((a, b) {
-            final aDate = DateFilterUtils._parseDate(a.date);
-            final bDate = DateFilterUtils._parseDate(b.date);
-            final aPast = aDate.isBefore(DateTime.now());
-            final bPast = bDate.isBefore(DateTime.now());
-            return aPast && !bPast
-                ? 1
-                : !aPast && bPast
-                ? -1
-                : aDate.compareTo(bDate);
-          });
+      List<Event> fetchedEvents = snapshot.docs.map((doc) {
+        print('Raw Firestore data for ${doc.id}: ${doc.data()}');
+        return Event.fromFirestore(doc);
+      }).toList();
+      fetchedEvents.sort((a, b) {
+        final aDate = parseEventDate(a.date);
+        final bDate = parseEventDate(b.date);
+        final aPast = aDate.isBefore(DateTime.now());
+        final bPast = bDate.isBefore(DateTime.now());
+        if (aPast && !bPast) return 1;
+        if (!aPast && bPast) return -1;
+        return aDate.compareTo(bDate);
+      });
       setState(() {
         events = fetchedEvents;
         isLoading = false;
@@ -133,7 +109,6 @@ class _HomeScreenState extends State<HomeScreen> {
         isLoading = false;
       });
       print('Error fetching events: $e');
-      setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error loading events: $e'),
@@ -164,20 +139,15 @@ class _HomeScreenState extends State<HomeScreen> {
         orElse: () => throw Exception('Event not found: $eventId'),
       );
 
-      print(
-        'Booking attempt: authUid=${FirebaseAuth.instance.currentUser?.uid}, userId=$userId, eventId=$eventId',
-      );
-
+      print('Booking attempt: authUid=${FirebaseAuth.instance.currentUser?.uid}, userId=$userId, eventId=$eventId');
+      
       // Log booking data
       final bookingData = {
         'userId': userId,
         'eventId': eventId,
         'event': event.title,
         'price': event.price,
-        'paid':
-            event.price == '0' || event.price == '0.0' || event.price == '0.00'
-            ? true
-            : false,
+        'paid': event.price == '0' || event.price == '0.0' || event.price == '0.00' ? true : false,
         'ticketId': const Uuid().v4(),
         'isVerified': event.isVerified,
         'verificationStatus': event.verificationStatus,
@@ -228,9 +198,7 @@ class _HomeScreenState extends State<HomeScreen> {
           .collection('bookings')
           .where('userId', isEqualTo: userId)
           .get();
-      final bookedIds = snapshot.docs
-          .map((doc) => doc['eventId'] as String)
-          .toSet();
+      final bookedIds = snapshot.docs.map((doc) => doc['eventId'] as String).toSet();
       print('Loaded ${bookedIds.length} booked events: $bookedIds');
       setState(() {
         bookedEventIds = bookedIds;
@@ -260,12 +228,10 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         events.add(event);
       });
-      print(
-        'Event added: ${event.id}, organizerId: ${event.organizerId}, isVerified: ${event.isVerified}',
+      print('Event added to Firestore: ${event.id}, organizerId: ${event.organizerId}, isVerified: ${event.isVerified}, verificationStatus: ${event.verificationStatus}');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Event added successfully')),
       );
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Event added successfully')));
     } catch (e) {
       print('Error adding event: $e');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -312,12 +278,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     'id': DateTime.now().millisecondsSinceEpoch,
                     'event': event.title,
                     'total': event.price,
-                    'paid':
-                        event.price == '0' ||
-                            event.price == '0.0' ||
-                            event.price == '0.00'
-                        ? true
-                        : false,
+                    'paid': event.price == '0' || event.price == '0.0' || event.price == '0.00' ? true : false,
                     'eventId': event.id,
                     'ticketId': const Uuid().v4(),
                     'isVerified': event.isVerified,
@@ -342,9 +303,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ElevatedButton(
                 onPressed: () async {
                   await bookEvent(event.id);
-                  bookingsTabKey.currentState?.removeBookingByTitle(
-                    event.title,
-                  );
+                  bookingsTabKey.currentState?.removeBookingByTitle(event.title);
                   setState(() {
                     eventStatus[event.id] = 'Cancelled Reservation!';
                   });
@@ -369,31 +328,25 @@ class _HomeScreenState extends State<HomeScreen> {
                     context: context,
                     builder: (context) => AlertDialog(
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
+                      borderRadius: BorderRadius.circular(15),
                       ),
-
-                      title: const Text(
-                        'Caution: Unverified Event',
-                        style: TextStyle(color: Colors.red),
-                      ),
-
+                      
+                      title: const
+                          Text('Caution: Unverified Event', style: TextStyle(color: Colors.red)),
+                        
+                      
                       content: const Text(
                         'This event is not yet verified. Paying for an unverified event may carry risks, as the event details have not been confirmed by an administrator. Do you wish to proceed with payment?',
                       ),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(context),
-                          child: const Text(
-                            'Cancel',
-                            style: TextStyle(color: Colors.red, fontSize: 16),
-                          ),
+                          child: const Text('Cancel', style: TextStyle( color: Colors.red, fontSize: 16)),
                         ),
                         ElevatedButton(
                           onPressed: () {
                             Navigator.pop(context);
-                            Navigator.pop(
-                              context,
-                            ); // Close the event details modal
+                            Navigator.pop(context); // Close the event details modal
                             Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -401,15 +354,12 @@ class _HomeScreenState extends State<HomeScreen> {
                                   event: event,
                                   total: event.price,
                                   ticketId: const Uuid().v4(),
-                                  onPaymentSuccess: () =>
-                                      handlePaymentSuccess(event),
+                                  onPaymentSuccess: () => handlePaymentSuccess(event),
                                 ),
                               ),
                             );
                           },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orange,
-                          ),
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
                           child: const Text('Proceed'),
                         ),
                       ],
@@ -434,7 +384,10 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel', style: TextStyle(color: Colors.red)),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.red),
+              ),
             ),
           ],
         ),
@@ -473,15 +426,13 @@ class _HomeScreenState extends State<HomeScreen> {
                         verificationDocumentUrl: event.verificationDocumentUrl,
                         verificationStatus: event.verificationStatus,
                         rejectionReason: event.rejectionReason,
-                        onBookingAdded: (booking) =>
-                            bookingsTabKey.currentState?.addBooking(booking),
+                        onBookingAdded: (booking) {
+                          bookingsTabKey.currentState?.addBooking(booking);
+                        },
                         onStatusUpdate: (status) {
-                          print(
-                            'Status updated for event ${event.id}: $status',
-                          );
+                          print('Status updated for event ${event.id}: $status');
                           setState(() {
                             eventStatus[event.id] = status;
-                            _fetchEvents();
                           });
                           fetchEvents();
                         },
@@ -504,30 +455,30 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   List<Widget> getScreens() => [
-    HomeTab(
-      events: events,
-      onAddEvent: addEvent,
-      onEventTap: showEventDetailsModal,
-      eventStatus: eventStatus,
-      bookedEventIds: bookedEventIds,
-      bookEvent: bookEvent,
-    ),
-    SearchTab(
-      events: events,
-      eventStatus: eventStatus,
-      onEventTap: showEventDetailsModal,
-      bookedEventIds: bookedEventIds,
-      bookEvent: bookEvent,
-    ),
-    BookingsTab(key: bookingsTabKey),
-    const ProfileScreen(),
-    const MapScreen(),
-  ];
+        HomeTab(
+          events: events,
+          onAddEvent: addEvent,
+          onEventTap: showEventDetailsModal,
+          eventStatus: eventStatus,
+          bookedEventIds: bookedEventIds,
+          bookEvent: bookEvent,
+        ),
+        SearchTab(
+          events: events,
+          eventStatus: eventStatus,
+          onEventTap: showEventDetailsModal,
+          bookedEventIds: bookedEventIds,
+          bookEvent: bookEvent,
+        ),
+        BookingsTab(key: bookingsTabKey),
+        const ProfileScreen(),
+        const MapScreen(),
+      ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color.fromARGB(255, 25, 25, 95),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : getScreens()[selectedIndex],
@@ -571,7 +522,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class HomeTab extends StatefulWidget {
+class HomeTab extends StatelessWidget {
   final List<Event> events;
   final Function(Event) onAddEvent;
   final Function(Event) onEventTap;
@@ -610,8 +561,7 @@ class HomeTab extends StatefulWidget {
               isBooked: bookedEventIds.contains(event.id),
               onBookToggle: () => bookEvent(event.id),
               onPaymentSuccess: () {
-                final homeScreenState = context
-                    .findAncestorStateOfType<_HomeScreenState>();
+                final homeScreenState = context.findAncestorStateOfType<_HomeScreenState>();
                 homeScreenState?.handlePaymentSuccess(event);
               },
             ),
@@ -680,20 +630,14 @@ class HomeTab extends StatefulWidget {
                                   if (_isAdmin(context))
                                     GestureDetector(
                                       onTap: () {
-                                        final homeScreenState = context
-                                            .findAncestorStateOfType<
-                                              _HomeScreenState
-                                            >();
-                                        homeScreenState
-                                            ?.showEventSelectionDialog();
+                                        final homeScreenState = context.findAncestorStateOfType<_HomeScreenState>();
+                                        homeScreenState?.showEventSelectionDialog();
                                       },
                                       child: Container(
                                         padding: const EdgeInsets.all(8),
                                         decoration: BoxDecoration(
                                           color: Colors.white,
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
+                                          borderRadius: BorderRadius.circular(8),
                                         ),
                                         child: const Icon(
                                           Icons.admin_panel_settings,
@@ -708,8 +652,7 @@ class HomeTab extends StatefulWidget {
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (context) =>
-                                              const ProfileScreen(),
+                                          builder: (context) => const ProfileScreen(),
                                         ),
                                       );
                                     },
@@ -725,27 +668,21 @@ class HomeTab extends StatefulWidget {
                                   //const SizedBox(width:10, ),
                                   IconButton(
                                     onPressed: () {
-                                      final authProvider =
-                                          Provider.of<AuthProvider>(
-                                            context,
-                                            listen: false,
-                                          );
+                                      final authProvider = Provider.of<AuthProvider>(
+                                        context,
+                                        listen: false,
+                                      );
                                       if (authProvider.user != null) {
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
-                                            builder: (context) =>
-                                                const EventManagementScreen(),
+                                            builder: (context) => const EventManagementScreen(),
                                           ),
                                         );
                                       } else {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
+                                        ScaffoldMessenger.of(context).showSnackBar(
                                           const SnackBar(
-                                            content: Text(
-                                              'Please log in to manage events',
-                                            ),
+                                            content: Text('Please log in to manage events'),
                                           ),
                                         );
                                       }
@@ -845,20 +782,6 @@ class HomeTab extends StatefulWidget {
                             bookEvent: bookEvent,
                             eventStatus: eventStatus,
                             bookedEventIds: bookedEventIds,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => SearchTab(
-                                    events: events,
-                                    onEventTap: onEventTap,
-                                    eventStatus: eventStatus,
-                                    bookedEventIds: bookedEventIds,
-                                    bookEvent: bookEvent,
-                                  ),
-                                ),
-                              );
-                            },
                           ),
                           const SizedBox(width: 10),
                           _CategoryChip(
@@ -1001,7 +924,9 @@ class HomeTab extends StatefulWidget {
                             ),
                           ),
                           const SizedBox(height: 15),
-                          Column(children: eventWidgets),
+                          Column(
+                            children: eventWidgets,
+                          ),
                         ],
                       ),
                     ),
@@ -1026,23 +951,20 @@ class HomeTab extends StatefulWidget {
 class _CategoryChip extends StatelessWidget {
   final String label;
   final bool isSelected;
-  final VoidCallback onTap;
+  final List<Event> events;
+  final Function(Event) onEventTap;
+  final Future<void> Function(String) bookEvent;
   final Map<String, String> eventStatus;
   final Set<String> bookedEventIds;
-  final List<Event> events; // Missing
-  final void Function(Event) onEventTap; // Missing
-  //final VoidCallback bookEvent;
-  final Future<void> Function(String) bookEvent;
 
   const _CategoryChip({
     required this.label,
-    required this.isSelected,
-    required this.onTap,
-    required this.eventStatus,
-    required this.bookedEventIds,
+    this.isSelected = false,
     required this.events,
     required this.onEventTap,
     required this.bookEvent,
+    required this.eventStatus,
+    required this.bookedEventIds,
   });
 
   @override
@@ -1073,78 +995,10 @@ class _CategoryChip extends StatelessWidget {
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected
-                ? Colors.white
-                : const Color.fromARGB(255, 25, 25, 95),
+            color: isSelected ? Colors.white : const Color.fromARGB(255, 25, 25, 95),
             fontSize: 14,
             fontWeight: FontWeight.w500,
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _DateRangeDropdown extends StatelessWidget {
-  final String selectedDateRange;
-  final List<String> dateRangeOptions;
-  final Function(String) onDateRangeChanged;
-
-  const _DateRangeDropdown({
-    required this.selectedDateRange,
-    required this.dateRangeOptions,
-    required this.onDateRangeChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: selectedDateRange != 'All Dates'
-            ? Theme.of(context).primaryColor
-            : Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: selectedDateRange != 'All Dates'
-              ? Theme.of(context).primaryColor
-              : Colors.grey[300]!,
-        ),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: selectedDateRange,
-          icon: Icon(
-            Icons.calendar_today,
-            size: 16,
-            color: selectedDateRange != 'All Dates'
-                ? Colors.white
-                : Colors.grey[600],
-          ),
-          style: TextStyle(
-            color: selectedDateRange != 'All Dates'
-                ? Colors.white
-                : Colors.black,
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
-          dropdownColor: Colors.white,
-          items: dateRangeOptions
-              .map(
-                (value) => DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(
-                    value,
-                    style: const TextStyle(color: Colors.black, fontSize: 14),
-                  ),
-                ),
-              )
-              .toList(),
-          onChanged: (String? newValue) {
-            if (newValue != null) {
-              onDateRangeChanged(newValue);
-            }
-          },
         ),
       ),
     );
@@ -1153,21 +1007,38 @@ class _DateRangeDropdown extends StatelessWidget {
 
 class EventCard extends StatelessWidget {
   final Event event;
-  final VoidCallback? onTap;
+  final VoidCallback onTap;
   final String? status;
+  final VoidCallback onBookToggle;
   final bool isBooked;
   final VoidCallback? onPaymentSuccess;
-  final VoidCallback onBookToggle;
 
   const EventCard({
     Key? key,
     required this.event,
-    this.onTap,
+    required this.onTap,
     this.status,
+    required this.onBookToggle,
     required this.isBooked,
     this.onPaymentSuccess,
-    required this.onBookToggle,
   }) : super(key: key);
+
+  DateTime parseEventDate(String input) {
+    try {
+      final parts = input.split('/');
+      if (parts.length != 3) {
+        print('Invalid date format in EventCard: $input');
+        return DateTime(1900);
+      }
+      final day = int.tryParse(parts[0]) ?? 1;
+      final month = int.tryParse(parts[1]) ?? 1;
+      final year = int.tryParse(parts[2]) ?? 1900;
+      return DateTime(year, month, day);
+    } catch (e) {
+      print("Date parse error in EventCard for '$input': $e");
+      return DateTime(1900);
+    }
+  }
 
   IconData getCategoryIcon(String category) {
     switch (category.toLowerCase()) {
@@ -1195,13 +1066,12 @@ class EventCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final eventDate = DateFilterUtils._parseDate(event.date);
+    print('Rendering EventCard: ${event.title}, isBooked: $isBooked, isVerified: ${event.isVerified}, verificationStatus: ${event.verificationStatus}, verificationDocumentUrl: ${event.verificationDocumentUrl != null ? "present" : "null"}');
+    final eventDate = parseEventDate(event.date);
     final isPast = eventDate.isBefore(DateTime.now());
     final isVerified = event.isVerified;
 
-    print(
-      'EventCard verification status for ${event.title}: isVerified=$isVerified, verificationStatus=${event.verificationStatus}, displayed as ${isVerified ? "Verified" : "Unverified"}',
-    );
+    print('EventCard verification status for ${event.title}: isVerified=$isVerified, verificationStatus=${event.verificationStatus}, displayed as ${isVerified ? "Verified" : "Unverified"}');
 
     return GestureDetector(
       onTap: () {
@@ -1215,7 +1085,7 @@ class EventCard extends StatelessWidget {
             fontSize: 18.0,
           );
         } else {
-          onTap?.call();
+          onTap();
         }
       },
       child: Opacity(
@@ -1223,7 +1093,7 @@ class EventCard extends StatelessWidget {
         child: Container(
           margin: const EdgeInsets.only(bottom: 5, right: 0, left: 0),
           padding: const EdgeInsets.all(16),
-
+          
           width: MediaQuery.of(context).size.width - 20,
           decoration: BoxDecoration(
             color: Colors.white,
@@ -1244,10 +1114,7 @@ class EventCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: isVerified ? Colors.blue : Colors.red,
                       borderRadius: BorderRadius.circular(12),
@@ -1274,10 +1141,7 @@ class EventCard extends StatelessWidget {
                   ),
                   if (status != null)
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: status == 'Paid'
                             ? Colors.green.withOpacity(0.2)
@@ -1287,9 +1151,7 @@ class EventCard extends StatelessWidget {
                       child: Text(
                         status!,
                         style: TextStyle(
-                          color: status == 'Paid'
-                              ? Colors.green
-                              : Colors.orange,
+                          color: status == 'Paid' ? Colors.green : Colors.orange,
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
                         ),
@@ -1303,107 +1165,90 @@ class EventCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(13),
                   child: ColorFiltered(
                     colorFilter: isPast
-                        ? const ColorFilter.mode(
-                            Colors.grey,
-                            BlendMode.saturation,
-                          )
-                        : const ColorFilter.mode(
-                            Colors.transparent,
-                            BlendMode.multiply,
-                          ),
+                        ? const ColorFilter.mode(Colors.grey, BlendMode.saturation)
+                        : const ColorFilter.mode(Colors.transparent, BlendMode.multiply),
                     child: Image.network(
                       event.imageUrl!,
                       height: 250,
                       width: double.infinity,
                       fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Container(
-                        height: 250,
-                        color: Colors.grey[300],
-                        child: Icon(
-                          getCategoryIcon(event.category),
-                          size: 60,
-                          color: Colors.grey[400],
-                        ),
-                      ),
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          height: 200,
+                          color: const Color.fromARGB(255, 111, 110, 110),
+                          child: Icon(
+                            getCategoryIcon(event.category),
+                            size: 60,
+                            color: Colors.grey[400],
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ),
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  if (event.imageUrl == null)
+              if (event.imageUrl == null)
+                Row(
+                  children: [
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: const Color.fromARGB(
-                          255,
-                          25,
-                          25,
-                          95,
-                        ).withOpacity(0.1),
+                        color: Theme.of(context).primaryColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(
                         getCategoryIcon(event.category),
-                        color: const Color.fromARGB(255, 25, 25, 95),
+                        color: Theme.of(context).primaryColor,
                         size: 24,
                       ),
                     ),
-                  const SizedBox(width: 15),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          event.title,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
+                    const SizedBox(width: 15),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            event.title,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.calendar_today,
-                              size: 16,
-                              color: Colors.grey[600],
-                            ),
-                            const SizedBox(width: 5),
-                            Text(
-                              event.date,
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.location_on,
-                              size: 16,
-                              color: Colors.grey[600],
-                            ),
-                            const SizedBox(width: 5),
-                            Expanded(
-                              child: Text(
-                                event.location,
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
+                              const SizedBox(width: 5),
+                              Text(
+                                event.date,
                                 style: TextStyle(
                                   color: Colors.grey[600],
                                   fontSize: 14,
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ],
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
+                              const SizedBox(width: 5),
+                              Expanded(
+                                child: Text(
+                                  event.location,
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
               if (event.imageUrl != null)
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1418,11 +1263,7 @@ class EventCard extends StatelessWidget {
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        Icon(
-                          Icons.calendar_today,
-                          size: 16,
-                          color: Colors.grey[600],
-                        ),
+                        Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
                         const SizedBox(width: 5),
                         Text(
                           event.date,
@@ -1453,10 +1294,7 @@ class EventCard extends StatelessWidget {
                 ),
               const SizedBox(height: 12),
               Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: Theme.of(context).primaryColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(15),
@@ -1487,15 +1325,9 @@ class EventCard extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child:
-                        (event.price == '0' ||
-                            event.price == '0.0' ||
-                            event.price == '0.00')
+                    child: (event.price == '0' || event.price == '0.0' || event.price == '0.00')
                         ? Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: Colors.green[50],
                               borderRadius: BorderRadius.circular(6),
@@ -1509,10 +1341,7 @@ class EventCard extends StatelessWidget {
                             ),
                           )
                         : Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: const Color.fromARGB(255, 250, 186, 137),
                               borderRadius: BorderRadius.circular(6),
@@ -1564,28 +1393,19 @@ class EventCard extends StatelessWidget {
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(15),
                               ),
-                              title: const Text(
-                                'Caution: Unverified Event',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.red,
-                                ),
-                              ),
-
+                              title:const
+                                  Text('Caution: Unverified Event' ,
+                                    style: TextStyle(fontSize: 13, color: Colors.red),
+                                  ),
+                                
+                              
                               content: const Text(
                                 'This event is not yet verified. Paying for an unverified event may carry risks, as the event details have not been confirmed by an administrator. Do you wish to proceed with payment?',
-                              ),
+                              ), 
                               actions: [
                                 TextButton(
                                   onPressed: () => Navigator.pop(context),
-                                  child: const Text(
-                                    'Cancel',
-                                    style: TextStyle(
-                                      backgroundColor: Colors.white,
-                                      fontSize: 19,
-                                      color: Colors.red,
-                                    ),
-                                  ),
+                                  child: const Text('Cancel', style: TextStyle(backgroundColor: Colors.white, fontSize: 19, color: Colors.red)),
                                 ),
                                 ElevatedButton(
                                   onPressed: () {
@@ -1602,9 +1422,7 @@ class EventCard extends StatelessWidget {
                                       ),
                                     );
                                   },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.orange,
-                                  ),
+                                  style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
                                   child: const Text('Proceed'),
                                 ),
                               ],
@@ -1711,16 +1529,15 @@ class _SearchTabState extends State<SearchTab> {
   void filterEvents() {
     setState(() {
       filteredEvents = widget.events.where((event) {
-        final matchesSearch =
-            event.title.toLowerCase().contains(
-              searchController.text.toLowerCase(),
-            ) ||
-            event.description.toLowerCase().contains(
-              searchController.text.toLowerCase(),
-            ) ||
-            event.location.toLowerCase().contains(
-              searchController.text.toLowerCase(),
-            );
+        final matchesSearch = event.title
+                .toLowerCase()
+                .contains(searchController.text.toLowerCase()) ||
+            event.description
+                .toLowerCase()
+                .contains(searchController.text.toLowerCase()) ||
+            event.location
+                .toLowerCase()
+                .contains(searchController.text.toLowerCase());
         final matchesCategory =
             selectedCategory == 'All' || event.category == selectedCategory;
         return matchesSearch && matchesCategory;
@@ -1773,12 +1590,7 @@ class _SearchTabState extends State<SearchTab> {
                     'id': DateTime.now().millisecondsSinceEpoch,
                     'event': event.title,
                     'total': event.price,
-                    'paid':
-                        event.price == '0' ||
-                            event.price == '0.0' ||
-                            event.price == '0.00'
-                        ? true
-                        : false,
+                    'paid': event.price == '0' || event.price == '0.0' || event.price == '0.00' ? true : false,
                     'eventId': event.id,
                     'ticketId': const Uuid().v4(),
                     'isVerified': event.isVerified,
@@ -1803,9 +1615,7 @@ class _SearchTabState extends State<SearchTab> {
               ElevatedButton(
                 onPressed: () async {
                   await widget.bookEvent(event.id);
-                  bookingsTabKey.currentState?.removeBookingByTitle(
-                    event.title,
-                  );
+                  bookingsTabKey.currentState?.removeBookingByTitle(event.title);
                   setState(() {
                     widget.eventStatus[event.id] = 'Cancelled Reservation!';
                   });
@@ -1829,27 +1639,19 @@ class _SearchTabState extends State<SearchTab> {
                   showDialog(
                     context: context,
                     builder: (context) => AlertDialog(
-                      title: const Text(
-                        'Caution: Unverified Event',
-                        style: TextStyle(fontSize: 13, color: Colors.red),
-                      ),
+                      title: const Text('Caution: Unverified Event', style: TextStyle(fontSize: 13, color: Colors.red)),
                       content: const Text(
                         'This event is not yet verified. Paying for an unverified event may carry risks, as the event details have not been confirmed by an administrator. Do you wish to proceed with payment?',
                       ),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(context),
-                          child: const Text(
-                            'Cancel',
-                            style: TextStyle(color: Colors.red),
-                          ),
+                          child: const Text('Cancel', style: TextStyle(color: Colors.red)),
                         ),
                         ElevatedButton(
                           onPressed: () {
                             Navigator.pop(context);
-                            Navigator.pop(
-                              context,
-                            ); // Close the event details modal
+                            Navigator.pop(context); // Close the event details modal
                             Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -1857,15 +1659,12 @@ class _SearchTabState extends State<SearchTab> {
                                   event: event,
                                   total: event.price,
                                   ticketId: const Uuid().v4(),
-                                  onPaymentSuccess: () =>
-                                      handlePaymentSuccess(event),
+                                  onPaymentSuccess: () => handlePaymentSuccess(event),
                                 ),
                               ),
                             );
                           },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orange,
-                          ),
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
                           child: const Text('Proceed'),
                         ),
                       ],
@@ -1890,7 +1689,10 @@ class _SearchTabState extends State<SearchTab> {
             ),
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel', style: TextStyle(color: Colors.red)),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.red),
+              ),
             ),
           ],
         ),
@@ -1901,7 +1703,7 @@ class _SearchTabState extends State<SearchTab> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         backgroundColor: const Color.fromARGB(255, 25, 25, 95),
         foregroundColor: Colors.white,
@@ -1941,7 +1743,10 @@ class _SearchTabState extends State<SearchTab> {
             const SizedBox(height: 8),
             const Text(
               'Find Events that Match your Interests',
-              style: TextStyle(color: Colors.white, fontSize: 18),
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+              ),
             ),
             const SizedBox(height: 10),
           ],
@@ -1950,7 +1755,10 @@ class _SearchTabState extends State<SearchTab> {
       body: Stack(
         children: [
           Positioned.fill(
-            child: Image.asset('assets/images/blue2.jpeg', fit: BoxFit.cover),
+            child: Image.asset(
+              'assets/images/blue2.jpeg',
+              fit: BoxFit.cover,
+            ),
           ),
           Column(
             children: [
@@ -1967,7 +1775,9 @@ class _SearchTabState extends State<SearchTab> {
                         filled: true,
                         prefixIcon: Icon(Icons.search),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(30)),
+                          borderRadius: BorderRadius.all(
+                            Radius.circular(30),
+                          ),
                         ),
                       ),
                       onChanged: (value) => filterEvents(),
@@ -2038,12 +1848,9 @@ class _SearchTabState extends State<SearchTab> {
                               event: event,
                               onTap: () => showEventDetailsModal(event),
                               status: widget.eventStatus[event.id],
-                              isBooked: widget.bookedEventIds.contains(
-                                event.id,
-                              ),
+                              isBooked: widget.bookedEventIds.contains(event.id),
                               onBookToggle: () => widget.bookEvent(event.id),
-                              onPaymentSuccess: () =>
-                                  handlePaymentSuccess(event),
+                              onPaymentSuccess: () => handlePaymentSuccess(event),
                             ),
                           );
                         },
@@ -2084,9 +1891,7 @@ class _CategoryFilterChip extends StatelessWidget {
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected
-                ? Colors.white
-                : const Color.fromARGB(255, 25, 25, 95),
+            color: isSelected ? Colors.white : const Color.fromARGB(255, 25, 25, 95),
             fontSize: 14,
             fontWeight: FontWeight.w500,
           ),
@@ -2128,16 +1933,16 @@ class _BookingsTabState extends State<BookingsTab> {
     });
 
     try {
-      final snapshot = await FirebaseFirestore.instance
+      QuerySnapshot snapshot = await FirebaseFirestore.instance
           .collection('bookings')
           .where('userId', isEqualTo: userId)
           .get();
-      final fetchedBookings = <Map<String, dynamic>>[];
+
+      List<Map<String, dynamic>> fetchedBookings = [];
       for (var doc in snapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
         // Validate price field
-        if (data['price'] != null &&
-            double.tryParse(data['price'].toString()) == null) {
+        if (data['price'] != null && double.tryParse(data['price'].toString()) == null) {
           print('Invalid price format for booking ${doc.id}: ${data['price']}');
           continue;
         }
@@ -2150,16 +1955,12 @@ class _BookingsTabState extends State<BookingsTab> {
           'isVerified': data['isVerified'] ?? false,
           'verificationStatus': data['verificationStatus'],
           'eventId': data['eventId'] ?? '',
-          'timestamp':
-              (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
+          'timestamp': (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
         });
       }
 
       // Sort bookings by timestamp (most recent first)
-      fetchedBookings.sort(
-        (a, b) =>
-            (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime),
-      );
+      fetchedBookings.sort((a, b) => (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime));
 
       setState(() {
         bookings = fetchedBookings;
@@ -2171,19 +1972,16 @@ class _BookingsTabState extends State<BookingsTab> {
       setState(() {
         isLoading = false;
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error fetching bookings: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error fetching bookings: $e')),
+      );
     }
   }
 
   void addBooking(Map<String, dynamic> booking) {
     setState(() {
       bookings.add(booking);
-      bookings.sort(
-        (a, b) =>
-            (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime),
-      );
+      bookings.sort((a, b) => (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime));
     });
     print('Added booking: ${booking['event']}');
   }
@@ -2210,8 +2008,7 @@ class _BookingsTabState extends State<BookingsTab> {
       setState(() {
         bookings.removeWhere((booking) => booking['eventId'] == eventId);
       });
-      final homeScreenState = context
-          .findAncestorStateOfType<_HomeScreenState>();
+      final homeScreenState = context.findAncestorStateOfType<_HomeScreenState>();
       homeScreenState?.setState(() {
         homeScreenState.bookedEventIds.remove(eventId);
         homeScreenState.eventStatus.remove(eventId);
@@ -2236,6 +2033,7 @@ class _BookingsTabState extends State<BookingsTab> {
       );
     }
   }
+  
 
   @override
   Widget build(BuildContext context) {
@@ -2249,76 +2047,82 @@ class _BookingsTabState extends State<BookingsTab> {
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : bookings.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.history, size: 80, color: Colors.grey[400]),
-                  const SizedBox(height: 20),
-                  Text(
-                    'No Payments history found',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.grey[600],
-                      fontWeight: FontWeight.w500,
-                    ),
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.history,
+                        size: 80,
+                        color: Colors.grey[400],
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        'No Payments history found',
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        'Book/Pay events from the Home or Search tab',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'Book/Pay events from the Home or Search tab',
-                    style: TextStyle(fontSize: 14, color: Colors.grey[500]),
-                  ),
-                ],
-              ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: bookings.length,
-              itemBuilder: (context, index) {
-                final booking = bookings[index];
-                final isVerified = booking['isVerified'] ?? false;
-                final isPaid = booking['paid'] ?? false;
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: bookings.length,
+                  itemBuilder: (context, index) {
+                    final booking = bookings[index];
+                    final isVerified = booking['isVerified'] ?? false;
+                    final isPaid = booking['paid'] ?? false;
 
-                return Card(
-                  elevation: 2,
-                  margin: const EdgeInsets.only(bottom: 12),
-                  child: ListTile(
-                    leading: Icon(
-                      isVerified ? Icons.verified : Icons.warning,
-                      color: isVerified ? Colors.green : Colors.red,
-                    ),
-                    title: Text(
-                      booking['event'],
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Price: ${booking['total'] == '0' || booking['total'] == '0.0' || booking['total'] == '0.00' ? 'Free' : 'UGX ${booking['total']}'}',
+                    return Card(
+                      elevation: 2,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: ListTile(
+                        leading: Icon(
+                          isVerified ? Icons.verified : Icons.warning,
+                          color: isVerified ? Colors.green : Colors.red,
                         ),
-                        Text(
-                          'Status: ${isPaid ? 'Paid' : 'Reserved'}',
-                          style: TextStyle(
-                            color: isPaid ? Colors.green : Colors.orange,
-                          ),
+                        title: Text(
+                          booking['event'],
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
-                        if (!isVerified)
-                          const Text(
-                            'Unverified Event',
-                            style: TextStyle(color: Colors.red),
-                          ),
-                      ],
-                    ),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () =>
-                          _cancelBooking(booking['eventId'], booking['event']),
-                    ),
-                  ),
-                );
-              },
-            ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Price: ${booking['total'] == '0' || booking['total'] == '0.0' || booking['total'] == '0.00' ? 'Free' : 'UGX ${booking['total']}'}',
+                            ),
+                            Text(
+                              'Status: ${isPaid ? 'Paid' : 'Reserved'}',
+                              style: TextStyle(
+                                color: isPaid ? Colors.green : Colors.orange,
+                              ),
+                            ),
+                            if (!isVerified)
+                              const Text(
+                                'Unverified Event',
+                                style: TextStyle(color: Colors.red),
+                              ),
+                          ],
+                        ),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () => _cancelBooking(booking['eventId'], booking['event']),
+                        ),
+                      ),
+                    );
+                  },
+                ),
     );
   }
 }
