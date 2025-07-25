@@ -112,73 +112,73 @@ class ProfileScreen extends StatelessWidget {
                   title: 'Help & Support', 
                   onTap: () {
                     showModalBottomSheet(
-    context: context,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
-    backgroundColor: Colors.white,
-    isScrollControlled: true,
-    builder: (context) {
-      return Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[400],
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Icon(Icons.help_outline, size: 50, color: Colors.deepPurple),
-            const SizedBox(height: 12),
-            const Text(
-              "Help & Support",
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Color.fromARGB(255, 45, 45, 145),
-              ),
-            ),
-            const SizedBox(height: 10),
-            const Text(
-              "Need assistance? Here’s how you can get help:\n\n"
-              "• For booking issues, check your event page.\n"
-              "• For payment concerns, email us at: support@eventfinder.com\n"
-              "• For general inquiries, visit our website.\n\n"
-              "We’re here to help!",
-              textAlign: TextAlign.left,
-              style: TextStyle(fontSize: 15, color: Colors.black87),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.mail),
-              label: const Text("Contact Support"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.deepPurple,
-                foregroundColor: Colors.white,
-              ),
-              onPressed: () {
-                // Add custom logic here or integrate a contact form
-                Navigator.pop(context);
-              },
-            ),
-            const SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.grey[300],
-              ),
-              child: const Text("Close", style: TextStyle(color: Colors.black)),
-            )
-          ],
-        ),
-      );
-    },
-  );
+                    context: context,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                    ),
+                    backgroundColor: Colors.white,
+                    isScrollControlled: true,
+                    builder: (context) {
+                      return Padding(
+                        padding: const EdgeInsets.all(20.0),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 40,
+                              height: 4,
+                              decoration: BoxDecoration(
+                                color: Colors.grey[400],
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            const Icon(Icons.help_outline, size: 50, color: Colors.deepPurple),
+                            const SizedBox(height: 12),
+                            const Text(
+                              "Help & Support",
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Color.fromARGB(255, 45, 45, 145),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            const Text(
+                              "Need assistance? Here’s how you can get help:\n\n"
+                              "• For booking issues, check your event page.\n"
+                              "• For payment concerns, email us at: support@eventfinder.com\n"
+                              "• For general inquiries, visit our website.\n\n"
+                              "We’re here to help!",
+                              textAlign: TextAlign.left,
+                              style: TextStyle(fontSize: 15, color: Colors.black87),
+                            ),
+                            const SizedBox(height: 20),
+                            ElevatedButton.icon(
+                              icon: const Icon(Icons.mail),
+                              label: const Text("Contact Support"),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.deepPurple,
+                                foregroundColor: Colors.white,
+                              ),
+                              onPressed: () {
+                                // Add custom logic here or integrate a contact form
+                                Navigator.pop(context);
+                              },
+                            ),
+                            const SizedBox(height: 10),
+                            ElevatedButton(
+                              onPressed: () => Navigator.pop(context),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.grey[300],
+                              ),
+                              child: const Text("Close", style: TextStyle(color: Colors.black)),
+                            )
+                          ],
+                        ),
+                      );
+                    },
+                  );
 
                   })
                   ,
@@ -222,7 +222,7 @@ class ProfileScreen extends StatelessWidget {
                               ),
                               const SizedBox(height: 10),
                               const Text(
-                                "Event Finder is your go-to app for discovering, booking, and managing events with ease.\n\nBuilt with ❤️ by Reina Michal.\n\nVersion 1.0.0",
+                                "Event Finder is your go-to app for discovering, booking, and managing events with ease.\n\nBuilt with Flutter & Firebase.\n\nVersion 1.0.0",
                                 textAlign: TextAlign.center,
                                 style: TextStyle(fontSize: 15, color: Colors.black87),
                               ),
