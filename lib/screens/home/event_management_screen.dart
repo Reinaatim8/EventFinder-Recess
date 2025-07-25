@@ -512,11 +512,13 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
   String? organizerId;
   bool _hasAccess = false;
   final BookingService _bookingService = BookingService();
-
+  double totalRevenue = 0.0;
   @override
   void initState() {
     super.initState();
     _initializeOrganizer();
+    
+    
   }
 
   DateTime parseEventDate(String input) {
@@ -579,6 +581,9 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
         _hasAccess = true;
         _isLoading = false;
       });
+      double revenue = await calculateTotalRevenue();
+        setState(() {
+         totalRevenue = revenue;});
     } catch (e) {
       print('Error loading events: $e');
       setState(() {
@@ -684,6 +689,20 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
         ),
       );
     }
+  }
+  Future<double> calculateTotalRevenue() async {
+    totalRevenue = 0.0;
+    
+    for (Event event in organizerEvents) {
+    List<Booking> bookings = await _getEventBookings(event.id);
+    int paidBookings = bookings.where((booking) => booking.paid).length;
+
+    double eventRevenue = event.price * paidBookings;
+    totalRevenue += eventRevenue;
+
+    print('Event "${event.title}" revenue: $eventRevenue');
+  }
+    return totalRevenue;
   }
 
   IconData _getCategoryIcon(String category) {
@@ -863,11 +882,24 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                 child: FutureBuilder<Map<String, dynamic>>(
                   future: _getOverallStats(),
                   builder: (context, snapshot) {
-                    final stats =
-                        snapshot.data ?? {'revenue': 0.0, 'bookings': 0};
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (snapshot.hasError) {
+                      return _buildSummaryCard(
+                        'Total Revenue',
+                        'Error loading revenue',
+                        Icons.error,
+                        Colors.red,
+                      );
+                    }
+                    // final stats = snapshot.data ?? {'revenue': 0.0, 'bookings': 0};
+                    
                     return _buildSummaryCard(
                       'Total Revenue',
-                      'UGX ${stats['revenue'].toStringAsFixed(2)}',
+                      // 'UGX ${stats['revenue'].toStringAsFixed(2)}',
+                      'UGX ${totalRevenue.toStringAsFixed(2)}',
+                      
                       Icons.attach_money,
                       Colors.green,
                     );
@@ -985,15 +1017,9 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                               );
                             }
                             final bookings = snapshot.data ?? [];
-                            final paidBookings = bookings
-                                .where((b) => b.paid)
-                                .length;
-                            final totalRevenue = bookings
-                                .where((b) => b.paid)
-                                .fold(
-                                  0.0,
-                                  (sum, booking) => sum + booking.total,
-                                );
+                            final paidBookings = bookings.where((b) => b.paid).length;
+                            // final totalRevenue =
+                            //     bookings.where((b) => b.paid).fold(0.0, (sum, booking) => sum + booking.total);
                             final bookedCount = bookings.length;
                             final maxslots = event.maxslots ?? 0;
                             final slotsRemaining = maxslots - bookedCount;
@@ -1036,7 +1062,8 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                                   Column(
                                     children: [
                                       Text(
-                                        'UGX ${totalRevenue.toStringAsFixed(2)}',
+                                        'UGX ${(event.price * paidBookings).toStringAsFixed(1)}',
+
                                         style: const TextStyle(
                                           fontSize: 18,
                                           fontWeight: FontWeight.bold,
@@ -1381,14 +1408,11 @@ class EventAnalyticsScreen extends StatelessWidget {
   Future<Map<String, dynamic>> _getEventStats() async {
     final bookingService = BookingService();
     final bookings = await bookingService.getEventBookings(event.id);
+    
     final paidBookings = bookings.where((b) => b.paid).length;
-
-    final totalRevenue = bookings
-        .where((b) => b.paid)
-        .fold(0.0, (sum, booking) => sum + booking.total);
-    print(
-      'Total Revenue for ${event.title}: UGX ${totalRevenue.toStringAsFixed(2)}',
-    );
+   // final paidCount = paidBookingsSnapshot.docs.length;
+    final totalRevenue = event.price * paidBookings;
+    print('Total Revenue for ${event.title}: UGX ${totalRevenue.toStringAsFixed(2)}');
     return {
       'totalBookings': bookings.length,
       'paidBookings': paidBookings,
@@ -1445,7 +1469,7 @@ class EventAnalyticsScreen extends StatelessWidget {
                 const SizedBox(height: 16),
                 _buildStatCard(
                   'Total Revenue',
-                  'UGX ${stats['totalRevenue'].toStringAsFixed(2)}',
+                  'UGX ${stats['totalRevenue'].toStringAsFixed(0)}',
                   Icons.attach_money,
                   Colors.purple,
                 ),
