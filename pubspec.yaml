@@ -29,6 +29,7 @@ dependencies:
   firebase_storage: ^12.4.8
   #local storage
   shared_preferences: ^2.2.2
+  flutter_blurhash: ^0.7.0
 
   # HTTP & Networking
   http: ^1.4.0
