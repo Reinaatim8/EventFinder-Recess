@@ -97,6 +97,7 @@ class ProfileScreen extends StatelessWidget {
                   title: 'Edit Profile',
                   onTap: () {
                     // TODO: Navigate to edit profile screen
+                    
                   },
                 ),
                 _buildProfileOption(
