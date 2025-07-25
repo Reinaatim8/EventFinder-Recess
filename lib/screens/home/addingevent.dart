@@ -21,7 +21,7 @@ class AddEventDialog extends StatefulWidget {
   State<AddEventDialog> createState() => _AddEventDialogState();
 }
 
-class _AddEventDialogState extends State<AddEventDialog> with SingleTickerProviderStateMixin {
+class _AddEventDialogState extends State<AddEventDialog> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
@@ -45,9 +45,6 @@ class _AddEventDialogState extends State<AddEventDialog> with SingleTickerProvid
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   double? _latitude;
   double? _longitude;
-
-  late AnimationController _animationController;
-  late Animation<double> _scaleAnimation;
 
   final List<String> _categories = [
     'Concert',
@@ -229,8 +226,8 @@ class _AddEventDialogState extends State<AddEventDialog> with SingleTickerProvid
           _isUploading = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error uploading image: $e'),
+          const SnackBar(
+            content: Text('Error uploading image: '),
             backgroundColor: Colors.red,
           ),
         );
@@ -536,9 +533,11 @@ class _AddEventDialogState extends State<AddEventDialog> with SingleTickerProvid
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 value: _selectedDocumentType,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Document Type',
-                  border: OutlineInputBorder(),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                   prefixIcon: Icon(Icons.description),
                 ),
                 items: _documentTypes.map((type) {
@@ -714,7 +713,7 @@ class _AddEventDialogState extends State<AddEventDialog> with SingleTickerProvid
                     const Text(
                       'Add New Event',
                       style: TextStyle(
-                        fontSize: 20,
+                        fontSize: 24,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -734,9 +733,12 @@ class _AddEventDialogState extends State<AddEventDialog> with SingleTickerProvid
                 const SizedBox(height: 20),
                 TextFormField(
                   controller: _titleController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Event Title *',
-                    border: OutlineInputBorder(),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    prefixIcon: Icon(Icons.title),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -748,116 +750,146 @@ class _AddEventDialogState extends State<AddEventDialog> with SingleTickerProvid
                 const SizedBox(height: 15),
                 TextFormField(
                   controller: _descriptionController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Description',
-                    border: OutlineInputBorder(),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    prefixIcon: Icon(Icons.description),
                   ),
                   maxLines: 3,
                 ),
                 const SizedBox(height: 15),
-                TextFormField(
-                  controller: _priceController,
-                  keyboardType: TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(
-                    labelText: 'Price',
-                    prefixIcon: Icon(Icons.attach_money),
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter a price';
-                    }
-                    if (double.tryParse(value) == null) {
-                      return 'Please enter a valid number';
-                    }
-                    return null;
-                  },
-                ),
-                   const SizedBox(height: 15),
-                TextFormField(
-                  controller: _maxslotsController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Maximum/Capacity Slots',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter max slots';
-                    }
-                    if (int.tryParse(value) == null) {
-                      return 'Please enter a valid number';
-                    }
-                    return null;
-                  },
-                ),
-                
-
-                const SizedBox(height: 15),
-                TextFormField(
-                  controller: _dateController,
-                  decoration: const InputDecoration(
-                    labelText: 'Date *',
-                    border: OutlineInputBorder(),
-                    suffixIcon: Icon(Icons.calendar_today),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter event date';
-                    }
-                    return null;
-                  },
-                  onTap: () async {
-                    FocusScope.of(context).requestFocus(FocusNode());
-                    final date = await showDatePicker(
-                      context: context,
-                      initialDate: DateTime.now(),
-                      firstDate: DateTime.now(),
-                      lastDate: DateTime(2030),
-                    );
-                    if (date != null) {
-                      _dateController.text =
-                          '${date.day}/${date.month}/${date.year}';
-                    }
-                  },
-                ),
-                const SizedBox(height: 15),
-                TextFormField(
-                  controller: _locationController,
-                  decoration: const InputDecoration(
-                    labelText: 'Location *',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter event location';
-                    }
-                    return null;
-                  },
-                  onTap: () async {
-                    final result = await Navigator.push<Map<String, dynamic>?>(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const LocationPickerScreen(),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _priceController,
+                        keyboardType: TextInputType.numberWithOptions(decimal: true),
+                        decoration: InputDecoration(
+                          labelText: 'Price',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          prefixIcon: Icon(Icons.attach_money),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter a price';
+                          }
+                          if (double.tryParse(value) == null) {
+                            return 'Please enter a valid number';
+                          }
+                          return null;
+                        },
                       ),
-                    );
-                    if (result != null) {
-                      final LatLng location = result['location'];
-                      final String locationName = result['locationName'] ?? 'Unknown location';
-                      setState(() {
-                        _latitude = location.latitude;
-                        _longitude = location.longitude;
-                        _locationController.text = locationName;
-                      });
-                    }
-                  },
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _maxslotsController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: 'Max Slots',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          prefixIcon: Icon(Icons.people),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter max slots';
+                          }
+                          if (int.tryParse(value) == null) {
+                            return 'Please enter a valid number';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 15),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _dateController,
+                        decoration: InputDecoration(
+                          labelText: 'Date *',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          suffixIcon: Icon(Icons.calendar_today),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter event date';
+                          }
+                          return null;
+                        },
+                        onTap: () async {
+                          FocusScope.of(context).requestFocus(FocusNode());
+                          final date = await showDatePicker(
+                            context: context,
+                            initialDate: DateTime.now(),
+                            firstDate: DateTime.now(),
+                            lastDate: DateTime(2030),
+                          );
+                          if (date != null) {
+                            _dateController.text =
+                                '${date.day}/${date.month}/${date.year}';
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _locationController,
+                        decoration: InputDecoration(
+                          labelText: 'Location *',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          prefixIcon: Icon(Icons.location_on),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter event location';
+                          }
+                          return null;
+                        },
+                        onTap: () async {
+                          final result = await Navigator.push<Map<String, dynamic>?>(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const LocationPickerScreen(),
+                            ),
+                          );
+                          if (result != null) {
+                            final LatLng location = result['location'];
+                            final String locationName = result['locationName'] ?? 'Unknown location';
+                            setState(() {
+                              _latitude = location.latitude;
+                              _longitude = location.longitude;
+                              _locationController.text = locationName;
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 15),
                 DropdownButtonFormField<String>(
                   value: _selectedCategory,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Category',
-                    border: OutlineInputBorder(),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    prefixIcon: Icon(Icons.category),
                   ),
                   items: _categories.map((category) {
                     return DropdownMenuItem(
@@ -879,11 +911,14 @@ class _AddEventDialogState extends State<AddEventDialog> with SingleTickerProvid
                     Expanded(
                       child: TextButton(
                         onPressed: _isUploading ? null : () => Navigator.pop(context),
-                        child: Text('Cancel')
-                        ,
+                        child: const Text('Cancel'),
                         style: TextButton.styleFrom(
                           foregroundColor: Colors.white,
                           backgroundColor: Colors.red,
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                         ),
                       ),
                     ),
@@ -894,11 +929,15 @@ class _AddEventDialogState extends State<AddEventDialog> with SingleTickerProvid
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Color.fromARGB(255, 25, 25, 95),
                           foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                         ),
                         child: _isUploading
                             ? const SizedBox(
-                                height: 16,
-                                width: 16,
+                                height: 24,
+                                width: 24,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
                                   valueColor:
@@ -1010,7 +1049,7 @@ class _AddEventDialogState extends State<AddEventDialog> with SingleTickerProvid
           );
         }
       } catch (e) {
-        //print('Error adding event: $e');
+        print('Error adding event: $e');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -1034,4 +1073,3 @@ class _AddEventDialogState extends State<AddEventDialog> with SingleTickerProvid
     super.dispose();
   }
 }
-
