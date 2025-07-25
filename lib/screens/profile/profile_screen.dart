@@ -97,7 +97,7 @@ class ProfileScreen extends StatelessWidget {
                   title: 'Edit Profile',
                   onTap: () {
                     // TODO: Navigate to edit profile screen
-                    
+
                   },
                 ),
                 _buildProfileOption(
@@ -105,7 +105,62 @@ class ProfileScreen extends StatelessWidget {
                   icon: Icons.notifications,
                   title: 'Notifications',
                   onTap: () {
-                    // TODO: Navigate to notifications settings
+                    showModalBottomSheet(
+                      context: context,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+                      ),
+                      backgroundColor: Colors.white,
+                      builder: (context) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 4,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[300],
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              const Text(
+                                'Notification Settings',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              const Text(
+                                'Turn on/off event reminders, app updates, and more.\n\n Receive notifications upon Reerving/Booking events and Payment, and important updates.',
+                                
+                                textAlign: TextAlign.center,
+                                style: TextStyle(color: Colors.black87),
+                              ),
+                              const SizedBox(height: 25),
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  backgroundColor: Colors.deepPurple,
+                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                icon: const Icon(Icons.check),
+                                label: const Text("Close"),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    );
                   },
                 ),
                 _buildProfileOption(context,
