@@ -46,16 +46,11 @@ class _AddEventDialogState extends State<AddEventDialog> {
   double? _longitude;
 
   final List<String> _categories = [
-    'Concert',
-    'Conference',
-    'Workshop',
+    'food',
+    'art',
+    'technology',
     'Sports',
-    'Festival',
-    'Networking',
-    'Exhibition',
-    'Theater',
-    'Comedy',
-    'Other',
+    'business',
   ];
 
   final List<String> _documentTypes = [
