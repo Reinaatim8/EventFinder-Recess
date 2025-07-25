@@ -135,7 +135,7 @@ class ProfileScreen extends StatelessWidget {
                               ),
                               const SizedBox(height: 12),
                               const Text(
-                                'Turn on/off event reminders, app updates, and more.\n\n Receive notifications upon Reerving/Booking events and Payment, and important updates.',
+                                'Turn on/off event reminders, app updates, and more.\n\n Receive InApp notifications upon Reserving/Booking events and Payment, and important updates.',
                                 
                                 textAlign: TextAlign.center,
                                 style: TextStyle(color: Colors.black87),
