@@ -15,6 +15,7 @@ import '../../models/event.dart';
 import '../map/map_screen.dart';
 import 'verification_screen.dart';
 import '../../services/booking_service.dart';
+import 'dart:ui';
 
 final GlobalKey<_BookingsTabState> bookingsTabKey = GlobalKey<_BookingsTabState>();
 

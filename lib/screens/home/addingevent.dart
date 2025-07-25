@@ -11,6 +11,8 @@ import '../../providers/auth_provider.dart';
 import '../map/location_picker_screen.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:file_picker/file_picker.dart';
+import 'dart:ui';
+import '../../models/event.dart';
 
 class AddEventDialog extends StatefulWidget {
   final Function(Event) onAddEvent;
