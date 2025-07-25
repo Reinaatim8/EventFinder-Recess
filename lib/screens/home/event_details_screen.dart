@@ -41,3 +41,9 @@ class EventDetailsScreen extends StatelessWidget {
     );
   }
 }
+
+extension on String {
+  void operator >(int other) {}
+  
+  toStringAsFixed(int i) {}
+}

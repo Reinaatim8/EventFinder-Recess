@@ -1,18 +1,20 @@
+import 'package:firebase_auth/firebase_auth.dart' show FirebaseAuth;
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'dart:io';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:convex_bottom_bar/convex_bottom_bar.dart';
+import 'package:uuid/uuid.dart';
+import 'package:intl/intl.dart';
 import '../../providers/auth_provider.dart';
 import '../profile/profile_screen.dart';
-import 'bookevent_screen.dart';
-import 'package:flutter/foundation.dart';
-import 'dart:typed_data';
+import 'checkout_screen.dart';
 import 'addingevent.dart';
 import '../home/event_management_screen.dart';
 import '../../models/event.dart';
 import '../map/map_screen.dart';
+import 'verification_screen.dart';
+import '../../services/booking_service.dart';
 
 final GlobalKey<_BookingsTabState> bookingsTabKey = GlobalKey<_BookingsTabState>();
 
@@ -24,32 +26,87 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _selectedIndex = 0;
+  int selectedIndex = 0;
   List<Event> events = [];
-  bool _isLoading = true;
+  bool isLoading = true;
+  Set<String> bookedEventIds = {};
+  final Map<String, String> eventStatus = {};
+  final BookingService _bookingService = BookingService();
 
+  bool _isAdmin() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final userEmail = authProvider.user?.email?.toLowerCase().trim();
+    final isAdmin = userEmail == 'kennedymutebi7@gmail.com';
+    print('Checking admin status: user=$userEmail, isAdmin=$isAdmin');
+    return isAdmin;
+  }
 
   @override
   void initState() {
     super.initState();
-    _fetchEvents();
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    if (authProvider.user == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.pushReplacementNamed(context, '/login');
+      });
+    } else {
+      fetchEvents();
+      loadBookedEvents();
+    }
   }
-//fetch events from firestore
-  Future<void> _fetchEvents() async {
+
+  DateTime parseEventDate(String input) {
+    try {
+      final parts = input.split('/');
+      if (parts.length != 3) {
+        print('Invalid date format: $input');
+        return DateTime(1900);
+      }
+      final day = int.tryParse(parts[0]) ?? 1;
+      final month = int.tryParse(parts[1]) ?? 1;
+      final year = int.tryParse(parts[2]) ?? 1900;
+      return DateTime(year, month, day);
+    } catch (e) {
+      print("Date parse error for '$input': $e");
+      return DateTime(1900);
+    }
+  }
+
+  Future<void> fetchEvents() async {
     setState(() {
-      _isLoading = true;
+      isLoading = true;
     });
     try {
-      QuerySnapshot snapshot =
-          await FirebaseFirestore.instance.collection('events').get();
+      print('Fetching events from Firestore...');
+      QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('events')
+          .where('title', isNotEqualTo: '')
+          .get();
+      print('Retrieved ${snapshot.docs.length} documents');
+      List<Event> fetchedEvents = snapshot.docs.map((doc) {
+        print('Raw Firestore data for ${doc.id}: ${doc.data()}');
+        return Event.fromFirestore(doc);
+      }).toList();
+      fetchedEvents.sort((a, b) {
+        final aDate = parseEventDate(a.date);
+        final bDate = parseEventDate(b.date);
+        final aPast = aDate.isBefore(DateTime.now());
+        final bPast = bDate.isBefore(DateTime.now());
+        if (aPast && !bPast) return 1;
+        if (!aPast && bPast) return -1;
+        return aDate.compareTo(bDate);
+      });
       setState(() {
-        events = snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList();
-        _isLoading = false;
+        events = fetchedEvents;
+        isLoading = false;
       });
       print('Fetched ${events.length} events');
+      if (events.isEmpty) {
+        print('No events found. Check Firestore data or permissions.');
+      }
     } catch (e) {
       setState(() {
-        _isLoading = false;
+        isLoading = false;
       });
       print('Error fetching events: $e');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -61,7 +118,108 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _addEvent(Event event) async {
+  Future<void> bookEvent(String eventId) async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) {
+      print('No user logged in for booking event');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please log in to book events')),
+      );
+      return;
+    }
+
+    final bookingRef = FirebaseFirestore.instance
+        .collection('bookings')
+        .doc('$userId-$eventId');
+
+    try {
+      // Validate event existence
+      final event = events.firstWhere(
+        (e) => e.id == eventId,
+        orElse: () => throw Exception('Event not found: $eventId'),
+      );
+
+      print('Booking attempt: authUid=${FirebaseAuth.instance.currentUser?.uid}, userId=$userId, eventId=$eventId');
+      
+      // Log booking data
+      final bookingData = {
+        'userId': userId,
+        'eventId': eventId,
+        'event': event.title,
+        'price': event.price,
+        'paid': event.price == '0' || event.price == '0.0' || event.price == '0.00' ? true : false,
+        'ticketId': const Uuid().v4(),
+        'isVerified': event.isVerified,
+        'verificationStatus': event.verificationStatus,
+        'timestamp': FieldValue.serverTimestamp(),
+      };
+      print('Booking data: $bookingData');
+
+      if (await bookingRef.get().then((doc) => doc.exists)) {
+        print('Deleting booking for user: $userId, event: $eventId');
+        await bookingRef.delete();
+        setState(() {
+          bookedEventIds.remove(eventId);
+          eventStatus.remove(eventId);
+        });
+        bookingsTabKey.currentState?._fetchBookings();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Event Reservation Cancelled')),
+        );
+      } else {
+        print('Creating booking for user: $userId, event: $eventId');
+        await bookingRef.set(bookingData);
+        setState(() {
+          bookedEventIds.add(eventId);
+          eventStatus[eventId] = 'Reserved';
+        });
+        bookingsTabKey.currentState?._fetchBookings();
+        // ScaffoldMessenger.of(context).showSnackBar(
+        //   const SnackBar(content: Text('Event Reservation Successful')),
+        // );
+      }
+    } catch (e) {
+      print('Error booking event: $e');
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   SnackBar(content: Text('Error booking event: $e')),
+      // );
+    }
+  }
+
+  Future<void> loadBookedEvents() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) {
+      print('No user logged in for loading booked events');
+      return;
+    }
+
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('bookings')
+          .where('userId', isEqualTo: userId)
+          .get();
+      final bookedIds = snapshot.docs.map((doc) => doc['eventId'] as String).toSet();
+      print('Loaded ${bookedIds.length} booked events: $bookedIds');
+      setState(() {
+        bookedEventIds = bookedIds;
+        for (var eventId in bookedIds) {
+          eventStatus[eventId] = 'Reserved';
+        }
+      });
+      bookingsTabKey.currentState?._fetchBookings();
+    } catch (e) {
+      print('Error loading booked events: $e');
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   SnackBar(content: Text('Error loading booked events: $e')),
+      // );
+    }
+  }
+
+  void toggleBooking(Event event) {
+    bookEvent(event.id);
+  }
+
+  void addEvent(Event event) async {
     try {
       await FirebaseFirestore.instance
           .collection('events')
@@ -70,7 +228,10 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() {
         events.add(event);
       });
-      print('Event added to Firestore: ${event.id}, organizerId: ${event.organizerId}');
+      print('Event added to Firestore: ${event.id}, organizerId: ${event.organizerId}, isVerified: ${event.isVerified}, verificationStatus: ${event.verificationStatus}');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Event added successfully')),
+      );
     } catch (e) {
       print('Error adding event: $e');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -81,16 +242,27 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
   }
-  // (iii) Track booking/payment status per event
-  final Map<String, String> _eventStatus = {};
 
-// (i) Show bottom sheet with event details and actions
-  void _showEventDetailsModal(Event event) {
+  void handlePaymentSuccess(Event event) {
+    setState(() {
+      eventStatus[event.id] = 'Paid';
+      bookedEventIds.add(event.id);
+    });
+    bookingsTabKey.currentState?._fetchBookings();
+    Fluttertoast.showToast(
+      msg: "Payment Successful!",
+      toastLength: Toast.LENGTH_LONG,
+      gravity: ToastGravity.CENTER,
+      backgroundColor: Colors.green,
+      textColor: Colors.white,
+      fontSize: 16.0,
+    );
+  }
+
+  void showEventDetailsModal(Event event) {
     showDialog(
       context: context,
-      //shape: const RoundedRectangleBorder(
-       // borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      builder: (_) => AlertDialog (
+      builder: (context) => AlertDialog(
         title: Text(event.title),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -98,130 +270,206 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Text(event.description),
             const SizedBox(height: 20),
-            if (_eventStatus[event.id] != 'Reserved')
-        // return Padding(
-        //   padding: const EdgeInsets.all(20.0),
-        //   child: Column(
-        //     mainAxisSize: MainAxisSize.min,
-        //     children: [
-        //       Text(event.title,
-        //           style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-        //       const SizedBox(height: 10),
-        //       Text(event.description),
-        //       const SizedBox(height: 20),
-        //       Row(
-        //         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        //         children: [
-                  ElevatedButton(
-                    onPressed: () {
-                      bookingsTabKey.currentState?.addBooking({
-                        'id': DateTime.now().millisecondsSinceEpoch,
-                        'event': event.title,
-                        'total': event.price,
-                        'paid': false,
-                      });
-                      setState(() {
-                        _eventStatus[event.id] = 'Reserved';
-                      });
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Event Reserved!'),
-                          backgroundColor: Colors.orange,
-<<<<<<< HEAD
-                        ),
-                      );
-                    },
-                    child: const Text('Book Event'),
-                  ),
-                  if (_eventStatus[event.id] == 'Reserved')
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 8.0),
-                        child: Text(
-                        'Event Reserved',
-                        style: TextStyle(
-                         color: Colors.orange,
-                         fontWeight: FontWeight.bold,
-                         ),
-                      ),),
-=======
-                          textColor: Colors.white,
-                           fontSize: 19.0,
-                         );
-                      },
-                      child: const Text('Book Event'),
-                    ),
-                  ] else ...[
-                    ElevatedButton(
-                      onPressed: () {
-                        // UNBOOK logic
-                        bookingsTabKey.currentState?.removeBookingByTitle(event.title); // You'll create this method next
-                        setState(() {
-                          _eventStatus[event.id] = 'Reservation Cancelled!';
-                        });
-                        Navigator.pop(context);
-                        Fluttertoast.showToast(
-                          msg: "Reservation Cancelled!",
-                          toastLength: Toast.LENGTH_LONG,
-                          gravity: ToastGravity.CENTER, // or CENTER
-                          backgroundColor: Colors.grey,
-                          textColor: Colors.pink,
-                          fontSize: 18.0,
-                        );
-
-                      },
-                      style: ElevatedButton.styleFrom(backgroundColor: const Color.fromARGB(255, 246, 105, 50)),
-                      child: const Text('Cancel Reseravtion'),
-                    ),
-                  ],
-              const SizedBox(height: 10),
->>>>>>> b29ef5c71fe2575e608696386940e59c92e1ce38
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => CheckoutScreen(
-                            total: event.price,
-                            onPaymentSuccess: () {
-                              bookingsTabKey.currentState?.addBooking({
-                                'id': DateTime.now().millisecondsSinceEpoch,
-                                'event': event.title,
-                                'total': event.price,
-                                'paid': true,
-                              });
-                              setState(() {
-                                _eventStatus[event.id] = 'Paid';
-                              });
-                            },
-                          ),
-                        ),
-                      );
-                    },
-                    
-                    
-                    child: const Text('Pay For Event'),
-                  ),
-                 TextButton(
-                     onPressed: () {
-                       Navigator.pop(context);
-                     },
-                  child: const Text(
-                   'Cancel',
-                       style: TextStyle(color: Colors.red),
-                 ),
-                 ),
-                ],
+            if (eventStatus[event.id] != 'Reserved') ...[
+              ElevatedButton(
+                onPressed: () async {
+                  await bookEvent(event.id);
+                  bookingsTabKey.currentState?.addBooking({
+                    'id': DateTime.now().millisecondsSinceEpoch,
+                    'event': event.title,
+                    'total': event.price,
+                    'paid': event.price == '0' || event.price == '0.0' || event.price == '0.00' ? true : false,
+                    'eventId': event.id,
+                    'ticketId': const Uuid().v4(),
+                    'isVerified': event.isVerified,
+                    'verificationStatus': event.verificationStatus,
+                  });
+                  setState(() {
+                    eventStatus[event.id] = 'Reserved';
+                  });
+                  Navigator.pop(context);
+                  Fluttertoast.showToast(
+                    msg: "Event Reservation Successful!",
+                    toastLength: Toast.LENGTH_LONG,
+                    gravity: ToastGravity.CENTER,
+                    backgroundColor: Colors.orange,
+                    textColor: Colors.white,
+                    fontSize: 19.0,
+                  );
+                },
+                child: const Text('Book/Reserve an Event'),
               ),
-
-          ),
-        );
+            ] else ...[
+              ElevatedButton(
+                onPressed: () async {
+                  await bookEvent(event.id);
+                  bookingsTabKey.currentState?.removeBookingByTitle(event.title);
+                  setState(() {
+                    eventStatus[event.id] = 'Cancelled Reservation!';
+                  });
+                  Navigator.pop(context);
+                  Fluttertoast.showToast(
+                    msg: "Event Reservation Cancelled!",
+                    toastLength: Toast.LENGTH_LONG,
+                    gravity: ToastGravity.CENTER,
+                    backgroundColor: Colors.pink,
+                    textColor: Colors.white,
+                    fontSize: 19.0,
+                  );
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.pink),
+                child: const Text('Cancel Reservation'),
+              ),
+            ],
+            ElevatedButton(
+              onPressed: () {
+                if (!event.isVerified) {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15),
+                      ),
+                      
+                      title: const
+                          Text('Caution: Unverified Event', style: TextStyle(color: Colors.red)),
+                        
+                      
+                      content: const Text(
+                        'This event is not yet verified. Paying for an unverified event may carry risks, as the event details have not been confirmed by an administrator. Do you wish to proceed with payment?',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cancel', style: TextStyle( color: Colors.red, fontSize: 16)),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            Navigator.pop(context); // Close the event details modal
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => CheckoutScreen(
+                                  event: event,
+                                  total: event.price,
+                                  ticketId: const Uuid().v4(),
+                                  onPaymentSuccess: () => handlePaymentSuccess(event),
+                                ),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+                          child: const Text('Proceed'),
+                        ),
+                      ],
+                    ),
+                  );
+                } else {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => CheckoutScreen(
+                        event: event,
+                        total: event.price,
+                        ticketId: const Uuid().v4(),
+                        onPaymentSuccess: () => handlePaymentSuccess(event),
+                      ),
+                    ),
+                  );
+                }
+              },
+              child: const Text('Pay For Event'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
-  List<Widget> _getScreens() => [
-        HomeTab(events: events, onAddEvent: _addEvent, onEventTap: _showEventDetailsModal, eventStatus: _eventStatus,),
-        SearchTab(events: events),
+  void showEventSelectionDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Select Event to Verify'),
+        content: Container(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: events.length,
+            itemBuilder: (context, index) {
+              final event = events[index];
+              return ListTile(
+                title: Text(event.title),
+                subtitle: Text(
+                  event.isVerified ? 'Verified' : 'Unverified',
+                  style: TextStyle(
+                    color: event.isVerified ? Colors.green : Colors.red,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => VerificationScreen(
+                        event: event,
+                        isVerified: event.isVerified,
+                        verificationDocumentUrl: event.verificationDocumentUrl,
+                        verificationStatus: event.verificationStatus,
+                        rejectionReason: event.rejectionReason,
+                        onBookingAdded: (booking) {
+                          bookingsTabKey.currentState?.addBooking(booking);
+                        },
+                        onStatusUpdate: (status) {
+                          print('Status updated for event ${event.id}: $status');
+                          setState(() {
+                            eventStatus[event.id] = status;
+                          });
+                          fetchEvents();
+                        },
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> getScreens() => [
+        HomeTab(
+          events: events,
+          onAddEvent: addEvent,
+          onEventTap: showEventDetailsModal,
+          eventStatus: eventStatus,
+          bookedEventIds: bookedEventIds,
+          bookEvent: bookEvent,
+        ),
+        SearchTab(
+          events: events,
+          eventStatus: eventStatus,
+          onEventTap: showEventDetailsModal,
+          bookedEventIds: bookedEventIds,
+          bookEvent: bookEvent,
+        ),
         BookingsTab(key: bookingsTabKey),
         const ProfileScreen(),
         const MapScreen(),
@@ -230,90 +478,46 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-<<<<<<< HEAD
-      body: _isLoading
+      backgroundColor: const Color.fromARGB(255, 25, 25, 95),
+      body: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _getScreens()[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: _selectedIndex,
-        onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
-        selectedItemColor: Theme.of(context).primaryColor,
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
+          : getScreens()[selectedIndex],
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: const Color.fromARGB(255, 25, 25, 95),
+            width: 0.2,
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.search),
-            label: 'Search',
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(50),
+            topRight: Radius.circular(50),
+            bottomLeft: Radius.circular(20),
+            bottomRight: Radius.circular(20),
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.bookmark),
-            label: 'Bookings',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-         BottomNavigationBarItem(
-           icon: Icon(Icons.map),
-           label: 'Map',
-         ),
-       ],
+        ),
+        child: ConvexAppBar(
+          style: TabStyle.react,
+          backgroundColor: const Color.fromARGB(255, 25, 25, 95),
+          activeColor: Colors.orange,
+          color: Colors.white,
+          height: 60,
+          curveSize: 100,
+          curve: Curves.easeInOut,
+          items: const [
+            TabItem(icon: Icons.home, title: 'Home'),
+            TabItem(icon: Icons.search, title: 'Search'),
+            TabItem(icon: Icons.history, title: 'Pay-History'),
+            TabItem(icon: Icons.person, title: 'Profile'),
+            TabItem(icon: Icons.map, title: 'Map'),
+          ],
+          initialActiveIndex: selectedIndex,
+          onTap: (int index) {
+            setState(() {
+              selectedIndex = index;
+            });
+          },
+        ),
       ),
-=======
-      backgroundColor:const Color.fromARGB(255, 25, 25, 95),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _getScreens()[_selectedIndex],
-            bottomNavigationBar: Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: const Color.fromARGB(255, 25, 25, 95),
-                          width: 0.2,
-                          
-                        ),
-                        borderRadius: const BorderRadius.only(
-                          topLeft: Radius.circular(50),
-                          topRight: Radius.circular(50),
-                          bottomLeft: Radius.circular(20),
-                          bottomRight: Radius.circular(20),
-
-                        ),
-                        
-                        ),
-            child: ConvexAppBar(
-                      style: TabStyle.react, // other styles: fixedCircle, flip, reactCircle
-                      backgroundColor:Color.fromARGB(255, 25, 25, 95),
-                      activeColor:Colors.orange,
-                      color:Colors.white,
-                      height: 60,
-                      // elevation: 5,
-              curveSize: 100,
-                      curve: Curves.easeInOut,
-             
-              items: const [
-                TabItem(icon: Icons.home, title: 'Home'),
-                TabItem(icon: Icons.search, title: 'Search'),
-                TabItem(icon: Icons.bookmark, title: 'Bookings'),
-                TabItem(icon: Icons.person, title: 'Profile'),
-                TabItem(icon: Icons.map, title: 'Map'),
-              ],
-              initialActiveIndex: _selectedIndex,
-              onTap: (int index) {
-                setState(() {
-                  _selectedIndex = index;
-                });
-              },
-            ),),
-
->>>>>>> b29ef5c71fe2575e608696386940e59c92e1ce38
     );
   }
 }
@@ -321,368 +525,419 @@ class _HomeScreenState extends State<HomeScreen> {
 class HomeTab extends StatelessWidget {
   final List<Event> events;
   final Function(Event) onAddEvent;
-  final Function(Event) onEventTap; // (i) Used to trigger event details bottom sheet
+  final Function(Event) onEventTap;
   final Map<String, String> eventStatus;
-  const HomeTab({Key? key,
+  final Set<String> bookedEventIds;
+  final Future<void> Function(String) bookEvent;
+
+  const HomeTab({
+    Key? key,
     required this.events,
     required this.onAddEvent,
     required this.onEventTap,
     required this.eventStatus,
-  })
-      : super(key: key);
+    required this.bookedEventIds,
+    required this.bookEvent,
+  }) : super(key: key);
+
+  bool _isAdmin(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final userEmail = authProvider.user?.email?.toLowerCase().trim();
+    final isAdmin = userEmail == 'kennedymutebi7@gmail.com';
+    print('HomeTab - Checking admin status: user=$userEmail, isAdmin=$isAdmin');
+    return isAdmin;
+  }
 
   @override
   Widget build(BuildContext context) {
-    Map<String, List<Event>> eventsByDate = {};
-    for (var event in events) {
-      eventsByDate.putIfAbsent(event.date, () => []).add(event);
-    }
-
-    var sortedDates = eventsByDate.keys.toList()..sort();
-
-    List<Widget> eventWidgets = [];
-    for (var date in sortedDates) {
-      eventWidgets.add(
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-          child: Text(
-            date,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.black54,
+    List<Widget> eventWidgets = events
+        .map(
+          (event) => Padding(
+            padding: const EdgeInsets.only(bottom: 15, left: 0, right: 0),
+            child: EventCard(
+              event: event,
+              onTap: () => onEventTap(event),
+              status: eventStatus[event.id],
+              isBooked: bookedEventIds.contains(event.id),
+              onBookToggle: () => bookEvent(event.id),
+              onPaymentSuccess: () {
+                final homeScreenState = context.findAncestorStateOfType<_HomeScreenState>();
+                homeScreenState?.handlePaymentSuccess(event);
+              },
             ),
           ),
-        ),
-      );
-      eventWidgets.addAll(
-        eventsByDate[date]!.asMap().entries.map(
-              (entry) => Padding(
-                padding: const EdgeInsets.only(bottom: 15, left: 20, right: 20),
-                child: _EventCard(
-                  event: entry.value,
-                  onTap: () => onEventTap(entry.value),
-                  status: eventStatus[entry.value.id],
-                ),
-              ),
-            ),
-      );
-    }
+        )
+        .toList();
 
     return Scaffold(
-<<<<<<< HEAD
-      backgroundColor: Colors.grey[50],
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-=======
-     backgroundColor: Colors.white,
+      backgroundColor: Colors.white,
       body: Stack(
-        children:[
-          // Background image
-        //   Positioned.fill(
-        //     child: Image.asset(
-        //       'assets/images/blue2.jpeg',
-        //       fit: BoxFit.cover,
-
-        //     ),  
-        // ),
-      SafeArea(
-        child: SingleChildScrollView( 
-        child: Column(
-          children: [
-            // Header section with title and search bar
->>>>>>> b29ef5c71fe2575e608696386940e59c92e1ce38
-              Container(
-                width: double.infinity,
-                height: 250,
-                decoration: BoxDecoration(
-                  color:const Color.fromARGB(255, 25, 25, 95),
-                  borderRadius: const BorderRadius.only(
-                    bottomLeft: Radius.circular(80,),
-                    bottomRight: Radius.circular(80),
-                    
-                    
-                  ),
-                  
-                  boxShadow:[
-                      BoxShadow(
-                        color: Colors.black,
-                        spreadRadius: 1,
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
-                      ),] 
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          
-                          Image.asset(
-                              'assets/images/logoo.jpeg',
-                              height: 50, // adjust as needed
-                            ),
-
-
-                          Row(
-                            children: [
-                              GestureDetector(
-                                onTap: () {
-                                  _showAddEventDialog(context);
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Icon(
-                                    Icons.add,
-                                    color:const Color.fromARGB(255, 25, 25, 95),
-                                    size: 20,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              GestureDetector(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (context) =>
-                                            const ProfileScreen()),
-                                  );
-                                },
-                                child: CircleAvatar(
-                                  radius: 20,
-                                  backgroundColor: Colors.white,
-                                  child: Icon(
-                                    Icons.person,
-                                    color: const Color.fromARGB(255, 25, 25, 95),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              IconButton(
-                                onPressed: () {
-                                  final authProvider = Provider.of<AuthProvider>(
-                                      context,
-                                      listen: false);
-                                  if (authProvider.user != null) {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            const EventManagementScreen(),
-                                      ),
-                                    );
-                                  } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                          content: Text(
-                                              'Please log in to manage events')),
-                                    );
-                                  }
-                                },
-                                icon: const Icon(
-                                  Icons.event_note,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+        children: [
+          SafeArea(
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  Container(
+                    width: double.infinity,
+                    height: 250,
+                    decoration: const BoxDecoration(
+                      color: Color.fromARGB(255, 25, 25, 95),
+                      borderRadius: BorderRadius.only(
+                        bottomLeft: Radius.circular(80),
+                        bottomRight: Radius.circular(80),
                       ),
-                      const SizedBox(height: 10),
-                      Text.rich(
-                        TextSpan(
-                          children: [
-                            TextSpan(
-                              text: 'Discover ',
-                              style: TextStyle(
-                                color: Colors.orange, 
-                                fontSize: 20,
-                                fontFamily: 'RobotoMono',
-                              ),
-                            ),
-                             TextSpan(
-                              text: 'Amazing Events Near You....',
-                              style: TextStyle(
-                                color: Colors.white, 
-                                fontSize: 18,
-                              ),
-                             ),],),),
-                             const SizedBox(height: 23),
-                             const SizedBox(height: 15),
-
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(15),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              spreadRadius: 1,
-                              blurRadius: 10,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        
-                        child: TextField(
-                          decoration: InputDecoration(
-                            hintText: 'Search events.....',
-                            prefixIcon: Icon(Icons.search, color:const Color.fromARGB(255, 25, 25, 95), size: 20,),
-                            border: InputBorder.none,
-                            //focusedBorder: InputBorder(color:Colors.yellow),
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 20, vertical: 15),
-                          ),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => SearchTab(
-                                  events: events,
-                                  onEventTap: onEventTap,
-                                  eventStatus: _eventStatus,
-                                ),
-                    ),
-<<<<<<< HEAD
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => SearchTab(events: events),
-                        ),
-                      );
-                    },
-                  ),
-=======
-                    );
-                                },
-                       ),
-                    ),
-                  ],
-            ),
->>>>>>> b29ef5c71fe2575e608696386940e59c92e1ce38
-                ),
-             ),
-              const SizedBox(height: 12),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                
-              ),
-              const SizedBox(height: 20),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  
-                  child: Row(
-                    children: [
-<<<<<<< HEAD
-                      _CategoryChip(label: 'All', isSelected: true, events: events),
-=======
-                      _CategoryChip(label: 'All', isSelected: true, events: events,onEventTap: onEventTap,),
->>>>>>> b29ef5c71fe2575e608696386940e59c92e1ce38
-                      const SizedBox(width: 10),
-                      _CategoryChip(label: 'Concert', events: events),
-                      const SizedBox(width: 10),
-                      _CategoryChip(label: 'Conference', events: events),
-                      const SizedBox(width: 10),
-                      _CategoryChip(label: 'Workshop', events: events),
-                      const SizedBox(width: 10),
-                      _CategoryChip(label: 'Sports', events: events),
-                      const SizedBox(width: 10),
-                      _CategoryChip(label: 'Festival', events: events),
-                      const SizedBox(width: 10),
-<<<<<<< HEAD
-                      _CategoryChip(label: 'Networking', events: events),
-                      const SizedBox(width: 10),
-                      _CategoryChip(label: 'Exhibition', events: events),
-=======
-                      _CategoryChip(label: 'Networking', events: events,onEventTap: onEventTap),
-                      const SizedBox(width: 10, ),
-                      _CategoryChip(label: 'Exhibition', events: events,onEventTap: onEventTap),
->>>>>>> b29ef5c71fe2575e608696386940e59c92e1ce38
-                      const SizedBox(width: 10),
-                      _CategoryChip(label: 'Theater', events: events),
-                      const SizedBox(width: 10),
-                      _CategoryChip(label: 'Comedy', events: events),
-                      const SizedBox(width: 10),
-                      _CategoryChip(label: 'Other', events: events),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 30),
-              if (events.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.all(50.0),
-                  child: Center(
-                    child: Column(
-                      children: [
-                        Icon(
-                          Icons.event_busy,
-                          size: 80,
-                          color: Colors.grey[400],
-                        ),
-                        const SizedBox(height: 20),
-                        Text(
-                          'No events found',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Colors.grey[600],
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          'Try changing your filter or search criteria',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[500],
-                          ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black,
+                          spreadRadius: 2,
+                          blurRadius: 10,
+                          offset: Offset(0, 2),
                         ),
                       ],
                     ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Image.asset(
+                                'assets/images/logoo.jpeg',
+                                height: 50,
+                              ),
+                              Row(
+                                children: [
+                                  GestureDetector(
+                                    onTap: () {
+                                      _showAddEventDialog(context);
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Icon(
+                                        Icons.add,
+                                        color: Color.fromARGB(255, 25, 25, 95),
+                                        size: 20,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  if (_isAdmin(context))
+                                    GestureDetector(
+                                      onTap: () {
+                                        final homeScreenState = context.findAncestorStateOfType<_HomeScreenState>();
+                                        homeScreenState?.showEventSelectionDialog();
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: const Icon(
+                                          Icons.admin_panel_settings,
+                                          color: Colors.blue,
+                                          size: 20,
+                                        ),
+                                      ),
+                                    ),
+                                  const SizedBox(width: 10),
+                                  GestureDetector(
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => const ProfileScreen(),
+                                        ),
+                                      );
+                                    },
+                                    child: const CircleAvatar(
+                                      radius: 20,
+                                      backgroundColor: Colors.white,
+                                      child: Icon(
+                                        Icons.person,
+                                        color: Color.fromARGB(255, 25, 25, 95),
+                                      ),
+                                    ),
+                                  ),
+                                  //const SizedBox(width:10, ),
+                                  IconButton(
+                                    onPressed: () {
+                                      final authProvider = Provider.of<AuthProvider>(
+                                        context,
+                                        listen: false,
+                                      );
+                                      if (authProvider.user != null) {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => const EventManagementScreen(),
+                                          ),
+                                        );
+                                      } else {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('Please log in to manage events'),
+                                          ),
+                                        );
+                                      }
+                                    },
+                                    icon: const Icon(
+                                      Icons.event,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Text.rich(
+                            TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: 'Discover ',
+                                  style: TextStyle(
+                                    color: Colors.orange,
+                                    fontSize: 20,
+                                    fontFamily: 'RobotoMono',
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: 'Amazing Events Near You....',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 23),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(15),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  spreadRadius: 1,
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: TextField(
+                              decoration: InputDecoration(
+                                hintText: 'Search events.....',
+                                prefixIcon: const Icon(
+                                  Icons.search,
+                                  color: Color.fromARGB(255, 25, 25, 95),
+                                  size: 20,
+                                ),
+                                border: InputBorder.none,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 20,
+                                  vertical: 15,
+                                ),
+                              ),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => SearchTab(
+                                      events: events,
+                                      onEventTap: onEventTap,
+                                      eventStatus: eventStatus,
+                                      bookedEventIds: bookedEventIds,
+                                      bookEvent: bookEvent,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                )
-              else
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Events (${events.length})',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                  const SizedBox(height: 12),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _CategoryChip(
+                            label: 'All',
+                            isSelected: true,
+                            events: events,
+                            onEventTap: onEventTap,
+                            bookEvent: bookEvent,
+                            eventStatus: eventStatus,
+                            bookedEventIds: bookedEventIds,
+                          ),
+                          const SizedBox(width: 10),
+                          _CategoryChip(
+                            label: 'Concert',
+                            events: events,
+                            onEventTap: onEventTap,
+                            bookEvent: bookEvent,
+                            eventStatus: eventStatus,
+                            bookedEventIds: bookedEventIds,
+                          ),
+                          const SizedBox(width: 10),
+                          _CategoryChip(
+                            label: 'Conference',
+                            events: events,
+                            onEventTap: onEventTap,
+                            bookEvent: bookEvent,
+                            eventStatus: eventStatus,
+                            bookedEventIds: bookedEventIds,
+                          ),
+                          const SizedBox(width: 10),
+                          _CategoryChip(
+                            label: 'Workshop',
+                            events: events,
+                            onEventTap: onEventTap,
+                            bookEvent: bookEvent,
+                            eventStatus: eventStatus,
+                            bookedEventIds: bookedEventIds,
+                          ),
+                          const SizedBox(width: 10),
+                          _CategoryChip(
+                            label: 'Sports',
+                            events: events,
+                            onEventTap: onEventTap,
+                            bookEvent: bookEvent,
+                            eventStatus: eventStatus,
+                            bookedEventIds: bookedEventIds,
+                          ),
+                          const SizedBox(width: 10),
+                          _CategoryChip(
+                            label: 'Festival',
+                            events: events,
+                            onEventTap: onEventTap,
+                            bookEvent: bookEvent,
+                            eventStatus: eventStatus,
+                            bookedEventIds: bookedEventIds,
+                          ),
+                          const SizedBox(width: 10),
+                          _CategoryChip(
+                            label: 'Networking',
+                            events: events,
+                            onEventTap: onEventTap,
+                            bookEvent: bookEvent,
+                            eventStatus: eventStatus,
+                            bookedEventIds: bookedEventIds,
+                          ),
+                          const SizedBox(width: 10),
+                          _CategoryChip(
+                            label: 'Exhibition',
+                            events: events,
+                            onEventTap: onEventTap,
+                            bookEvent: bookEvent,
+                            eventStatus: eventStatus,
+                            bookedEventIds: bookedEventIds,
+                          ),
+                          const SizedBox(width: 10),
+                          _CategoryChip(
+                            label: 'Theater',
+                            events: events,
+                            onEventTap: onEventTap,
+                            bookEvent: bookEvent,
+                            eventStatus: eventStatus,
+                            bookedEventIds: bookedEventIds,
+                          ),
+                          const SizedBox(width: 10),
+                          _CategoryChip(
+                            label: 'Comedy',
+                            events: events,
+                            onEventTap: onEventTap,
+                            bookEvent: bookEvent,
+                            eventStatus: eventStatus,
+                            bookedEventIds: bookedEventIds,
+                          ),
+                          const SizedBox(width: 10),
+                          _CategoryChip(
+                            label: 'Other',
+                            events: events,
+                            onEventTap: onEventTap,
+                            bookEvent: bookEvent,
+                            eventStatus: eventStatus,
+                            bookedEventIds: bookedEventIds,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+                  if (events.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.all(50.0),
+                      child: Center(
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.event_busy,
+                              size: 80,
+                              color: Colors.grey[400],
+                            ),
+                            const SizedBox(height: 20),
+                            Text(
+                              'No events found',
+                              style: TextStyle(
+                                fontSize: 18,
+                                color: Colors.grey[600],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              'Try changing your filter or search criteria',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[500],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 15),
-                      Column(
-                        children: eventWidgets,
+                    )
+                  else
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Events (${events.length})',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 15),
+                          Column(
+                            children: eventWidgets,
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
-              const SizedBox(height: 30),
-            ],
+                    ),
+                  const SizedBox(height: 30),
+                ],
+              ),
+            ),
           ),
-        ),
+        ],
       ),
-    ],
-    ),);
+    );
   }
 
   void _showAddEventDialog(BuildContext context) {
@@ -697,11 +952,19 @@ class _CategoryChip extends StatelessWidget {
   final String label;
   final bool isSelected;
   final List<Event> events;
+  final Function(Event) onEventTap;
+  final Future<void> Function(String) bookEvent;
+  final Map<String, String> eventStatus;
+  final Set<String> bookedEventIds;
 
   const _CategoryChip({
     required this.label,
     this.isSelected = false,
     required this.events,
+    required this.onEventTap,
+    required this.bookEvent,
+    required this.eventStatus,
+    required this.bookedEventIds,
   });
 
   @override
@@ -711,24 +974,28 @@ class _CategoryChip extends StatelessWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => SearchTab(events: events),
+            builder: (context) => SearchTab(
+              events: label == 'All'
+                  ? events
+                  : events.where((event) => event.category == label).toList(),
+              onEventTap: onEventTap,
+              eventStatus: eventStatus,
+              bookedEventIds: bookedEventIds,
+              bookEvent: bookEvent,
+            ),
           ),
         );
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-           color: isSelected ? Colors.orange: Colors.black.withOpacity(0.05),
-          // color: Colors.white,
+          color: isSelected ? Colors.orange : Colors.black.withOpacity(0.05),
           borderRadius: BorderRadius.circular(20),
-          // backgroundColor: isSelected ? const Color.fromARGB(255, 25, 25, 95) : Colors.white,
-          
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected ? Colors.white :const Color.fromARGB(255, 25, 25, 95),
-            //  backgroundColor: isSelected ? const Color.fromARGB(255, 25, 25, 95) : Colors.white,
+            color: isSelected ? Colors.white : const Color.fromARGB(255, 25, 25, 95),
             fontSize: 14,
             fontWeight: FontWeight.w500,
           ),
@@ -738,386 +1005,42 @@ class _CategoryChip extends StatelessWidget {
   }
 }
 
-class _EventCard extends StatelessWidget {
+class EventCard extends StatelessWidget {
   final Event event;
   final VoidCallback onTap;
   final String? status;
+  final VoidCallback onBookToggle;
+  final bool isBooked;
+  final VoidCallback? onPaymentSuccess;
 
-  const _EventCard({required this.event, required this.onTap, this.status});
+  const EventCard({
+    Key? key,
+    required this.event,
+    required this.onTap,
+    this.status,
+    required this.onBookToggle,
+    required this.isBooked,
+    this.onPaymentSuccess,
+  }) : super(key: key);
 
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-<<<<<<< HEAD
-        onTap: onTap,
-
-
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
-              spreadRadius: 1,
-              blurRadius: 5,
-              offset: const Offset(0, 2),
-=======
-        onTap: () {
-          if (isPast) {
-            Fluttertoast.showToast(
-              msg: "Oops! Event Passed, Sorry!",
-              backgroundColor: Colors.red,
-              textColor: Colors.white,
-              toastLength: Toast.LENGTH_LONG,
-              gravity: ToastGravity.CENTER,
-              fontSize: 18.0,
-            );
-          } else {
-            onTap?.call();
-          }
-        },
-          child: Opacity(
-            opacity: isPast ? 0.3 : 1.0,
-          child: Container(
-            margin: EdgeInsets.zero,
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 0),
-            decoration: BoxDecoration(
-              // color:  Colors.blue.shade50,
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(0),
-              border: Border(
-                bottom: BorderSide(
-                  color: Colors.white,
-                  width: 0,
-                ),
-              ),
->>>>>>> b29ef5c71fe2575e608696386940e59c92e1ce38
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (event.imageUrl != null)
-<<<<<<< HEAD
-              ClipRRect(
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(12),
-                  topRight: Radius.circular(12),
-                ),
-                child: Image.network(
-=======
-              ColorFiltered(
-                colorFilter: isPast
-                    ? const ColorFilter.mode(Colors.grey, BlendMode.saturation)
-                    : const ColorFilter.mode(Colors.transparent, BlendMode.multiply),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(15),
-                 child: Image.network(
->>>>>>> b29ef5c71fe2575e608696386940e59c92e1ce38
-                  event.imageUrl!,
-                  height: 250,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  
-                 
-                  
-
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      height: 200,
-                      color: const Color.fromARGB(255, 111, 110, 110),
-                      child: Icon(
-                        _getCategoryIcon(event.category),
-                        size: 60,
-                        color: Colors.grey[400],
-                      ),
-                    );
-                  },
-                ),),
-              ),
-            Padding(
-              padding: const EdgeInsets.all(15),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      if (event.imageUrl == null)
-                        Container(
-                          padding: const EdgeInsets.all(0),
-                          decoration: BoxDecoration(
-                            color: Color.fromARGB(255, 25, 25, 95).withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Icon(
-                            _getCategoryIcon(event.category),
-                            color: Color.fromARGB(255, 25, 25, 95),
-                            size: 30,
-                          ),
-                        ),
-                      if (event.imageUrl == null) const SizedBox(width: 15),
-                      
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-<<<<<<< HEAD
-                            Text(
-                              event.title,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                              ),
-=======
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Column(crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        event.title.toUpperCase(),
-                                        style: const TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold,
-                                          //decoration: TextDecoration.underline,
-                                          backgroundColor: Colors.transparent,
-                                          color: Colors.black,
-                                        ),
-                                      ),
-                                      
-                                  
-                                  const SizedBox(height: 8),
-                                    (event.price == '0' || event.price == '0.0' || event.price == '0.00') ?
-                                      Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: Colors.green[50],
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: const Text(
-                                        'Free Entry',
-                                        style: TextStyle(
-                                          color: Colors.green,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      ):
-                              
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: const Color.fromARGB(255, 250, 186, 137),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                 child:Text(
-                                   (event.price == '0' || event.price == '0.0' || event.price == '0.00')
-                                       ? 'Free Entry'
-                                       : 'Entry Fee: UGX ${event.price}',
-                                   style: const TextStyle(
-                                     color: Colors.black,
-                                     fontWeight: FontWeight.bold,
-                                ),),),],),),
-                                // Shortcut icons row
-                                const SizedBox(height: 8),
-                                
-                                Row(
-                                  children: [
-                                    IconButton(
-                                      icon: Icon(
-                                        isBooked ? Icons.bookmark : Icons.bookmark_border,
-                                        color: isBooked ? Colors.orange : Colors.grey,
-                                        size: 35,
-                                      ),
-                                      tooltip: isBooked ? 'Cancel Booking' : 'Book Event',
-                                      onPressed: () {
-                                        if (!isPast) {
-                                          onBookToggle();
-                                        } else {
-                                          Fluttertoast.showToast(
-                                            msg: "Cannot book past event",
-                                            backgroundColor: Colors.red,
-                                            textColor: Colors.white,
-                                            toastLength: Toast.LENGTH_LONG,
-                                            gravity: ToastGravity.CENTER,
-                                            fontSize: 16.0,
-                                          );
-                                        }
-                                      },
-                                    ),
-                                    const SizedBox(height: 13),
-                                    IconButton(
-                                      icon: Icon(
-                                        Icons.payment,
-                                        color: Color.fromARGB(255, 25, 25, 95),
-                                        size: 35,
-                                      ),
-                                      tooltip: 'Pay for Event',
-                                      
-                                      onPressed: () {
-                                        if (!isPast) {
-                                          // Navigate to payment screen or show payment dialog
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) => CheckoutScreen(
-                                                total: event.price is num
-                                                    ? event.price.toDouble()
-                                                    : double.tryParse(event.price.toString()) ?? 0.0,
-                                                onPaymentSuccess: () {
-                                                  // Optionally update UI or state after payment success
-                                                  Fluttertoast.showToast(
-                                                    msg: "Payment Successful!",
-                                                    backgroundColor: Colors.green,
-                                                    textColor: Colors.white,
-                                                    toastLength: Toast.LENGTH_LONG,
-                                                    gravity: ToastGravity.CENTER,
-                                                    fontSize: 16.0,
-                                                  );
-                                                },
-                                              ),
-                                            ),
-                                          );
-                                        } else {
-                                          Fluttertoast.showToast(
-                                            msg: "Cannot pay for past event",
-                                            backgroundColor: Colors.red,
-                                            textColor: Colors.white,
-                                            toastLength: Toast.LENGTH_LONG,
-                                            gravity: ToastGravity.CENTER,
-                                            fontSize: 16.0,
-                                          );
-                                        }
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            
->>>>>>> b29ef5c71fe2575e608696386940e59c92e1ce38
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                Icon(Icons.calendar_today,
-                                    size: 19, color: Colors.green),
-                                const SizedBox(width: 5),
-                                Text(
-                                  event.date,
-                                  style: TextStyle(
-                                    color: Colors.black,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                               Icon(Icons.location_on,
-                                    size: 17, color: Colors.red),
-                                const SizedBox(width: 5),
-                                Flexible(
-                                  child: Text(
-                                    event.location,
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: 12,
-                                    ),
-<<<<<<< HEAD
-                                  ),
-                                ),
-=======
-                                    overflow: TextOverflow.ellipsis, 
-                                    maxLines: 2,
-                                    softWrap: false,
-                                  ),),
-                                
->>>>>>> b29ef5c71fe2575e608696386940e59c92e1ce38
-                              ],
-                            ),
-                            if (status != null)
-                             Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                color: status == 'Paid'
-                                    ? Colors.green.withOpacity(0.2)
-                                    : Colors.orange.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(20),
-                             ),
-                              child: Text(
-                               status!,
-                               style: TextStyle(
-                                 color: status == 'Paid' ? Colors.green : Colors.orange,
-                                 fontWeight: FontWeight.bold,
-                                 fontSize: 12,
-                                  ),
-                                ),
-                              ),
-                             ],),),
-                            // if (event.description.isNotEmpty)
-                            //   Padding(
-                            //     padding: const EdgeInsets.only(top: 8.0),
-                            //     child: Text(
-                            //       event.description,
-                            //       maxLines: 2,
-                            //       overflow: TextOverflow.ellipsis,
-                            //       style: TextStyle(color: Colors.grey[700]),
-                            //       ),
-                               // ),
-                                ],
-                              ),
-
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Color.fromARGB(255, 25, 25, 95).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(15),
-                        ),
-                        child: Text(
-                          event.category,
-                          style: TextStyle(
-                            color: Color.fromARGB(255, 25, 25, 95),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    
-                  
-                  if (event.description.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      event.description,
-                      style: TextStyle(
-                        color: Colors.grey[700],
-                        fontSize: 14,
-                        height: 1.4,
-                      ),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ],
-<<<<<<< HEAD
-              ),)
-            );
-         // ],
-       // ),
-    //   ),
-    // );
+  DateTime parseEventDate(String input) {
+    try {
+      final parts = input.split('/');
+      if (parts.length != 3) {
+        print('Invalid date format in EventCard: $input');
+        return DateTime(1900);
+      }
+      final day = int.tryParse(parts[0]) ?? 1;
+      final month = int.tryParse(parts[1]) ?? 1;
+      final year = int.tryParse(parts[2]) ?? 1900;
+      return DateTime(year, month, day);
+    } catch (e) {
+      print("Date parse error in EventCard for '$input': $e");
+      return DateTime(1900);
+    }
   }
-=======
-              ),
-              ),],
-            ),),
-            ),);
-            }
->>>>>>> b29ef5c71fe2575e608696386940e59c92e1ce38
 
-  IconData _getCategoryIcon(String category) {
+  IconData getCategoryIcon(String category) {
     switch (category.toLowerCase()) {
       case 'concert':
       case 'festival':
@@ -1140,55 +1063,431 @@ class _EventCard extends StatelessWidget {
         return Icons.event;
     }
   }
+
+  @override
+  Widget build(BuildContext context) {
+    print('Rendering EventCard: ${event.title}, isBooked: $isBooked, isVerified: ${event.isVerified}, verificationStatus: ${event.verificationStatus}, verificationDocumentUrl: ${event.verificationDocumentUrl != null ? "present" : "null"}');
+    final eventDate = parseEventDate(event.date);
+    final isPast = eventDate.isBefore(DateTime.now());
+    final isVerified = event.isVerified;
+
+    print('EventCard verification status for ${event.title}: isVerified=$isVerified, verificationStatus=${event.verificationStatus}, displayed as ${isVerified ? "Verified" : "Unverified"}');
+
+    return GestureDetector(
+      onTap: () {
+        if (isPast) {
+          Fluttertoast.showToast(
+            msg: "Oops! Event Passed, Sorry!",
+            toastLength: Toast.LENGTH_LONG,
+            gravity: ToastGravity.CENTER,
+            backgroundColor: Colors.red,
+            textColor: Colors.white,
+            fontSize: 18.0,
+          );
+        } else {
+          onTap();
+        }
+      },
+      child: Opacity(
+        opacity: isPast ? 0.3 : 1.0,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 5, right: 0, left: 0),
+          padding: const EdgeInsets.all(16),
+          
+          width: MediaQuery.of(context).size.width - 20,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.3),
+                spreadRadius: 2,
+                blurRadius: 5,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isVerified ? Colors.blue : Colors.red,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          isVerified ? Icons.verified : Icons.warning,
+                          color: Colors.white,
+                          size: 15,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          isVerified ? 'Verified' : 'Unverified',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (status != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: status == 'Paid'
+                            ? Colors.green.withOpacity(0.2)
+                            : Colors.orange.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        status!,
+                        style: TextStyle(
+                          color: status == 'Paid' ? Colors.green : Colors.orange,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              if (event.imageUrl != null)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(13),
+                  child: ColorFiltered(
+                    colorFilter: isPast
+                        ? const ColorFilter.mode(Colors.grey, BlendMode.saturation)
+                        : const ColorFilter.mode(Colors.transparent, BlendMode.multiply),
+                    child: Image.network(
+                      event.imageUrl!,
+                      height: 250,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          height: 200,
+                          color: const Color.fromARGB(255, 111, 110, 110),
+                          child: Icon(
+                            getCategoryIcon(event.category),
+                            size: 60,
+                            color: Colors.grey[400],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 12),
+              if (event.imageUrl == null)
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).primaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        getCategoryIcon(event.category),
+                        color: Theme.of(context).primaryColor,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 15),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            event.title,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
+                              const SizedBox(width: 5),
+                              Text(
+                                event.date,
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
+                              const SizedBox(width: 5),
+                              Expanded(
+                                child: Text(
+                                  event.location,
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              if (event.imageUrl != null)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      event.title.toUpperCase(),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
+                        const SizedBox(width: 5),
+                        Text(
+                          event.date,
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.location_on, size: 32, color: Colors.red),
+                        const SizedBox(width: 5),
+                        Expanded(
+                          child: Text(
+                            event.location,
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: Text(
+                  event.category,
+                  style: TextStyle(
+                    color: Theme.of(context).primaryColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              if (event.description.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text(
+                  event.description,
+                  style: TextStyle(
+                    color: Colors.grey[700],
+                    fontSize: 14,
+                    height: 1.4,
+                  ),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: (event.price == '0' || event.price == '0.0' || event.price == '0.00')
+                        ? Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.green[50],
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              'Free Entry',
+                              style: TextStyle(
+                                color: Colors.green,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          )
+                        : Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color.fromARGB(255, 250, 186, 137),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              'Entry Fee: UGX ${event.price}',
+                              style: const TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      isBooked ? Icons.bookmark : Icons.bookmark_border,
+                      color: isBooked ? Colors.orange : Colors.grey,
+                      size: 35,
+                    ),
+                    tooltip: isBooked ? 'Cancel Booking' : 'Book Event',
+                    onPressed: () {
+                      if (!isPast) {
+                        onBookToggle();
+                      } else {
+                        Fluttertoast.showToast(
+                          msg: "Cannot book past event",
+                          toastLength: Toast.LENGTH_LONG,
+                          gravity: ToastGravity.CENTER,
+                          backgroundColor: Colors.red,
+                          textColor: Colors.white,
+                          fontSize: 16.0,
+                        );
+                      }
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.payment,
+                      color: Color.fromARGB(255, 25, 25, 95),
+                      size: 35,
+                    ),
+                    tooltip: 'Pay for Event',
+                    onPressed: () {
+                      if (!isPast) {
+                        if (!event.isVerified) {
+                          showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(15),
+                              ),
+                              title:const
+                                  Text('Caution: Unverified Event' ,
+                                    style: TextStyle(fontSize: 13, color: Colors.red),
+                                  ),
+                                
+                              
+                              content: const Text(
+                                'This event is not yet verified. Paying for an unverified event may carry risks, as the event details have not been confirmed by an administrator. Do you wish to proceed with payment?',
+                              ), 
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: const Text('Cancel', style: TextStyle(backgroundColor: Colors.white, fontSize: 19, color: Colors.red)),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    Navigator.pop(context);
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => CheckoutScreen(
+                                          event: event,
+                                          total: event.price,
+                                          ticketId: const Uuid().v4(),
+                                          onPaymentSuccess: onPaymentSuccess,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+                                  child: const Text('Proceed'),
+                                ),
+                              ],
+                            ),
+                          );
+                        } else {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => CheckoutScreen(
+                                event: event,
+                                total: event.price,
+                                ticketId: const Uuid().v4(),
+                                onPaymentSuccess: onPaymentSuccess,
+                              ),
+                            ),
+                          );
+                        }
+                      } else {
+                        Fluttertoast.showToast(
+                          msg: "Cannot pay for past event",
+                          toastLength: Toast.LENGTH_LONG,
+                          gravity: ToastGravity.CENTER,
+                          backgroundColor: Colors.red,
+                          textColor: Colors.white,
+                          fontSize: 16.0,
+                        );
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class SearchTab extends StatefulWidget {
   final List<Event> events;
+  final Function(Event) onEventTap;
+  final Map<String, String> eventStatus;
+  final Set<String> bookedEventIds;
+  final Future<void> Function(String) bookEvent;
 
-<<<<<<< HEAD
-  const SearchTab({Key? key, required this.events}) : super(key: key);
-
-  @override
-  State<SearchTab> createState() => _SearchTabState();
-}
-
-=======
-  const SearchTab({Key? key, required this.events,required this.onEventTap,
+  const SearchTab({
+    Key? key,
+    required this.events,
+    required this.onEventTap,
     required this.eventStatus,
-}) : super(key: key);
-       
+    required this.bookedEventIds,
+    required this.bookEvent,
+  }) : super(key: key);
+
   @override
   State<SearchTab> createState() => _SearchTabState();
 }
- 
->>>>>>> b29ef5c71fe2575e608696386940e59c92e1ce38
+
 class _SearchTabState extends State<SearchTab> {
-  final _searchController = TextEditingController();
-  String _selectedCategory = 'All';
-  List<Event> _filteredEvents = [];
-<<<<<<< HEAD
-
-=======
-  List<Event> upcomingEvents = [];
-   List<Event> pastEvents = [];   
-  DateTime parseEventDate(String input) {
-    try {
-      final parts = input.split('/');
-      if (parts.length != 3) return DateTime(1900);
-
-      final day = int.tryParse(parts[0]) ?? 1;
-      final month = int.tryParse(parts[1]) ?? 1;
-      final year = int.tryParse(parts[2]) ?? 1900;
-
-      return DateTime(year, month, day);
-    } catch (e) {
-      print("Date parse error for '$input': $e");
-      return DateTime(1900);
-    }
-  }
-
->>>>>>> b29ef5c71fe2575e608696386940e59c92e1ce38
-  final List<String> _categories = [
+  final TextEditingController searchController = TextEditingController();
+  String selectedCategory = 'All';
+  List<Event> filteredEvents = [];
+  final List<String> categories = [
     'All',
     'Concert',
     'Conference',
@@ -1205,27 +1504,200 @@ class _SearchTabState extends State<SearchTab> {
   @override
   void initState() {
     super.initState();
-    _filteredEvents = widget.events;
-    _filterEvents();
+    filteredEvents = widget.events;
+    print('SearchTab initialized with ${widget.events.length} events');
+    filterEvents();
   }
 
-  void _filterEvents() {
+  DateTime parseEventDate(String input) {
+    try {
+      final parts = input.split('/');
+      if (parts.length != 3) {
+        print('Invalid date format in SearchTab: $input');
+        return DateTime(1900);
+      }
+      final day = int.tryParse(parts[0]) ?? 1;
+      final month = int.tryParse(parts[1]) ?? 1;
+      final year = int.tryParse(parts[2]) ?? 1900;
+      return DateTime(year, month, day);
+    } catch (e) {
+      print("Date parse error in SearchTab for '$input': $e");
+      return DateTime(1900);
+    }
+  }
+
+  void filterEvents() {
     setState(() {
-      _filteredEvents = widget.events.where((event) {
+      filteredEvents = widget.events.where((event) {
         final matchesSearch = event.title
                 .toLowerCase()
-                .contains(_searchController.text.toLowerCase()) ||
+                .contains(searchController.text.toLowerCase()) ||
             event.description
                 .toLowerCase()
-                .contains(_searchController.text.toLowerCase()) ||
+                .contains(searchController.text.toLowerCase()) ||
             event.location
                 .toLowerCase()
-                .contains(_searchController.text.toLowerCase());
+                .contains(searchController.text.toLowerCase());
         final matchesCategory =
-            _selectedCategory == 'All' || event.category == _selectedCategory;
+            selectedCategory == 'All' || event.category == selectedCategory;
         return matchesSearch && matchesCategory;
       }).toList();
+      filteredEvents.sort((a, b) {
+        final aDate = parseEventDate(a.date);
+        final bDate = parseEventDate(b.date);
+        final aPast = aDate.isBefore(DateTime.now());
+        final bPast = bDate.isBefore(DateTime.now());
+        if (aPast && !bPast) return 1;
+        if (!aPast && bPast) return -1;
+        return aDate.compareTo(bDate);
+      });
+      print('Filtered ${filteredEvents.length} events in SearchTab');
     });
+  }
+
+  void handlePaymentSuccess(Event event) {
+    setState(() {
+      widget.eventStatus[event.id] = 'Paid';
+      widget.bookedEventIds.add(event.id);
+    });
+    bookingsTabKey.currentState?._fetchBookings();
+    Fluttertoast.showToast(
+      msg: "Payment Successful!",
+      toastLength: Toast.LENGTH_LONG,
+      gravity: ToastGravity.CENTER,
+      backgroundColor: Colors.green,
+      textColor: Colors.white,
+      fontSize: 16.0,
+    );
+  }
+
+  void showEventDetailsModal(Event event) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(event.title),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(event.description),
+            const SizedBox(height: 20),
+            if (widget.eventStatus[event.id] != 'Reserved') ...[
+              ElevatedButton(
+                onPressed: () async {
+                  await widget.bookEvent(event.id);
+                  bookingsTabKey.currentState?.addBooking({
+                    'id': DateTime.now().millisecondsSinceEpoch,
+                    'event': event.title,
+                    'total': event.price,
+                    'paid': event.price == '0' || event.price == '0.0' || event.price == '0.00' ? true : false,
+                    'eventId': event.id,
+                    'ticketId': const Uuid().v4(),
+                    'isVerified': event.isVerified,
+                    'verificationStatus': event.verificationStatus,
+                  });
+                  setState(() {
+                    widget.eventStatus[event.id] = 'Reserved';
+                  });
+                  Navigator.pop(context);
+                  Fluttertoast.showToast(
+                    msg: "Event Reservation Successful!",
+                    toastLength: Toast.LENGTH_LONG,
+                    gravity: ToastGravity.CENTER,
+                    backgroundColor: Colors.orange,
+                    textColor: Colors.white,
+                    fontSize: 19.0,
+                  );
+                },
+                child: const Text('Book/Reserve an Event'),
+              ),
+            ] else ...[
+              ElevatedButton(
+                onPressed: () async {
+                  await widget.bookEvent(event.id);
+                  bookingsTabKey.currentState?.removeBookingByTitle(event.title);
+                  setState(() {
+                    widget.eventStatus[event.id] = 'Cancelled Reservation!';
+                  });
+                  Navigator.pop(context);
+                  Fluttertoast.showToast(
+                    msg: "Event Reservation Cancelled!",
+                    toastLength: Toast.LENGTH_LONG,
+                    gravity: ToastGravity.CENTER,
+                    backgroundColor: Colors.pink,
+                    textColor: Colors.white,
+                    fontSize: 19.0,
+                  );
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.pink),
+                child: const Text('Cancel Reservation'),
+              ),
+            ],
+            ElevatedButton(
+              onPressed: () {
+                if (!event.isVerified) {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Caution: Unverified Event', style: TextStyle(fontSize: 13, color: Colors.red)),
+                      content: const Text(
+                        'This event is not yet verified. Paying for an unverified event may carry risks, as the event details have not been confirmed by an administrator. Do you wish to proceed with payment?',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cancel', style: TextStyle(color: Colors.red)),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            Navigator.pop(context); // Close the event details modal
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => CheckoutScreen(
+                                  event: event,
+                                  total: event.price,
+                                  ticketId: const Uuid().v4(),
+                                  onPaymentSuccess: () => handlePaymentSuccess(event),
+                                ),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+                          child: const Text('Proceed'),
+                        ),
+                      ],
+                    ),
+                  );
+                } else {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => CheckoutScreen(
+                        event: event,
+                        total: event.price,
+                        ticketId: const Uuid().v4(),
+                        onPaymentSuccess: () => handlePaymentSuccess(event),
+                      ),
+                    ),
+                  );
+                }
+              },
+              child: const Text('Pay For Event'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -1233,9 +1705,8 @@ class _SearchTabState extends State<SearchTab> {
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
-        
-        backgroundColor: Color.fromARGB(255, 25, 25, 95),
-        foregroundColor: Colors.white, 
+        backgroundColor: const Color.fromARGB(255, 25, 25, 95),
+        foregroundColor: Colors.white,
         toolbarHeight: 90,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.only(
@@ -1243,148 +1714,150 @@ class _SearchTabState extends State<SearchTab> {
             bottomRight: Radius.circular(30),
           ),
         ),
-         
-              title: Column(
-                 mainAxisAlignment: MainAxisAlignment.start,
-                crossAxisAlignment: CrossAxisAlignment.start,
+        title: Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            RichText(
+              text: TextSpan(
                 children: [
-               RichText(
-                text: TextSpan(
-                  children: [
-                    TextSpan(
-                      text: 'Search',
-                      style: TextStyle(
-                        color: Colors.orange,
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  TextSpan(
+                    text: 'Search',
+                    style: TextStyle(
+                      color: Colors.orange,
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
                     ),
-                    TextSpan(
-                      text: ' Events',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  ),
+                  TextSpan(
+                    text: ' Events',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
-              const SizedBox(height: 4),
-              const Text(
-                'Find Events that Match your Interests',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Find Events that Match your Interests',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
               ),
-              const SizedBox(height: 10),
-              ],),
-              
+            ),
+            const SizedBox(height: 10),
+          ],
+        ),
       ),
       body: Stack(
         children: [
-          // Background image
           Positioned.fill(
             child: Image.asset(
               'assets/images/blue2.jpeg',
               fit: BoxFit.cover,
             ),
           ),
-          // Main content    
-      Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            color:Color.fromARGB(255, 25, 25, 95) ,
-            child: Column(
-              children: [
-                TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Search events...',
-                    fillColor: Colors.white,
-                    filled: true,
-                    prefixIcon: const Icon(Icons.search),
-                    border: OutlineInputBorder(
-
-                      borderRadius: const BorderRadius.all(
-                        Radius.circular(30),
+          Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                color: const Color.fromARGB(255, 25, 25, 95),
+                child: Column(
+                  children: [
+                    TextField(
+                      controller: searchController,
+                      decoration: const InputDecoration(
+                        hintText: 'Search events...',
+                        fillColor: Colors.white,
+                        filled: true,
+                        prefixIcon: Icon(Icons.search),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.all(
+                            Radius.circular(30),
+                          ),
+                        ),
                       ),
-                      
-                      
-                     
+                      onChanged: (value) => filterEvents(),
                     ),
-                  ),
-                  onChanged: (value) => _filterEvents(),
+                    const SizedBox(height: 16),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: categories.map((category) {
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: _CategoryFilterChip(
+                              label: category,
+                              isSelected: selectedCategory == category,
+                              onTap: () {
+                                setState(() {
+                                  selectedCategory = category;
+                                });
+                                filterEvents();
+                              },
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: _categories.map((category) {
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: _CategoryFilterChip(
-                          label: category,
-                          isSelected: _selectedCategory == category,
-                          onTap: () {
-                            setState(() {
-                              _selectedCategory = category;
-                            });
-                            _filterEvents();
-                          },
+              ),
+              Expanded(
+                child: filteredEvents.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.event_busy,
+                              size: 80,
+                              color: Colors.grey[400],
+                            ),
+                            const SizedBox(height: 20),
+                            Text(
+                              'No events found',
+                              style: TextStyle(
+                                fontSize: 18,
+                                color: Colors.grey[600],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              'Try changing your filter or search criteria',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[500],
+                              ),
+                            ),
+                          ],
                         ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ],
-            ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: filteredEvents.length,
+                        itemBuilder: (context, index) {
+                          final event = filteredEvents[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 15),
+                            child: EventCard(
+                              event: event,
+                              onTap: () => showEventDetailsModal(event),
+                              status: widget.eventStatus[event.id],
+                              isBooked: widget.bookedEventIds.contains(event.id),
+                              onBookToggle: () => widget.bookEvent(event.id),
+                              onPaymentSuccess: () => handlePaymentSuccess(event),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
           ),
-          Expanded(
-            child: _filteredEvents.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.event_busy,
-                          size: 80,
-                          color: Colors.grey[400],
-                        ),
-                        const SizedBox(height: 20),
-                        Text(
-                          'No events found',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Colors.grey[600],
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          'Try changing your filter or search criteria',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[500],
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _filteredEvents.length,
-                    itemBuilder: (context, index) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 15),
-                        child: _EventCard(event: _filteredEvents[index], onTap: () {  },),
-                      );
-                    },
-                  ),
-       ), ], ),
         ],
       ),
     );
@@ -1409,17 +1882,16 @@ class _CategoryFilterChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.orange: Colors.grey[200],
+          color: isSelected ? Colors.orange : Colors.grey[200],
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected ? Colors.transparent : Colors.transparent,
           ),
-          
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected ? Colors.white : Color.fromARGB(255, 25, 25, 95),
+            color: isSelected ? Colors.white : const Color.fromARGB(255, 25, 25, 95),
             fontSize: 14,
             fontWeight: FontWeight.w500,
           ),
@@ -1438,6 +1910,7 @@ class BookingsTab extends StatefulWidget {
 
 class _BookingsTabState extends State<BookingsTab> {
   List<Map<String, dynamic>> bookings = [];
+  bool isLoading = false;
 
   @override
   void initState() {
@@ -1447,8 +1920,17 @@ class _BookingsTabState extends State<BookingsTab> {
 
   void _fetchBookings() async {
     final userId = Provider.of<AuthProvider>(context, listen: false).user?.uid;
+    if (userId == null) {
+      print('No user logged in for fetching bookings');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please log in to view bookings')),
+      );
+      return;
+    }
 
-    if (userId == null) return;
+    setState(() {
+      isLoading = true;
+    });
 
     try {
       QuerySnapshot snapshot = await FirebaseFirestore.instance
@@ -1456,103 +1938,191 @@ class _BookingsTabState extends State<BookingsTab> {
           .where('userId', isEqualTo: userId)
           .get();
 
+      List<Map<String, dynamic>> fetchedBookings = [];
+      for (var doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        // Validate price field
+        if (data['price'] != null && double.tryParse(data['price'].toString()) == null) {
+          print('Invalid price format for booking ${doc.id}: ${data['price']}');
+          continue;
+        }
+        fetchedBookings.add({
+          'id': data['id'] ?? DateTime.now().millisecondsSinceEpoch,
+          'event': data['event'] ?? 'Unknown Event',
+          'total': data['price'] ?? '0',
+          'paid': data['paid'] ?? false,
+          'ticketId': data['ticketId'] ?? const Uuid().v4(),
+          'isVerified': data['isVerified'] ?? false,
+          'verificationStatus': data['verificationStatus'],
+          'eventId': data['eventId'] ?? '',
+          'timestamp': (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
+        });
+      }
+
+      // Sort bookings by timestamp (most recent first)
+      fetchedBookings.sort((a, b) => (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime));
+
       setState(() {
-        bookings = snapshot.docs
-            .map((doc) => doc.data() as Map<String, dynamic>)
-            .toList();
+        bookings = fetchedBookings;
+        isLoading = false;
       });
+      print('Fetched ${bookings.length} bookings for user: $userId');
     } catch (e) {
-      print("Error fetching bookings: $e");
+      print('Error fetching bookings: $e');
+      setState(() {
+        isLoading = false;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Error fetching bookings'),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text('Error fetching bookings: $e')),
       );
     }
   }
-  void addBooking(Map<String, dynamic> booking) async {
-    final userId = Provider.of<AuthProvider>(context, listen: false).user?.uid;
-    // setState(() {
-    //   bookings.add(booking);
-    // });
-    if (userId == null) return;
+
+  void addBooking(Map<String, dynamic> booking) {
+    setState(() {
+      bookings.add(booking);
+      bookings.sort((a, b) => (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime));
+    });
+    print('Added booking: ${booking['event']}');
+  }
+
+  void removeBookingByTitle(String eventTitle) {
+    setState(() {
+      bookings.removeWhere((booking) => booking['event'] == eventTitle);
+    });
+    print('Removed booking for event: $eventTitle');
+  }
+
+  Future<void> _cancelBooking(String eventId, String eventTitle) async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) {
+      print('No user logged in for cancelling booking');
+      return;
+    }
 
     try {
-      await FirebaseFirestore.instance.collection('bookings').add({
-        'userId': userId,
-        'event': booking['event'],
-        'price': booking['total'],
-        'paid': booking['paid'],
-        'timestamp': FieldValue.serverTimestamp(),
+      final bookingRef = FirebaseFirestore.instance
+          .collection('bookings')
+          .doc('$userId-$eventId');
+      await bookingRef.delete();
+      setState(() {
+        bookings.removeWhere((booking) => booking['eventId'] == eventId);
       });
-
-      _fetchBookings();
+      final homeScreenState = context.findAncestorStateOfType<_HomeScreenState>();
+      homeScreenState?.setState(() {
+        homeScreenState.bookedEventIds.remove(eventId);
+        homeScreenState.eventStatus.remove(eventId);
+      });
+      Fluttertoast.showToast(
+        msg: "Booking for $eventTitle cancelled",
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.CENTER,
+        backgroundColor: Colors.pink,
+        textColor: Colors.white,
+        fontSize: 16.0,
+      );
     } catch (e) {
-      print("Error saving booking: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Error saving booking'),
-          backgroundColor: Colors.red,
-        ),
+      print('Error cancelling booking: $e');
+      Fluttertoast.showToast(
+        msg: 'Error cancelling booking: $e',
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.CENTER,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0,
       );
     }
   }
-
-
+  
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('My Bookings'),
-        backgroundColor: Color.fromARGB(255, 25, 25, 95),
+        backgroundColor: const Color.fromARGB(255, 25, 25, 95),
         foregroundColor: Colors.white,
-        toolbarHeight: 80,
-        titleTextStyle: const TextStyle(
-          fontSize: 22,
-          fontWeight: FontWeight.bold,
-          color: Colors.orange,
-        ),
+        title: const Text('Payments History'),
       ),
-      body: bookings.isEmpty
-          ? const Center(child: Text('No bookings yet.'))
-          : ListView.builder(
-        itemCount: bookings.length,
-        itemBuilder: (context, index) {
-          final booking = bookings[index];
-          return ListTile(
-            title: Text(booking['event'] ?? ''),
-            subtitle: Text('Total: €${booking['price']}'),
-            trailing: booking['paid'] == true
-                ? const Text('Paid', style: TextStyle(color: Colors.green))
-                : ElevatedButton(
-              child: const Text('Checkout'),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => CheckoutScreen(
-                      total: booking['price'],
-                      onPaymentSuccess: () {
-                        setState(() {
-                          bookings[index]['paid'] = true;
-                        });
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Payment Successful!'),
-                            backgroundColor: Colors.green,
-                          ),
-                        );
-                      },
-                    ),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : bookings.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.history,
+                        size: 80,
+                        color: Colors.grey[400],
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        'No Payments history found',
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        'Book/Pay events from the Home or Search tab',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                    ],
                   ),
-                );
-              },
-            ),
-          );
-        },
-      ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: bookings.length,
+                  itemBuilder: (context, index) {
+                    final booking = bookings[index];
+                    final isVerified = booking['isVerified'] ?? false;
+                    final isPaid = booking['paid'] ?? false;
+
+                    return Card(
+                      elevation: 2,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: ListTile(
+                        leading: Icon(
+                          isVerified ? Icons.verified : Icons.warning,
+                          color: isVerified ? Colors.green : Colors.red,
+                        ),
+                        title: Text(
+                          booking['event'],
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Price: ${booking['total'] == '0' || booking['total'] == '0.0' || booking['total'] == '0.00' ? 'Free' : 'UGX ${booking['total']}'}',
+                            ),
+                            Text(
+                              'Status: ${isPaid ? 'Paid' : 'Reserved'}',
+                              style: TextStyle(
+                                color: isPaid ? Colors.green : Colors.orange,
+                              ),
+                            ),
+                            if (!isVerified)
+                              const Text(
+                                'Unverified Event',
+                                style: TextStyle(color: Colors.red),
+                              ),
+                          ],
+                        ),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () => _cancelBooking(booking['eventId'], booking['event']),
+                        ),
+                      ),
+                    );
+                  },
+                ),
     );
   }
 }

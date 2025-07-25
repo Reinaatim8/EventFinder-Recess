@@ -187,7 +187,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 _openMobileMoneyDialog(_selectedNetwork!);
               }
             },
-            child: const Text("Book Ticket", style: TextStyle(color: Colors.white, fontSize: 16)),
+            child: const Text("Get Your Ticket", style: TextStyle(color: Colors.white, fontSize: 16)),
           ),
         ]),
       ),
@@ -367,7 +367,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text("Booking Successful ✅", style: TextStyle(fontSize:20,fontWeight: FontWeight.bold,)),
+        title: const Text("Payment Successful ✅", style: TextStyle(fontSize:20,fontWeight: FontWeight.bold,)),
         content:Column(
           mainAxisSize: MainAxisSize.min,
            children: [

@@ -27,6 +27,8 @@ dependencies:
   firebase_auth: ^5.6.1
   cloud_firestore: ^5.6.10
   firebase_storage: ^12.4.8
+  #local storage
+  shared_preferences: ^2.2.2
 
   # HTTP & Networking
   http: ^1.4.0
@@ -37,14 +39,18 @@ dependencies:
   fluttertoast: ^8.2.12
   email_validator: ^3.0.0
   equatable: ^2.0.7
+  url_launcher: ^6.1.0
+  
 
   # Map & Location
   google_maps_flutter: ^2.2.5
   geocoding: ^4.0.0
-  geolocator: ^14.0.2
+  geolocator: ^14.0.0
 
   # Image Handling
   image_picker: ^1.1.2
+  file_picker:  ^8.0.0
+  
 
   # Payment
   flutterwave_standard: ^1.1.0

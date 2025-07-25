@@ -1,79 +1,486 @@
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'dart:io';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:intl/intl.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/event.dart';
+import '../../models/booking.dart';
+import '../../services/booking_service.dart';
 
-// Booking model
-class Booking {
-  final String eventId;
-  final String firstName;
-  final String lastName;
-  final String email;
-  final DateTime bookingDate;
-  final double total;
-  final bool paid;
-
-  Booking({
-    required this.eventId,
-    required this.firstName,
-    required this.lastName,
-    required this.email,
-    required this.bookingDate,
-    required this.total,
-    required this.paid,
-  });
-
-  factory Booking.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-    return Booking(
-      eventId: data['eventId'] ?? '',
-      firstName: data['firstName'] ?? '',
-      lastName: data['lastName'] ?? '',
-      email: data['email'] ?? '',
-      bookingDate: (data['bookingDate'] as Timestamp).toDate(),
-      total: (data['total'] as num).toDouble(),
-      paid: data['paid'] ?? false,
-    );
-  }
-}
-
-// Placeholder AddEventScreen (replace with actual implementation)
-class AddEventScreen extends StatelessWidget {
+class AddEventScreen extends StatefulWidget {
   final VoidCallback onEventAdded;
 
   const AddEventScreen({Key? key, required this.onEventAdded}) : super(key: key);
+
+  @override
+  State<AddEventScreen> createState() => _AddEventScreenState();
+}
+
+class _AddEventScreenState extends State<AddEventScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _titleController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  final _dateController = TextEditingController();
+  final _locationController = TextEditingController();
+  final _priceController = TextEditingController();
+  String _selectedCategory = 'Concert';
+  File? _imageFile;
+  bool _isLoading = false;
+
+  final List<String> _categories = [
+    'Concert',
+    'Conference',
+    'Workshop',
+    'Sports',
+    'Festival',
+    'Networking',
+    'Exhibition',
+    'Theater',
+    'Comedy',
+    'Other'
+  ];
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _imageFile = File(pickedFile.path);
+      });
+    }
+  }
+
+  Future<String?> _uploadImage(String eventId) async {
+    if (_imageFile == null) return null;
+    try {
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('events')
+          .child('$eventId.jpg');
+      await storageRef.putFile(_imageFile!);
+      return await storageRef.getDownloadURL();
+    } catch (e) {
+      print('Error uploading image: $e');
+      return null;
+    }
+  }
+
+  Future<void> _addEvent() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _isLoading = true);
+
+    try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final eventId = FirebaseFirestore.instance.collection('events').doc().id;
+      final imageUrl = await _uploadImage(eventId);
+
+      final event = Event(
+        id: eventId,
+        title: _titleController.text,
+        category: _selectedCategory,
+        date: _dateController.text,
+        location: _locationController.text,
+        description: _descriptionController.text,
+        imageUrl: imageUrl,
+        organizerId: authProvider.user!.uid,
+        price: _priceController.text.toLowerCase() == 'free'
+            ? 0.0
+            : double.parse(_priceController.text),
+        isVerified: false,
+        verificationStatus: 'pending',
+        verificationDocumentUrl: null,
+        rejectionReason: null,
+      );
+
+      await FirebaseFirestore.instance
+          .collection('events')
+          .doc(eventId)
+          .set(event.toFirestore());
+
+      widget.onEventAdded();
+      Navigator.pop(context);
+      Fluttertoast.showToast(
+        msg: "Event created successfully!",
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.TOP,
+        backgroundColor: Colors.green,
+        textColor: Colors.white,
+      );
+    } catch (e) {
+      Fluttertoast.showToast(
+        msg: "Error creating event: $e",
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.TOP,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Add Event'),
+        backgroundColor: const Color.fromARGB(255, 25, 25, 95),
+        foregroundColor: Colors.white,
       ),
-      body: const Center(
-        child: Text('Add Event Screen - Implement Me'),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextFormField(
+                controller: _titleController,
+                decoration: const InputDecoration(labelText: 'Event Title *'),
+                validator: (value) => value!.isEmpty ? 'Required' : null,
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: _selectedCategory,
+                decoration: const InputDecoration(labelText: 'Category *'),
+                items: _categories
+                    .map((category) => DropdownMenuItem(
+                          value: category,
+                          child: Text(category),
+                        ))
+                    .toList(),
+                onChanged: (value) => setState(() => _selectedCategory = value!),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _dateController,
+                decoration: const InputDecoration(
+                  labelText: 'Date (DD/MM/YYYY) *',
+                  hintText: 'e.g., 15/07/2025',
+                ),
+                validator: (value) {
+                  if (value!.isEmpty) return 'Required';
+                  final regex = RegExp(r'^\d{1,2}/\d{1,2}/\d{4}$');
+                  if (!regex.hasMatch(value)) return 'Invalid format (DD/MM/YYYY)';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _locationController,
+                decoration: const InputDecoration(labelText: 'Location *'),
+                validator: (value) => value!.isEmpty ? 'Required' : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _descriptionController,
+                decoration: const InputDecoration(labelText: 'Description *'),
+                maxLines: 4,
+                validator: (value) => value!.isEmpty ? 'Required' : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _priceController,
+                decoration: const InputDecoration(labelText: 'Price (UGX) *'),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value!.isEmpty) return 'Required';
+                  if (double.tryParse(value) == null && value.toLowerCase() != 'free') {
+                    return 'Enter a valid number or "free"';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              GestureDetector(
+                onTap: _pickImage,
+                child: Container(
+                  height: 150,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey),
+                  ),
+                  child: _imageFile == null
+                      ? const Center(child: Text('Tap to select image'))
+                      : Image.file(_imageFile!, fit: BoxFit.cover),
+                ),
+              ),
+              const SizedBox(height: 24),
+              _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : ElevatedButton(
+                      onPressed: _addEvent,
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 50),
+                        backgroundColor: const Color.fromARGB(255, 25, 25, 95),
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('Create Event'),
+                    ),
+            ],
+          ),
+        ),
       ),
     );
   }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _descriptionController.dispose();
+    _dateController.dispose();
+    _locationController.dispose();
+    _priceController.dispose();
+    super.dispose();
+  }
 }
 
-// Placeholder EditEventScreen (replace with actual implementation)
-class EditEventScreen extends StatelessWidget {
+class EditEventScreen extends StatefulWidget {
   final Event event;
   final VoidCallback onEventUpdated;
 
-  const EditEventScreen({Key? key, required this.event, required this.onEventUpdated}) : super(key: key);
+  const EditEventScreen({Key? key, required this.event, required this.onEventUpdated})
+      : super(key: key);
+
+  @override
+  State<EditEventScreen> createState() => _EditEventScreenState();
+}
+
+class _EditEventScreenState extends State<EditEventScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _titleController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  final _dateController = TextEditingController();
+  final _locationController = TextEditingController();
+  final _priceController = TextEditingController();
+  String _selectedCategory = 'Concert';
+  File? _imageFile;
+  bool _isLoading = false;
+
+  final List<String> _categories = [
+    'Concert',
+    'Conference',
+    'Workshop',
+    'Sports',
+    'Festival',
+    'Networking',
+    'Exhibition',
+    'Theater',
+    'Comedy',
+    'Other'
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController.text = widget.event.title;
+    _descriptionController.text = widget.event.description;
+    _dateController.text = widget.event.date;
+    _locationController.text = widget.event.location;
+    _priceController.text = widget.event.price == 0.0 ? 'free' : widget.event.price.toString();
+    _selectedCategory = widget.event.category;
+  }
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _imageFile = File(pickedFile.path);
+      });
+    }
+  }
+
+  Future<String?> _uploadImage(String eventId) async {
+    if (_imageFile == null) return widget.event.imageUrl;
+    try {
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('events')
+          .child('$eventId.jpg');
+      await storageRef.putFile(_imageFile!);
+      return await storageRef.getDownloadURL();
+    } catch (e) {
+      print('Error uploading image: $e');
+      return widget.event.imageUrl;
+    }
+  }
+
+  Future<void> _updateEvent() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _isLoading = true);
+
+    try {
+      final imageUrl = await _uploadImage(widget.event.id);
+      final updatedEvent = Event(
+        id: widget.event.id,
+        title: _titleController.text,
+        category: _selectedCategory,
+        date: _dateController.text,
+        location: _locationController.text,
+        description: _descriptionController.text,
+        imageUrl: imageUrl,
+        organizerId: widget.event.organizerId,
+        price: _priceController.text.toLowerCase() == 'free'
+            ? 0.0
+            : double.parse(_priceController.text),
+        isVerified: widget.event.isVerified,
+        verificationStatus: widget.event.verificationStatus,
+        verificationDocumentUrl: widget.event.verificationDocumentUrl,
+        rejectionReason: widget.event.rejectionReason,
+      );
+
+      await FirebaseFirestore.instance
+          .collection('events')
+          .doc(widget.event.id)
+          .update(updatedEvent.toFirestore());
+
+      widget.onEventUpdated();
+      Navigator.pop(context);
+      Fluttertoast.showToast(
+        msg: "Event updated successfully!",
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.TOP,
+        backgroundColor: Colors.green,
+        textColor: Colors.white,
+      );
+    } catch (e) {
+      Fluttertoast.showToast(
+        msg: "Error updating event: $e",
+        toastLength: Toast.LENGTH_LONG,
+        gravity: ToastGravity.TOP,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Edit Event'),
+        backgroundColor: const Color.fromARGB(255, 25, 25, 95),
+        foregroundColor: Colors.white,
       ),
-      body: const Center(
-        child: Text('Edit Event Screen - Implement Me'),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextFormField(
+                controller: _titleController,
+                decoration: const InputDecoration(labelText: 'Event Title *'),
+                validator: (value) => value!.isEmpty ? 'Required' : null,
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: _selectedCategory,
+                decoration: const InputDecoration(labelText: 'Category *'),
+                items: _categories
+                    .map((category) => DropdownMenuItem(
+                          value: category,
+                          child: Text(category),
+                        ))
+                    .toList(),
+                onChanged: (value) => setState(() => _selectedCategory = value!),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _dateController,
+                decoration: const InputDecoration(
+                  labelText: 'Date (DD/MM/YYYY) *',
+                  hintText: 'e.g., 15/07/2025',
+                ),
+                validator: (value) {
+                  if (value!.isEmpty) return 'Required';
+                  final regex = RegExp(r'^\d{1,2}/\d{1,2}/\d{4}$');
+                  if (!regex.hasMatch(value)) return 'Invalid format (DD/MM/YYYY)';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _locationController,
+                decoration: const InputDecoration(labelText: 'Location *'),
+                validator: (value) => value!.isEmpty ? 'Required' : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _descriptionController,
+                decoration: const InputDecoration(labelText: 'Description *'),
+                maxLines: 4,
+                validator: (value) => value!.isEmpty ? 'Required' : null,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _priceController,
+                decoration: const InputDecoration(labelText: 'Price (UGX) *'),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value!.isEmpty) return 'Required';
+                  if (double.tryParse(value) == null && value.toLowerCase() != 'free') {
+                    return 'Enter a valid number or "free"';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              GestureDetector(
+                onTap: _pickImage,
+                child: Container(
+                  height: 150,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey),
+                  ),
+                  child: _imageFile != null
+                      ? Image.file(_imageFile!, fit: BoxFit.cover)
+                      : widget.event.imageUrl != null
+                          ? Image.network(widget.event.imageUrl!, fit: BoxFit.cover)
+                          : const Center(child: Text('Tap to select image')),
+                ),
+              ),
+              const SizedBox(height: 24),
+              _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : ElevatedButton(
+                      onPressed: _updateEvent,
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 50),
+                        backgroundColor: const Color.fromARGB(255, 25, 25, 95),
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('Update Event'),
+                    ),
+            ],
+          ),
+        ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _descriptionController.dispose();
+    _dateController.dispose();
+    _locationController.dispose();
+    _priceController.dispose();
+    super.dispose();
   }
 }
 
@@ -89,6 +496,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
   bool _isLoading = true;
   String? organizerId;
   bool _hasAccess = false;
+  final BookingService _bookingService = BookingService();
 
   @override
   void initState() {
@@ -96,10 +504,27 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
     _initializeOrganizer();
   }
 
+  DateTime parseEventDate(String input) {
+    try {
+      final parts = input.split('/');
+      if (parts.length != 3) {
+        print('Invalid date format: $input');
+        return DateTime(1900);
+      }
+      final day = int.tryParse(parts[0]) ?? 1;
+      final month = int.tryParse(parts[1]) ?? 1;
+      final year = int.tryParse(parts[2]) ?? 1900;
+      return DateTime(year, month, day);
+    } catch (e) {
+      print("Date parse error for '$input': $e");
+      return DateTime(1900);
+    }
+  }
+
   Future<void> _initializeOrganizer() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     organizerId = authProvider.user?.uid;
-    
+
     if (organizerId != null) {
       print('Initializing organizer with ID: $organizerId');
       await _checkAccessAndFetchEvents();
@@ -112,34 +537,34 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
     }
   }
 
-  // Checks if the user has any events in Firestore and fetches them
   Future<void> _checkAccessAndFetchEvents() async {
     if (organizerId == null) return;
-    
+
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
       print('Fetching events for organizerId: $organizerId');
       QuerySnapshot snapshot = await FirebaseFirestore.instance
           .collection('events')
           .where('organizerId', isEqualTo: organizerId)
           .get();
-      
+
       print('Found ${snapshot.docs.length} events');
       snapshot.docs.forEach((doc) => print('Event data: ${doc.data()}'));
 
       setState(() {
         organizerEvents = snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList();
-        _hasAccess = true; // Allow access for authenticated users to create events
+        organizerEvents.sort((a, b) => parseEventDate(a.date).compareTo(parseEventDate(b.date)));
+        _hasAccess = true;
         _isLoading = false;
       });
     } catch (e) {
       print('Error loading events: $e');
       setState(() {
         _isLoading = false;
-        _hasAccess = true; // Still allow access to try creating events
+        _hasAccess = true;
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -150,46 +575,36 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
     }
   }
 
-  // New method to explicitly check if the user has any events
-  Future<bool> _hasUserEvents() async {
-    if (organizerId == null) return false;
-    
+  Future<List<Booking>> _getEventBookings(String eventId) async {
     try {
-      QuerySnapshot snapshot = await FirebaseFirestore.instance
-          .collection('events')
-          .where('organizerId', isEqualTo: organizerId)
-          .limit(1) // Optimize by limiting to one document
-          .get();
-      
-      print('Has user events: ${snapshot.docs.isNotEmpty}');
-      return snapshot.docs.isNotEmpty;
+      final bookings = await _bookingService.getEventBookings(eventId);
+      return bookings;
     } catch (e) {
-      print('Error checking user events: $e');
-      return false;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error fetching bookings: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return [];
     }
   }
 
-  Future<void> _fetchOrganizerEvents() async {
-    await _checkAccessAndFetchEvents();
-  }
-
-  Future<List<Booking>> _getEventBookings(String eventId) async {
+  Future<Map<String, dynamic>> _getOverallStats() async {
     try {
-      QuerySnapshot snapshot = await FirebaseFirestore.instance
-          .collection('bookings')
-          .where('eventId', isEqualTo: eventId)
-          .get();
-      
-      return snapshot.docs.map((doc) => Booking.fromFirestore(doc)).toList();
+      return await _bookingService.getOverallStats(organizerEvents);
     } catch (e) {
-      print('Error fetching bookings: $e');
-      return [];
+      print('Error getting overall stats: $e');
+      return {
+        'revenue': 0.0,
+        'bookings': 0,
+        'paidBookings': 0,
+      };
     }
   }
 
   Future<void> _deleteEvent(Event event) async {
     try {
-      // Show confirmation dialog
       bool? confirmed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
@@ -210,19 +625,39 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
       );
 
       if (confirmed == true) {
+        QuerySnapshot bookingsSnapshot = await FirebaseFirestore.instance
+            .collection('bookings')
+            .where('eventId', isEqualTo: event.id)
+            .get();
+        for (var doc in bookingsSnapshot.docs) {
+          await doc.reference.delete();
+        }
+
         await FirebaseFirestore.instance
             .collection('events')
             .doc(event.id)
             .delete();
-        
+
+        if (event.imageUrl != null) {
+          try {
+            await FirebaseStorage.instance
+                .ref()
+                .child('events')
+                .child('${event.id}.jpg')
+                .delete();
+          } catch (e) {
+            print('Error deleting image: $e');
+          }
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Event deleted successfully'),
             backgroundColor: Colors.green,
           ),
         );
-        
-        await _fetchOrganizerEvents();
+
+        await _checkAccessAndFetchEvents();
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -231,6 +666,30 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
           backgroundColor: Colors.red,
         ),
       );
+    }
+  }
+
+  IconData _getCategoryIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'concert':
+      case 'festival':
+        return Icons.music_note;
+      case 'conference':
+        return Icons.computer;
+      case 'workshop':
+        return Icons.build;
+      case 'sports':
+        return Icons.sports;
+      case 'networking':
+        return Icons.group;
+      case 'exhibition':
+        return Icons.museum;
+      case 'theater':
+        return Icons.theater_comedy;
+      case 'comedy':
+        return Icons.sentiment_very_satisfied;
+      default:
+        return Icons.event;
     }
   }
 
@@ -243,12 +702,12 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
           'Event Management',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
-        backgroundColor: Color.fromARGB(255, 25, 25, 95),
+        backgroundColor: const Color.fromARGB(255, 25, 25, 95),
         elevation: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.white),
-            onPressed: _fetchOrganizerEvents,
+            onPressed: _checkAccessAndFetchEvents,
           ),
         ],
       ),
@@ -266,12 +725,12 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => AddEventScreen(
-                      onEventAdded: _fetchOrganizerEvents,
+                      onEventAdded: _checkAccessAndFetchEvents,
                     ),
                   ),
                 );
               },
-              backgroundColor: Color.fromARGB(255, 25, 25, 95),
+              backgroundColor: const Color.fromARGB(255, 25, 25, 95),
               child: const Icon(Icons.add, color: Colors.white),
             )
           : null,
@@ -318,12 +777,12 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
           const SizedBox(height: 30),
           ElevatedButton.icon(
             onPressed: () {
-              Navigator.pop(context); // Go back to previous screen
+              Navigator.pop(context);
             },
             icon: const Icon(Icons.arrow_back),
             label: const Text('Go Back'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Color.fromARGB(255, 25, 25, 95),
+              backgroundColor: const Color.fromARGB(255, 25, 25, 95),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
             ),
@@ -367,7 +826,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                 context,
                 MaterialPageRoute(
                   builder: (context) => AddEventScreen(
-                    onEventAdded: _fetchOrganizerEvents,
+                    onEventAdded: _checkAccessAndFetchEvents,
                   ),
                 ),
               );
@@ -375,7 +834,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
             icon: const Icon(Icons.add),
             label: const Text('Create Event'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Color.fromARGB(255, 25, 25, 95),
+              backgroundColor: const Color.fromARGB(255, 25, 25, 95),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
             ),
@@ -388,7 +847,6 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
   Widget _buildEventsList() {
     return Column(
       children: [
-        // Summary cards at the top
         Container(
           padding: const EdgeInsets.all(16),
           child: Row(
@@ -419,7 +877,6 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
             ],
           ),
         ),
-        // Events list
         Expanded(
           child: ListView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -452,12 +909,12 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: Color.fromARGB(255, 25, 25, 95).withOpacity(0.1),
+                                color: const Color.fromARGB(255, 25, 25, 95).withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Icon(
                                 _getCategoryIcon(event.category),
-                                color: Color.fromARGB(255, 25, 25, 95),
+                                color: const Color.fromARGB(255, 25, 25, 95),
                                 size: 24,
                               ),
                             ),
@@ -506,22 +963,26 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                           ],
                         ),
                         const SizedBox(height: 16),
-                        
-                        // Booking status
                         FutureBuilder<List<Booking>>(
                           future: _getEventBookings(event.id),
                           builder: (context, snapshot) {
                             if (snapshot.connectionState == ConnectionState.waiting) {
                               return const LinearProgressIndicator();
                             }
+                            if (snapshot.hasError) {
+                              return Text(
+                                'Error loading bookings',
+                                style: TextStyle(color: Colors.red, fontSize: 12),
+                              );
+                            }
                             final bookings = snapshot.data ?? [];
                             final paidBookings = bookings.where((b) => b.paid).length;
-                            final totalRevenue = bookings.where((b) => b.paid)
-                                .fold(0.0, (sum, booking) => sum + booking.total);
-                                final bookedCount = bookings.length;
+                            final totalRevenue =
+                                bookings.where((b) => b.paid).fold(0.0, (sum, booking) => sum + booking.total);
+                            final bookedCount = bookings.length;
                             final maxslots = event.maxslots ?? 0;
                             final slotsRemaining = maxslots - bookedCount;
-                            
+
                             return Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
@@ -540,7 +1001,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
-                                      const Text('Total Bookings'),
+                                      const Text('Bookings'),
                                     ],
                                   ),
                                   Column(
@@ -569,25 +1030,25 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                                       const Text('Revenue'),
                                     ],
                                   ),
-                                  if (maxslots > 0) ...[
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      slotsRemaining > 0
-                                        ? 'Slots remaining: $slotsRemaining'
-                                        : 'Slots full',
-                                      style: TextStyle(
-                                        color: slotsRemaining > 0 ? Colors.orange : Colors.red,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                  if (maxslots > 0)
+                                    Column(
+                                      children: [
+                                        Text(
+                                          slotsRemaining > 0 ? '$slotsRemaining' : 'Full',
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
+                                            color: slotsRemaining > 0 ? Colors.orange : Colors.red,
+                                          ),
+                                        ),
+                                        const Text('Slots Left'),
+                                      ],
                                     ),
-                                  ],
-
                                 ],
                               ),
                             );
                           },
                         ),
-                        
                         const SizedBox(height: 16),
                         Row(
                           children: [
@@ -620,7 +1081,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => AttendeesScreen(event: event),
+                                    builder: (context) => AttendeesScreen(event: event, ),
                                   ),
                                 );
                               },
@@ -634,7 +1095,7 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                                   MaterialPageRoute(
                                     builder: (context) => EditEventScreen(
                                       event: event,
-                                      onEventUpdated: _fetchOrganizerEvents,
+                                      onEventUpdated: _checkAccessAndFetchEvents,
                                     ),
                                   ),
                                 );
@@ -669,594 +1130,6 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
   Widget _buildSummaryCard(String title, String value, IconData icon, Color color) {
     return Card(
       elevation: 2,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<Map<String, dynamic>> _getOverallStats() async {
-    double totalRevenue = 0.0;
-    int totalBookings = 0;
-    
-    for (Event event in organizerEvents) {
-      List<Booking> bookings = await _getEventBookings(event.id);
-      totalBookings += bookings.length;
-      totalRevenue += bookings.where((b) => b.paid).fold(0.0, (sum, booking) => sum + booking.total);
-    }
-    
-    return {
-      'revenue': totalRevenue,
-      'bookings': totalBookings,
-    };
-  }
-
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: Color.fromARGB(255, 25, 25, 95).withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 16, color: Color.fromARGB(255, 25, 25, 95)),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: Color.fromARGB(255, 25, 25, 95),
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  IconData _getCategoryIcon(String category) {
-    switch (category.toLowerCase()) {
-      case 'concert':
-      case 'festival':
-        return Icons.music_note;
-      case 'conference':
-        return Icons.computer;
-      case 'workshop':
-        return Icons.build;
-      case 'sports':
-        return Icons.sports;
-      case 'networking':
-        return Icons.group;
-      case 'exhibition':
-        return Icons.museum;
-      case 'theater':
-        return Icons.theater_comedy;
-      case 'comedy':
-        return Icons.sentiment_very_satisfied;
-      default:
-        return Icons.event;
-    }
-  }
-}
-mixin maxSlots {
-}
-
-// Event Details Screen
-class EventDetailsScreen extends StatelessWidget {
-  final Event event;
-
-  const EventDetailsScreen({Key? key, required this.event}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(event.title),
-        backgroundColor: Color.fromARGB(255, 25, 25, 95),
-        foregroundColor: Colors.white,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (event.imageUrl != null)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  event.imageUrl!,
-                  height: 200,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                ),
-              ),
-            const SizedBox(height: 16),
-            Text(
-              event.title,
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              event.description,
-              style: const TextStyle(fontSize: 16),
-            ),
-            const SizedBox(height: 16),
-            _buildInfoRow(Icons.calendar_today, 'Date', event.date),
-            _buildInfoRow(Icons.location_on, 'Location', event.location),
-            _buildInfoRow(Icons.category, 'Category', event.category),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(IconData icon, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: Colors.grey[600]),
-          const SizedBox(width: 12),
-          Text(
-            '$label: ',
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          Expanded(child: Text(value)),
-        ],
-      ),
-    );
-  }
-}
-
-// Enhanced Attendees Screen
-class AttendeesScreen extends StatefulWidget {
-  final Event event;
-
-  const AttendeesScreen({Key? key, required this.event}) : super(key: key);
-
-  @override
-  State<AttendeesScreen> createState() => _AttendeesScreenState();
-}
-
-class _AttendeesScreenState extends State<AttendeesScreen> {
-  List<Booking> allBookings = [];
-  List<Booking> filteredBookings = [];
-  String _filterStatus = 'all';
-  bool _isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchBookings();
-  }
-
-  Future<void> _fetchBookings() async {
-    setState(() {
-      _isLoading = true;
-    });
-    
-    try {
-      QuerySnapshot snapshot = await FirebaseFirestore.instance
-          .collection('bookings')
-          .where('eventId', isEqualTo: widget.event.id)
-          .orderBy('bookingDate', descending: true)
-          .get();
-      
-      setState(() {
-        allBookings = snapshot.docs.map((doc) => Booking.fromFirestore(doc)).toList();
-        _filterBookings();
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error loading bookings: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  void _filterBookings() {
-    setState(() {
-      switch (_filterStatus) {
-        case 'paid':
-          filteredBookings = allBookings.where((booking) => booking.paid).toList();
-          break;
-        case 'pending':
-          filteredBookings = allBookings.where((booking) => !booking.paid).toList();
-          break;
-        default:
-          filteredBookings = allBookings;
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('${widget.event.title} - Attendees'),
-        backgroundColor: Color.fromARGB(255, 25, 25, 95),
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _fetchBookings,
-          ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                // Filter tabs
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _buildFilterChip('All', 'all', allBookings.length),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _buildFilterChip(
-                          'Paid',
-                          'paid',
-                          allBookings.where((b) => b.paid).length,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _buildFilterChip(
-                          'Pending',
-                          'pending',
-                          allBookings.where((b) => !b.paid).length,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                
-                // Bookings list
-                Expanded(
-                  child: filteredBookings.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.people_outline,
-                                size: 64,
-                                color: Colors.grey[400],
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'No ${_filterStatus == 'all' ? '' : _filterStatus} bookings',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: filteredBookings.length,
-                          itemBuilder: (context, index) {
-                            final booking = filteredBookings[index];
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              child: ListTile(
-                                leading: CircleAvatar(
-                                  backgroundColor: booking.paid 
-                                      ? Colors.green 
-                                      : Colors.orange,
-                                  child: Icon(
-                                    booking.paid ? Icons.check : Icons.pending,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                                title: Text('${booking.firstName} ${booking.lastName}'),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(booking.email),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'Booked: ${booking.bookingDate.day}/${booking.bookingDate.month}/${booking.bookingDate.year}',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey[600],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                trailing: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      '€${booking.total.toStringAsFixed(2)}',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: booking.paid 
-                                            ? Colors.green.withOpacity(0.1)
-                                            : Colors.orange.withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Text(
-                                        booking.paid ? 'Paid' : 'Pending',
-                                        style: TextStyle(
-                                          color: booking.paid ? Colors.green : Colors.orange,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                ),
-              ],
-            ),
-    );
-  }
-
-  Widget _buildFilterChip(String label, String value, int count) {
-    final isSelected = _filterStatus == value;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _filterStatus = value;
-          _filterBookings();
-        });
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected 
-              ? Color.fromARGB(255, 25, 25, 95)
-              : Colors.grey[200],
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Column(
-          children: [
-            Text(
-              count.toString(),
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: isSelected ? Colors.white : Colors.black,
-              ),
-            ),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                color: isSelected ? Colors.white : Colors.grey[600],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// Enhanced Event Analytics Screen
-class EventAnalyticsScreen extends StatelessWidget {
-  final Event event;
-
-  const EventAnalyticsScreen({Key? key, required this.event}) : super(key: key);
-
-  Future<List<Booking>> _getEventBookings() async {
-    try {
-      QuerySnapshot snapshot = await FirebaseFirestore.instance
-          .collection('bookings')
-          .where('eventId', isEqualTo: event.id)
-          .get();
-      
-      return snapshot.docs.map((doc) => Booking.fromFirestore(doc)).toList();
-    } catch (e) {
-      print('Error fetching bookings: $e');
-      return [];
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('${event.title} - Analytics'),
-        backgroundColor: Color.fromARGB(255, 25, 25, 95),
-        foregroundColor: Colors.white,
-      ),
-      body: FutureBuilder<List<Booking>>(
-        future: _getEventBookings(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          
-          final bookings = snapshot.data ?? [];
-          final totalBookings = bookings.length;
-          final paidBookings = bookings.where((b) => b.paid).length;
-          final pendingBookings = totalBookings - paidBookings;
-          final totalRevenue = bookings.where((b) => b.paid).fold(0.0, (sum, booking) => sum + booking.total);
-          final averageBookingValue = paidBookings > 0 ? totalRevenue / paidBookings : 0.0;
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Summary Cards
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildSummaryCard(
-                        'Total Bookings',
-                        totalBookings.toString(),
-                        Icons.people,
-                        Colors.blue,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _buildSummaryCard(
-                        'Paid Bookings',
-                        paidBookings.toString(),
-                        Icons.check_circle,
-                        Colors.green,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildSummaryCard(
-                        'Pending Bookings',
-                        pendingBookings.toString(),
-                        Icons.pending,
-                        Colors.orange,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _buildSummaryCard(
-                        'Total Revenue',
-                        'UGX ${totalRevenue.toStringAsFixed(2)}',
-                        Icons.attach_money,
-                        Colors.purple,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                _buildSummaryCard(
-                  'Average Booking Value',
-                  '€${averageBookingValue.toStringAsFixed(2)}',
-                  Icons.calculate,
-                  Colors.teal,
-                ),
-                const SizedBox(height: 24),
-
-                // Detailed Analytics
-                Text(
-                  'Booking Trends',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[800],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[50],
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.grey.withOpacity(0.1),
-                        spreadRadius: 1,
-                        blurRadius: 5,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Booking Status Breakdown',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey[700],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _buildStatusIndicator(
-                            'Paid',
-                            paidBookings,
-                            Colors.green,
-                          ),
-                          _buildStatusIndicator(
-                            'Pending',
-                            pendingBookings,
-                            Colors.orange,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildSummaryCard(String title, String value, IconData icon, Color color) {
-    return Card(
-      elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -1285,33 +1158,309 @@ class EventAnalyticsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusIndicator(String label, int count, Color color) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            shape: BoxShape.circle,
-          ),
-          child: Text(
-            count.toString(),
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: color,
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: const Color.fromARGB(255, 25, 25, 95).withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: const Color.fromARGB(255, 25, 25, 95)),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: const Color.fromARGB(255, 25, 25, 95),
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
             ),
-          ),
+          ],
         ),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey[600],
-          ),
+      ),
+    );
+  }
+}
+
+class EventDetailsScreen extends StatelessWidget {
+  final Event event;
+
+  const EventDetailsScreen({Key? key, required this.event}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(event.title),
+        backgroundColor: const Color.fromARGB(255, 25, 25, 95),
+        foregroundColor: Colors.white,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (event.imageUrl != null)
+              Container(
+                height: 200,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  image: DecorationImage(
+                    image: NetworkImage(event.imageUrl!),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+            const SizedBox(height: 16),
+            Text(
+              event.title,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              event.category,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
+                const SizedBox(width: 8),
+                Text(
+                  event.date,
+                  style: TextStyle(color: Colors.grey[600]),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    event.location,
+                    style: TextStyle(color: Colors.grey[600]),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              event.price == 0.0 ? 'Free Entry' : 'Price: UGX ${event.price.toStringAsFixed(2)}',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.green,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              event.description,
+              style: const TextStyle(fontSize: 16),
+            ),
+          ],
         ),
-      ],
+      ),
+    );
+  }
+}
+
+class AttendeesScreen extends StatelessWidget {
+  final Event event;
+
+  const AttendeesScreen({Key? key, required this.event}) : super(key: key);
+
+  Future<List<Booking>> _getEventBookings() async {
+    final bookingService = BookingService();
+    return await bookingService.getEventBookings(event.id);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('${event.title} - Attendees'),
+        backgroundColor: const Color.fromARGB(255, 25, 25, 95),
+        foregroundColor: Colors.white,
+      ),
+      body: FutureBuilder<List<Booking>>(
+        future: _getEventBookings(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+          final bookings = snapshot.data ?? [];
+          if (bookings.isEmpty) {
+            return const Center(child: Text('No attendees yet'));
+          }
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: bookings.length,
+            itemBuilder: (context, index) {
+              final booking = bookings[index];
+              String formattedDate = 'Unknown';
+              if (booking.bookingDate != null) {
+                if (booking.bookingDate is Timestamp) {
+                  formattedDate = DateFormat('dd/MM/yyyy HH:mm')
+                      .format((booking.bookingDate as Timestamp).toDate());
+                } else if (booking.bookingDate is DateTime) {
+                  formattedDate = DateFormat('dd/MM/yyyy HH:mm')
+                      .format(booking.bookingDate as DateTime);
+                }
+              }
+              return Card(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: ListTile(
+                  title: Text('${booking.firstName} ${booking.lastName}'),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(booking.email),
+                      Text('Paid: ${booking.paid ? "Yes" : "No"}'),
+                      Text('Amount: UGX ${booking.total.toStringAsFixed(2)}'),
+                      Text('Booked: $formattedDate'),
+                    ],
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+class EventAnalyticsScreen extends StatelessWidget {
+  final Event event;
+
+  const EventAnalyticsScreen({Key? key, required this.event}) : super(key: key);
+
+  Future<Map<String, dynamic>> _getEventStats() async {
+    final bookingService = BookingService();
+    final bookings = await bookingService.getEventBookings(event.id);
+    final paidBookings = bookings.where((b) => b.paid).length;
+    
+    final totalRevenue = bookings.where((b) => b.paid).fold(0.0, (sum, booking) => sum + booking.total);
+    print('Total Revenue for ${event.title}: UGX ${totalRevenue.toStringAsFixed(2)}');
+    return {
+      'totalBookings': bookings.length,
+      'paidBookings': paidBookings,
+      'totalRevenue': totalRevenue,
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('${event.title} - Analytics'),
+        backgroundColor: const Color.fromARGB(255, 25, 25, 95),
+        foregroundColor: Colors.white,
+      ),
+      body: FutureBuilder<Map<String, dynamic>>(
+        future: _getEventStats(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+          final stats = snapshot.data ?? {'totalBookings': 0, 'paidBookings': 0, 'totalRevenue': 0.0};
+          return Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  event.title,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildStatCard(
+                  'Total Bookings',
+                  stats['totalBookings'].toString(),
+                  Icons.people,
+                  Colors.blue,
+                ),
+                const SizedBox(height: 16),
+                _buildStatCard(
+                  'Paid Bookings',
+                  stats['paidBookings'].toString(),
+                  Icons.check_circle,
+                  Colors.green,
+                ),
+                const SizedBox(height: 16),
+                _buildStatCard(
+                  'Total Revenue',
+                  'UGX ${stats['totalRevenue'].toStringAsFixed(2)}',
+                  Icons.attach_money,
+                  Colors.purple,
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 24),
+            const SizedBox(width: 16),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

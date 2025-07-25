@@ -272,7 +272,7 @@ class _MapScreenState extends State<MapScreen>
       final icon = await _createCustomMarker(event);
       final marker = Marker(
         markerId: MarkerId(event.id),
-        position: LatLng(event.latitude, event.longitude),
+        position: LatLng(event.latitude ?? 0.0, event.longitude ?? 0.0),
         icon: icon,
         onTap: () => _onMarkerTap(event),
       );
@@ -295,7 +295,7 @@ class _MapScreenState extends State<MapScreen>
     // Animate camera to marker
     _mapController.animateCamera(
       CameraUpdate.newLatLngZoom(
-        LatLng(event.latitude, event.longitude),
+       LatLng(event.latitude ?? 0.0, event.longitude ?? 0.0),
         15.0,
       ),
     );
@@ -401,7 +401,9 @@ class _MapScreenState extends State<MapScreen>
                   _buildDetailRow(Icons.calendar_today, 'Date', event.date),
                   const SizedBox(height: 12),
                   _buildDetailRow(Icons.location_on, 'Location', 
-                    '${event.latitude.toStringAsFixed(4)}, ${event.longitude.toStringAsFixed(4)}'),
+                    // '${event.latitude.toStringAsFixed(4)}, ${event.longitude.toStringAsFixed(4)}'
+                    '${(event.latitude ?? 0.0).toStringAsFixed(4)}, ${(event.longitude ?? 0.0).toStringAsFixed(4)}'
+),
                   if (event.description.isNotEmpty) ...[
                     const SizedBox(height: 12),
                     _buildDetailRow(Icons.description, 'Description', event.description),
@@ -642,7 +644,35 @@ class _MapScreenState extends State<MapScreen>
       backgroundColor: const Color.fromARGB(255, 25, 25, 95),
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('EVENTS MAP'),
+        title: Row(
+    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    children: [
+      RichText(
+        text: TextSpan(
+          children: [
+            TextSpan(
+              text: 'EVENTS ',
+              style: TextStyle(
+                color: Colors.orange,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            TextSpan(
+              text: 'MAP',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+      const Icon(Icons.map, color: Colors.white, size: 28), // Map icon on the right
+    ],
+  ),
+
         backgroundColor:const Color.fromARGB(255, 25, 25, 95),
         toolbarHeight: 70,
         elevation: 0,
@@ -769,6 +799,7 @@ class _MapScreenState extends State<MapScreen>
           child: const Icon(Icons.my_location, color: Colors.white),
         ),
       ),
-    );
+    );//j
   }
 }
+
