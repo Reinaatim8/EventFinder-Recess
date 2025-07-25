@@ -21,7 +21,7 @@ class AddEventDialog extends StatefulWidget {
   State<AddEventDialog> createState() => _AddEventDialogState();
 }
 
-class _AddEventDialogState extends State<AddEventDialog> {
+class _AddEventDialogState extends State<AddEventDialog> with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
@@ -45,6 +45,9 @@ class _AddEventDialogState extends State<AddEventDialog> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   double? _latitude;
   double? _longitude;
+
+  late AnimationController _animationController;
+  late Animation<double> _scaleAnimation;
 
   final List<String> _categories = [
     'Concert',
