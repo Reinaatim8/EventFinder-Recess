@@ -1,3 +1,4 @@
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -71,6 +72,8 @@ class AuthProvider with ChangeNotifier {
             emailVerified: firebaseUser.emailVerified,
             createdAt: DateTime.now(),
             lastLoginAt: DateTime.now(),
+            phoneNumber: null,
+            twoFactorEnabled: false,
           );
           await _databaseService.updateUserData(
             firebaseUser.uid,
@@ -89,6 +92,7 @@ class AuthProvider with ChangeNotifier {
       print('User unauthenticated');
     }
     _isLoading = false;
+    notifyListeners();
   }
 
   void _setLoading(bool loading) {
@@ -111,52 +115,26 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // Enhanced email validation
   bool _isValidEmail(String email) {
     if (email.isEmpty) return false;
-
-    // Check if email contains @ symbol
     if (!email.contains('@')) return false;
-
-    // More comprehensive email regex
     final emailRegex = RegExp(
       r'^[a-zA-Z0-9.!#$%&*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$',
     );
-
     return emailRegex.hasMatch(email.trim());
   }
 
-  // Enhanced password validation
   String? _validatePassword(String password) {
-    if (password.isEmpty) {
-      return 'Password is required';
-    }
-
-    if (password.length < 8) {
-      return 'Password must be at least 8 characters long';
-    }
-
-    // Check for at least one uppercase letter
-    if (!password.contains(RegExp(r'[A-Z]'))) {
+    if (password.isEmpty) return 'Password is required';
+    if (password.length < 8) return 'Password must be at least 8 characters long';
+    if (!password.contains(RegExp(r'[A-Z]')))
       return 'Password must contain at least one uppercase letter';
-    }
-
-    // Check for at least one lowercase letter
-    if (!password.contains(RegExp(r'[a-z]'))) {
+    if (!password.contains(RegExp(r'[a-z]')))
       return 'Password must contain at least one lowercase letter';
-    }
-
-    // Check for at least one digit
-    if (!password.contains(RegExp(r'[0-9]'))) {
+    if (!password.contains(RegExp(r'[0-9]')))
       return 'Password must contain at least one number';
-    }
-
-    // Check for at least one special character
-    if (!password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
-      return 'Password must contain at least one special character (!@#\$%^&*(),.?":{}|<>)';
-    }
-
-    // Check for common weak passwords
+    if (!password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]')))
+      return 'Password must contain at least one special character';
     List<String> commonPasswords = [
       'password',
       '12345678',
@@ -167,24 +145,15 @@ class AuthProvider with ChangeNotifier {
       'welcome123',
       'admin123',
     ];
-
-    if (commonPasswords.contains(password.toLowerCase())) {
-      return 'Password is too common. Please choose a more secure password';
-    }
-
-    // Check for sequential characters
-    if (_hasSequentialChars(password)) {
-      return 'Password should not contain sequential characters (e.g., 123, abc)';
-    }
-
-    return null; // Password is valid
+    if (commonPasswords.contains(password.toLowerCase()))
+      return 'Password is too common';
+    if (_hasSequentialChars(password))
+      return 'Password should not contain sequential characters';
+    return null;
   }
 
-  // Helper method to check for sequential characters
   bool _hasSequentialChars(String password) {
     String lowerPassword = password.toLowerCase();
-
-    // Check for sequential numbers
     for (int i = 0; i < lowerPassword.length - 2; i++) {
       String substr = lowerPassword.substring(i, i + 3);
       if (substr == '123' ||
@@ -197,11 +166,6 @@ class AuthProvider with ChangeNotifier {
           substr == '890') {
         return true;
       }
-    }
-
-    // Check for sequential letters
-    for (int i = 0; i < lowerPassword.length - 2; i++) {
-      String substr = lowerPassword.substring(i, i + 3);
       if (substr == 'abc' ||
           substr == 'bcd' ||
           substr == 'cde' ||
@@ -229,7 +193,6 @@ class AuthProvider with ChangeNotifier {
         return true;
       }
     }
-
     return false;
   }
 
@@ -239,43 +202,32 @@ class AuthProvider with ChangeNotifier {
     required String name,
   }) async {
     print('Starting signUp for email: $email');
-
-    // Enhanced email validation
     if (!_isValidEmail(email)) {
       _setError('Please enter a valid email address with @ symbol');
       return false;
     }
-
-    // Enhanced password validation
     String? passwordError = _validatePassword(password);
     if (passwordError != null) {
       _setError(passwordError);
       return false;
     }
-
-    // Name validation
     if (name.trim().isEmpty) {
       _setError('Please enter your full name');
       return false;
     }
-
     if (name.trim().length < 2) {
       _setError('Name must be at least 2 characters long');
       return false;
     }
-
     _setLoading(true);
     _setError(null);
-
     try {
       UserModel? user = await _authService.signUpWithEmailAndPassword(
         email: email.trim(),
         password: password,
         name: name.trim(),
       );
-      print(
-        'AuthService.signUp returned: ${user != null ? 'UserModel (UID: ${user.uid})' : 'null'}',
-      );
+      print('AuthService.signUp returned: ${user != null ? 'UserModel (UID: ${user.uid})' : 'null'}');
       if (user != null) {
         _user = user;
         _status = AuthStatus.authenticated;
@@ -299,38 +251,28 @@ class AuthProvider with ChangeNotifier {
 
   Future<bool> signIn({required String email, required String password}) async {
     print('Starting signIn for email: $email');
-
-    // Enhanced email validation
     if (!_isValidEmail(email)) {
       _setError('Please enter a valid email address with @ symbol');
       return false;
     }
-
     if (password.isEmpty) {
       _setError('Please enter a password');
       return false;
     }
-
     _setLoading(true);
     _setError(null);
-
     try {
       UserModel? user = await _authService.signInWithEmailAndPassword(
         email: email.trim(),
         password: password,
       );
-      print(
-        'AuthService.signIn returned: ${user != null ? 'UserModel (UID: ${user.uid})' : 'null'}',
-      );
+      print('AuthService.signIn returned: ${user != null ? 'UserModel (UID: ${user.uid})' : 'null'}');
       if (user != null && user.uid.isNotEmpty) {
         _user = user;
         _status = AuthStatus.authenticated;
-        // Double-check with currentUser
         User? firebaseUser = _authService.currentUser;
         if (firebaseUser != null && user.uid != firebaseUser.uid) {
-          print(
-            'Mismatch in UIDs, updating from Firebase: ${firebaseUser.uid}',
-          );
+          print('Mismatch in UIDs, updating from Firebase: ${firebaseUser.uid}');
           _user = UserModel(
             uid: firebaseUser.uid,
             email: firebaseUser.email ?? email,
@@ -338,11 +280,10 @@ class AuthProvider with ChangeNotifier {
             emailVerified: firebaseUser.emailVerified,
             createdAt: DateTime.now(),
             lastLoginAt: DateTime.now(),
+            phoneNumber: null,
+            twoFactorEnabled: false,
           );
-          await _databaseService.updateUserData(
-            firebaseUser.uid,
-            _user!.toMap(),
-          );
+          await _databaseService.updateUserData(firebaseUser.uid, _user!.toMap());
         }
         Fluttertoast.showToast(
           msg: "Welcome back!",
@@ -385,16 +326,12 @@ class AuthProvider with ChangeNotifier {
 
   Future<bool> resetPassword({required String email}) async {
     print('Starting password reset for email: $email');
-
-    // Enhanced email validation
     if (!_isValidEmail(email)) {
       _setError('Please enter a valid email address with @ symbol');
       return false;
     }
-
     _setLoading(true);
     _setError(null);
-
     try {
       bool success = await _authService.resetPassword(email: email.trim());
       _setLoading(false);
@@ -436,9 +373,7 @@ class AuthProvider with ChangeNotifier {
       await _authService.reloadUser();
       print('User reloaded successfully');
       if (_authService.currentUser != null) {
-        _user = await _databaseService.getUserData(
-          _authService.currentUser!.uid,
-        );
+        _user = await _databaseService.getUserData(_authService.currentUser!.uid);
         notifyListeners();
       }
     } catch (e, stackTrace) {
@@ -455,20 +390,22 @@ class AuthProvider with ChangeNotifier {
       print('Cannot update profile - no user logged in');
       return false;
     }
-
     print('Updating user profile for: ${_user!.uid}');
     _setLoading(true);
     _setError(null);
-
     try {
       Map<String, dynamic> updateData = {};
       if (name != null) updateData['name'] = name;
       if (additionalData != null) updateData.addAll(additionalData);
-
       print('Update data: $updateData');
       await _databaseService.updateUserData(_user!.uid, updateData);
       if (name != null) _user = _user!.copyWith(name: name);
-
+      if (additionalData != null) {
+        _user = _user!.copyWith(
+          phoneNumber: additionalData['phoneNumber'],
+          twoFactorEnabled: additionalData['twoFactorEnabled'],
+        );
+      }
       notifyListeners();
       _setLoading(false);
       Fluttertoast.showToast(msg: "Profile updated successfully.");
@@ -482,12 +419,77 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  Future<bool> toggleTwoFactorAuth(bool enable) async {
+    if (_user == null) {
+      print('Cannot toggle 2FA - no user logged in');
+      _setError('No user is signed in');
+      return false;
+    }
+    print('Toggling 2FA for user: ${_user!.uid}, enable: $enable');
+    _setLoading(true);
+    _setError(null);
+    try {
+      await _databaseService.updateUserData(_user!.uid, {
+        'twoFactorEnabled': enable,
+      });
+      _user = _user!.copyWith(twoFactorEnabled: enable);
+      notifyListeners();
+      _setLoading(false);
+      Fluttertoast.showToast(
+        msg: 'Two-factor authentication ${enable ? 'enabled' : 'disabled'}',
+        toastLength: Toast.LENGTH_SHORT,
+      );
+      return true;
+    } catch (e, stackTrace) {
+      print('Error toggling 2FA: $e\n$stackTrace');
+      _setError('Failed to toggle 2FA: ${e.toString()}');
+      _setLoading(false);
+      return false;
+    }
+  }
+
+  Future<bool> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    print('Starting password change');
+    _setLoading(true);
+    _setError(null);
+    try {
+      String? passwordError = _validatePassword(newPassword);
+      if (passwordError != null) {
+        _setError(passwordError);
+        _setLoading(false);
+        return false;
+      }
+      bool success = await _authService.changePassword(
+        currentPassword: currentPassword,
+        newPassword: newPassword,
+      );
+      _setLoading(false);
+      if (success) {
+        Fluttertoast.showToast(
+          msg: 'Password changed successfully',
+          toastLength: Toast.LENGTH_SHORT,
+        );
+        return true;
+      } else {
+        _setError('Failed to change password');
+        return false;
+      }
+    } catch (e, stackTrace) {
+      print('Error during password change: $e\n$stackTrace');
+      _setError('Failed to change password: ${e.toString()}');
+      _setLoading(false);
+      return false;
+    }
+  }
+
   Future<void> refreshUserData() async {
     if (_user == null) {
       print('Cannot refresh user data - no user logged in');
       return;
     }
-
     print('Refreshing user data for: ${_user!.uid}');
     try {
       UserModel? updatedUser = await _databaseService.getUserData(_user!.uid);
@@ -509,11 +511,9 @@ class AuthProvider with ChangeNotifier {
       print('Cannot delete account - no user logged in');
       return false;
     }
-
     print('Deleting account for: ${_user!.uid}');
     _setLoading(true);
     _setError(null);
-
     try {
       await _databaseService.deleteUserDocument(_user!.uid);
       print('User document deleted from database');

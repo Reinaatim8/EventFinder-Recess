@@ -8,6 +8,8 @@ class UserModel {
   final bool emailVerified;
   final DateTime createdAt;
   final DateTime lastLoginAt;
+  final String? phoneNumber;
+  final bool twoFactorEnabled;
 
   UserModel({
     required this.uid,
@@ -16,6 +18,8 @@ class UserModel {
     required this.emailVerified,
     required this.createdAt,
     required this.lastLoginAt,
+    this.phoneNumber,
+    this.twoFactorEnabled = false,
   });
 
   Map<String, dynamic> toMap() {
@@ -26,6 +30,8 @@ class UserModel {
       'emailVerified': emailVerified,
       'createdAt': createdAt.millisecondsSinceEpoch,
       'lastLoginAt': lastLoginAt.millisecondsSinceEpoch,
+      'phoneNumber': phoneNumber,
+      'twoFactorEnabled': twoFactorEnabled,
     };
   }
 
@@ -37,6 +43,8 @@ class UserModel {
       emailVerified: map['emailVerified'] as bool? ?? false,
       createdAt: _parseDate(map['createdAt']) ?? DateTime.now(),
       lastLoginAt: _parseDate(map['lastLoginAt']) ?? DateTime.now(),
+      phoneNumber: map['phoneNumber']?.toString(),
+      twoFactorEnabled: map['twoFactorEnabled'] as bool? ?? false,
     );
   }
 
@@ -63,6 +71,8 @@ class UserModel {
     bool? emailVerified,
     DateTime? createdAt,
     DateTime? lastLoginAt,
+    String? phoneNumber,
+    bool? twoFactorEnabled,
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -71,6 +81,8 @@ class UserModel {
       emailVerified: emailVerified ?? this.emailVerified,
       createdAt: createdAt ?? this.createdAt,
       lastLoginAt: lastLoginAt ?? this.lastLoginAt,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      twoFactorEnabled: twoFactorEnabled ?? this.twoFactorEnabled,
     );
   }
 }

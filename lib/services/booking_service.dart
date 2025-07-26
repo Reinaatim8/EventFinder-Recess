@@ -113,6 +113,39 @@ class BookingService {
     }
   }
 
+  Future<List<Booking>> getUserBookings(String userId) async {
+    try {
+      print('Fetching bookings for userId: $userId');
+      
+      QuerySnapshot snapshot = await _firestore
+          .collection('bookings')
+          .where('userId', isEqualTo: userId)
+          .orderBy('timestamp', descending: true)
+          .get();
+
+      print('Found ${snapshot.docs.length} bookings for user $userId');
+      snapshot.docs.forEach((doc) => print('Booking data: ${doc.id} - ${doc.data()}'));
+
+      List<Booking> bookings = [];
+      for (var doc in snapshot.docs) {
+        try {
+          final booking = Booking.fromFirestore(doc);
+          bookings.add(booking);
+        } catch (e) {
+          print('Error parsing booking document ${doc.id}: $e');
+        }
+      }
+
+      if (bookings.isEmpty) {
+        print('No valid bookings parsed for user $userId');
+      }
+      return bookings;
+    } catch (e) {
+      print('Error fetching bookings for user $userId: $e');
+      return [];
+    }
+  }
+
   Future<Map<String, dynamic>> getOverallStats(List<dynamic> events) async {
     double totalRevenue = 0.0;
     int totalBookings = 0;
