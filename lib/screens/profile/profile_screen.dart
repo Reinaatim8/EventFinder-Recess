@@ -12,6 +12,10 @@ import '../../models/booking.dart';
 import '../../models/event.dart';
 import '../../services/booking_service.dart';
 import '../home/event_management_screen.dart'; // Correct import path
+import 'package:flutter/gestures.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -623,7 +627,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                               SwitchListTile(
                                 title: const Text('Event Reminders'),
-                                subtitle: const Text('Get reminded about upcoming events'),
+                                subtitle: const Text('Get reminded about Payment/Reservation of events'),
                                 value: _notificationsEnabled,
                                 onChanged: (value) {
                                   setModalState(() {
@@ -719,7 +723,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 trailing: const Icon(Icons.arrow_forward_ios),
                 onTap: () {
                   Navigator.pop(context);
-                  _showToast('Device management coming soon!', Colors.blue);
+                  _showToast('Device management Feature coming soon!', Colors.blue);
                 },
               ),
             ],
