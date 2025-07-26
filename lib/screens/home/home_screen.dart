@@ -118,6 +118,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  
   Future<void> bookEvent(String eventId) async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) {
@@ -1023,6 +1024,19 @@ class EventCard extends StatelessWidget {
     required this.isBooked,
     this.onPaymentSuccess,
   }) : super(key: key);
+  
+  Future<String> getUserNameFromUid(String uid) async {
+  try {
+    final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    if (doc.exists) {
+      return doc.data()?['name'] ?? 'Unknown';
+    }
+  } catch (e) {
+    print("Error fetching user name: $e");
+  }
+  return 'Unknown';
+}
+
 
   DateTime parseEventDate(String input) {
     try {
@@ -1275,6 +1289,7 @@ class EventCard extends StatelessWidget {
                         ),
                       ],
                     ),
+                    
                     const SizedBox(height: 4),
                     Row(
                       children: [
