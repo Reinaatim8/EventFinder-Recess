@@ -40,7 +40,7 @@ class CustomTextField extends StatelessWidget {
           style: const TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 17,
-            color:  const Color.fromARGB(255, 25, 25, 95),
+            color: const Color.fromARGB(255, 25, 25, 95),
           ),
         ),
         const SizedBox(height: 8),
@@ -75,8 +75,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
 
-  
-
   @override
   void dispose() {
     _emailController.dispose();
@@ -94,16 +92,14 @@ class _LoginScreenState extends State<LoginScreen> {
         password: _passwordController.text.trim(),
       );
       if (!success && mounted) {
-        
-          Fluttertoast.showToast(
-            msg: "Login failed. Please check your credentials.",
-            toastLength: Toast.LENGTH_LONG,
-            gravity: ToastGravity.TOP,
-            backgroundColor: Colors.red,
-            textColor: Colors.white,
-            fontSize: 18.0,
-          );
-        
+        Fluttertoast.showToast(
+          msg: "Login failed. Please check your credentials.",
+          toastLength: Toast.LENGTH_LONG,
+          gravity: ToastGravity.TOP,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+          fontSize: 18.0,
+        );
       }
     }
   }
@@ -142,17 +138,19 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 8),
                   const Text(
                     "Sign in to continue discovering amazing events near you",
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white,
-                    ),
+                    style: TextStyle(fontSize: 16, color: Colors.white),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 40),
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: const Color.fromARGB(179, 249, 248, 248).withOpacity(0.95),
+                      color: const Color.fromARGB(
+                        179,
+                        249,
+                        248,
+                        248,
+                      ).withOpacity(0.95),
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
@@ -173,13 +171,15 @@ class _LoginScreenState extends State<LoginScreen> {
                               CustomTextField(
                                 label: "Email",
                                 hint: "Enter your email",
-                                
-                                
+
                                 controller: _emailController,
                                 keyboardType: TextInputType.emailAddress,
                                 validator: Validators.validateEmail,
                                 prefixIcon: IconButton(
-                                  icon: const Icon(Icons.email_outlined, color: Colors.orange),
+                                  icon: const Icon(
+                                    Icons.email_outlined,
+                                    color: Colors.orange,
+                                  ),
                                   onPressed: () {
                                     _emailController.clear();
                                   },
@@ -194,7 +194,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                 validator: Validators.validatePassword,
                                 prefixIcon: IconButton(
                                   icon: Icon(
-                                    _obscurePassword ? Icons.lock_outline : Icons.lock_open,
+                                    _obscurePassword
+                                        ? Icons.lock_outline
+                                        : Icons.lock_open,
                                     color: Colors.orange,
                                   ),
                                   onPressed: () {
@@ -202,7 +204,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                       _obscurePassword = !_obscurePassword;
                                     });
                                   },
-                                  
                                 ),
                               ),
                               const SizedBox(height: 12),
@@ -213,15 +214,25 @@ class _LoginScreenState extends State<LoginScreen> {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (context) => const ForgotPasswordScreen(),
+                                        builder: (context) =>
+                                            const ForgotPasswordScreen(),
                                       ),
                                     );
                                   },
                                   child: const Text(
                                     "Forgot Password?",
-                                    style: TextStyle(color: Color.fromARGB(255, 25, 25, 95), decoration: TextDecoration.underline, fontSize: 18,decorationColor: Color.fromARGB(255, 25, 25, 95),),
+                                    style: TextStyle(
+                                      color: Color.fromARGB(255, 25, 25, 95),
+                                      decoration: TextDecoration.underline,
+                                      fontSize: 18,
+                                      decorationColor: Color.fromARGB(
+                                        255,
+                                        25,
+                                        25,
+                                        95,
+                                      ),
+                                    ),
                                   ),
-                                  
                                 ),
                               ),
                               const SizedBox(height: 24),
@@ -229,7 +240,12 @@ class _LoginScreenState extends State<LoginScreen> {
                                 text: "Sign In",
                                 onPressed: () => _handleLogin(context),
                                 isLoading: authProvider.isLoading,
-                                backgroundColor: const Color.fromARGB(255, 25, 25, 95),
+                                backgroundColor: const Color.fromARGB(
+                                  255,
+                                  25,
+                                  25,
+                                  95,
+                                ),
                                 textColor: Colors.orange,
                               ),
                               const SizedBox(height: 24),
@@ -238,14 +254,17 @@ class _LoginScreenState extends State<LoginScreen> {
                                 children: [
                                   const Text(
                                     "Don't have an account? ",
-                                    style: TextStyle(color: Color.fromARGB(255, 25, 25, 95)),
+                                    style: TextStyle(
+                                      color: Color.fromARGB(255, 25, 25, 95),
+                                    ),
                                   ),
                                   TextButton(
                                     onPressed: () {
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (context) => const RegisterScreen(),
+                                          builder: (context) =>
+                                              const RegisterScreen(),
                                         ),
                                       );
                                     },
@@ -256,8 +275,12 @@ class _LoginScreenState extends State<LoginScreen> {
                                         color: Color.fromARGB(255, 25, 25, 95),
                                         fontSize: 20,
                                         decoration: TextDecoration.underline,
-                                        decorationColor:Color.fromARGB(255, 25, 25, 95),
-                                         
+                                        decorationColor: Color.fromARGB(
+                                          255,
+                                          25,
+                                          25,
+                                          95,
+                                        ),
                                       ),
                                     ),
                                   ),

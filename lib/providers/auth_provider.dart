@@ -1,4 +1,3 @@
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -6,12 +5,7 @@ import '../models/user_model.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
 
-enum AuthStatus {
-  uninitialized,
-  authenticated,
-  unauthenticated,
-  loading,
-}
+enum AuthStatus { uninitialized, authenticated, unauthenticated, loading }
 
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
@@ -45,17 +39,20 @@ class AuthProvider with ChangeNotifier {
       notifyListeners();
     }
 
-    _authService.authStateChanges.listen((User? firebaseUser) async {
-      print('Auth state changed: ${firebaseUser?.uid ?? 'null'}');
-      await _updateUserState(firebaseUser);
-      notifyListeners();
-    }, onError: (error, stackTrace) {
-      print('Stream error in authStateChanges: $error\n$stackTrace');
-      _status = AuthStatus.unauthenticated;
-      _user = null;
-      _isLoading = false;
-      notifyListeners();
-    });
+    _authService.authStateChanges.listen(
+      (User? firebaseUser) async {
+        print('Auth state changed: ${firebaseUser?.uid ?? 'null'}');
+        await _updateUserState(firebaseUser);
+        notifyListeners();
+      },
+      onError: (error, stackTrace) {
+        print('Stream error in authStateChanges: $error\n$stackTrace');
+        _status = AuthStatus.unauthenticated;
+        _user = null;
+        _isLoading = false;
+        notifyListeners();
+      },
+    );
   }
 
   Future<void> _updateUserState(User? firebaseUser) async {
@@ -64,7 +61,9 @@ class AuthProvider with ChangeNotifier {
         _status = AuthStatus.authenticated;
         _user = await _databaseService.getUserData(firebaseUser.uid);
         if (_user == null) {
-          print('No user data found, creating default UserModel for UID: ${firebaseUser.uid}');
+          print(
+            'No user data found, creating default UserModel for UID: ${firebaseUser.uid}',
+          );
           _user = UserModel(
             uid: firebaseUser.uid,
             email: firebaseUser.email ?? '',
@@ -73,7 +72,10 @@ class AuthProvider with ChangeNotifier {
             createdAt: DateTime.now(),
             lastLoginAt: DateTime.now(),
           );
-          await _databaseService.updateUserData(firebaseUser.uid, _user!.toMap());
+          await _databaseService.updateUserData(
+            firebaseUser.uid,
+            _user!.toMap(),
+          );
         }
         print('User authenticated: ${_user?.uid}');
       } catch (e, stackTrace) {
@@ -109,18 +111,156 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  // Enhanced email validation
+  bool _isValidEmail(String email) {
+    if (email.isEmpty) return false;
+
+    // Check if email contains @ symbol
+    if (!email.contains('@')) return false;
+
+    // More comprehensive email regex
+    final emailRegex = RegExp(
+      r'^[a-zA-Z0-9.!#$%&*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$',
+    );
+
+    return emailRegex.hasMatch(email.trim());
+  }
+
+  // Enhanced password validation
+  String? _validatePassword(String password) {
+    if (password.isEmpty) {
+      return 'Password is required';
+    }
+
+    if (password.length < 8) {
+      return 'Password must be at least 8 characters long';
+    }
+
+    // Check for at least one uppercase letter
+    if (!password.contains(RegExp(r'[A-Z]'))) {
+      return 'Password must contain at least one uppercase letter';
+    }
+
+    // Check for at least one lowercase letter
+    if (!password.contains(RegExp(r'[a-z]'))) {
+      return 'Password must contain at least one lowercase letter';
+    }
+
+    // Check for at least one digit
+    if (!password.contains(RegExp(r'[0-9]'))) {
+      return 'Password must contain at least one number';
+    }
+
+    // Check for at least one special character
+    if (!password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) {
+      return 'Password must contain at least one special character (!@#\$%^&*(),.?":{}|<>)';
+    }
+
+    // Check for common weak passwords
+    List<String> commonPasswords = [
+      'password',
+      '12345678',
+      'qwerty123',
+      'abc123456',
+      'password123',
+      '123456789',
+      'welcome123',
+      'admin123',
+    ];
+
+    if (commonPasswords.contains(password.toLowerCase())) {
+      return 'Password is too common. Please choose a more secure password';
+    }
+
+    // Check for sequential characters
+    if (_hasSequentialChars(password)) {
+      return 'Password should not contain sequential characters (e.g., 123, abc)';
+    }
+
+    return null; // Password is valid
+  }
+
+  // Helper method to check for sequential characters
+  bool _hasSequentialChars(String password) {
+    String lowerPassword = password.toLowerCase();
+
+    // Check for sequential numbers
+    for (int i = 0; i < lowerPassword.length - 2; i++) {
+      String substr = lowerPassword.substring(i, i + 3);
+      if (substr == '123' ||
+          substr == '234' ||
+          substr == '345' ||
+          substr == '456' ||
+          substr == '567' ||
+          substr == '678' ||
+          substr == '789' ||
+          substr == '890') {
+        return true;
+      }
+    }
+
+    // Check for sequential letters
+    for (int i = 0; i < lowerPassword.length - 2; i++) {
+      String substr = lowerPassword.substring(i, i + 3);
+      if (substr == 'abc' ||
+          substr == 'bcd' ||
+          substr == 'cde' ||
+          substr == 'def' ||
+          substr == 'efg' ||
+          substr == 'fgh' ||
+          substr == 'ghi' ||
+          substr == 'hij' ||
+          substr == 'ijk' ||
+          substr == 'jkl' ||
+          substr == 'klm' ||
+          substr == 'lmn' ||
+          substr == 'mno' ||
+          substr == 'nop' ||
+          substr == 'opq' ||
+          substr == 'pqr' ||
+          substr == 'qrs' ||
+          substr == 'rst' ||
+          substr == 'stu' ||
+          substr == 'tuv' ||
+          substr == 'uvw' ||
+          substr == 'vwx' ||
+          substr == 'wxy' ||
+          substr == 'xyz') {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   Future<bool> signUp({
     required String email,
     required String password,
     required String name,
   }) async {
     print('Starting signUp for email: $email');
-    if (email.isEmpty || !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
-      _setError('Please enter a valid email address.');
+
+    // Enhanced email validation
+    if (!_isValidEmail(email)) {
+      _setError('Please enter a valid email address with @ symbol');
       return false;
     }
-    if (password.isEmpty || password.length < 6) {
-      _setError('Password must be at least 6 characters.');
+
+    // Enhanced password validation
+    String? passwordError = _validatePassword(password);
+    if (passwordError != null) {
+      _setError(passwordError);
+      return false;
+    }
+
+    // Name validation
+    if (name.trim().isEmpty) {
+      _setError('Please enter your full name');
+      return false;
+    }
+
+    if (name.trim().length < 2) {
+      _setError('Name must be at least 2 characters long');
       return false;
     }
 
@@ -131,9 +271,11 @@ class AuthProvider with ChangeNotifier {
       UserModel? user = await _authService.signUpWithEmailAndPassword(
         email: email.trim(),
         password: password,
-        name: name,
+        name: name.trim(),
       );
-      print('AuthService.signUp returned: ${user != null ? 'UserModel (UID: ${user.uid})' : 'null'}');
+      print(
+        'AuthService.signUp returned: ${user != null ? 'UserModel (UID: ${user.uid})' : 'null'}',
+      );
       if (user != null) {
         _user = user;
         _status = AuthStatus.authenticated;
@@ -155,17 +297,17 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> signIn({
-    required String email,
-    required String password,
-  }) async {
+  Future<bool> signIn({required String email, required String password}) async {
     print('Starting signIn for email: $email');
-    if (email.isEmpty || !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
-      _setError('Please enter a valid email address.');
+
+    // Enhanced email validation
+    if (!_isValidEmail(email)) {
+      _setError('Please enter a valid email address with @ symbol');
       return false;
     }
+
     if (password.isEmpty) {
-      _setError('Please enter a password.');
+      _setError('Please enter a password');
       return false;
     }
 
@@ -177,14 +319,18 @@ class AuthProvider with ChangeNotifier {
         email: email.trim(),
         password: password,
       );
-      print('AuthService.signIn returned: ${user != null ? 'UserModel (UID: ${user.uid})' : 'null'}');
+      print(
+        'AuthService.signIn returned: ${user != null ? 'UserModel (UID: ${user.uid})' : 'null'}',
+      );
       if (user != null && user.uid.isNotEmpty) {
         _user = user;
         _status = AuthStatus.authenticated;
         // Double-check with currentUser
         User? firebaseUser = _authService.currentUser;
         if (firebaseUser != null && user.uid != firebaseUser.uid) {
-          print('Mismatch in UIDs, updating from Firebase: ${firebaseUser.uid}');
+          print(
+            'Mismatch in UIDs, updating from Firebase: ${firebaseUser.uid}',
+          );
           _user = UserModel(
             uid: firebaseUser.uid,
             email: firebaseUser.email ?? email,
@@ -193,7 +339,10 @@ class AuthProvider with ChangeNotifier {
             createdAt: DateTime.now(),
             lastLoginAt: DateTime.now(),
           );
-          await _databaseService.updateUserData(firebaseUser.uid, _user!.toMap());
+          await _databaseService.updateUserData(
+            firebaseUser.uid,
+            _user!.toMap(),
+          );
         }
         Fluttertoast.showToast(
           msg: "Welcome back!",
@@ -221,7 +370,10 @@ class AuthProvider with ChangeNotifier {
       await _authService.signOut();
       _user = null;
       _status = AuthStatus.unauthenticated;
-      Fluttertoast.showToast(msg: "Signed out.", toastLength: Toast.LENGTH_SHORT);
+      Fluttertoast.showToast(
+        msg: "Signed out.",
+        toastLength: Toast.LENGTH_SHORT,
+      );
       print('Sign out successful');
     } catch (e, stackTrace) {
       print('Error during sign out: $e\n$stackTrace');
@@ -233,8 +385,10 @@ class AuthProvider with ChangeNotifier {
 
   Future<bool> resetPassword({required String email}) async {
     print('Starting password reset for email: $email');
-    if (email.isEmpty || !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
-      _setError('Please enter a valid email address.');
+
+    // Enhanced email validation
+    if (!_isValidEmail(email)) {
+      _setError('Please enter a valid email address with @ symbol');
       return false;
     }
 
@@ -282,7 +436,9 @@ class AuthProvider with ChangeNotifier {
       await _authService.reloadUser();
       print('User reloaded successfully');
       if (_authService.currentUser != null) {
-        _user = await _databaseService.getUserData(_authService.currentUser!.uid);
+        _user = await _databaseService.getUserData(
+          _authService.currentUser!.uid,
+        );
         notifyListeners();
       }
     } catch (e, stackTrace) {
