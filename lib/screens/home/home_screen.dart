@@ -1028,14 +1028,17 @@ class EventCard extends StatelessWidget {
   Future<String> getUserNameFromUid(String uid) async {
   try {
     final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-    if (doc.exists) {
-      return doc.data()?['name'] ?? 'Unknown';
+    if (doc.exists && doc.data()!.containsKey('name')) {
+      return doc['name'];
+    } else {
+      return 'Unknown';
     }
   } catch (e) {
-    print("Error fetching user name: $e");
+    print('Error fetching user name: $e');
+    return 'Unknown';
   }
-  return 'Unknown';
 }
+
 
 
   DateTime parseEventDate(String input) {
@@ -1289,6 +1292,22 @@ class EventCard extends StatelessWidget {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 8),
+
+                      // FutureBuilder<String>(
+                      //     future: getUserNameFromUid(event.createdByUid),
+                      //     builder: (context, snapshot) {
+                      //       if (snapshot.connectionState == ConnectionState.waiting) {
+                      //         return const Text('Loading organizer...');
+                      //       }
+                      //       // if (snapshot.hasError || !snapshot.hasData || snapshot.data == 'Unknown') {
+                      //       //   return const Text('Organized by Unknown');
+                      //       // }
+                      //       return Text('Organized by ${snapshot.data}',
+                      //           style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500));
+                      //     },
+                      //   ),
+
                     
                     const SizedBox(height: 4),
                     Row(

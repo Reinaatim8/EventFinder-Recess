@@ -964,6 +964,9 @@ class _AddEventDialogState extends State<AddEventDialog> {
           category: _selectedCategory,
           imageUrl: imageUrl,
           organizerId: organizerId,
+          
+          
+          
           price: double.tryParse(_priceController.text) ?? 0.0,
           maxslots: int.tryParse(_maxslotsController.text) ?? 0,
           verificationDocumentUrl: verificationDocumentUrl,
