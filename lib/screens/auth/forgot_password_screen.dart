@@ -58,7 +58,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         height: double.infinity,
         decoration: const BoxDecoration(
           image: DecorationImage(
-            image: AssetImage('assets/images/background3.jpg'),
+            image: AssetImage('assets/images/orange.jpeg'),
             fit: BoxFit.cover,
           ),
         ),
@@ -102,7 +102,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                               Icon(
                                 Icons.lock_reset_outlined,
                                 size: 64,
-                                color: Theme.of(context).primaryColor,
+                                color: Colors.orange,
                               ),
                               const SizedBox(height: 16),
                               Text(
@@ -146,6 +146,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                       text: "Send Reset Link",
                                       onPressed: _handleResetPassword,
                                       isLoading: authProvider.isLoading,
+                                      backgroundColor: Color.fromARGB(255, 25, 25, 95),
                                     ),
                                     const SizedBox(height: 24),
                                     Row(
@@ -166,7 +167,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                             "Sign In",
                                             style: TextStyle(
                                               fontWeight: FontWeight.w600,
-                                              color: Theme.of(context).primaryColor,
+                                              color: Colors.orange,
                                               fontSize: 14,
                                             ),
                                           ),

@@ -146,6 +146,7 @@ class _HomeScreenState extends State<HomeScreen> {
         'userId': userId,
         'eventId': eventId,
         'event': event.title,
+        
         'price': event.price,
         'paid': event.price == '0' || event.price == '0.0' || event.price == '0.00' ? true : false,
         'ticketId': const Uuid().v4(),
