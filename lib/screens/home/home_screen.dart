@@ -1710,8 +1710,8 @@ class _SearchTabState extends State<SearchTab> {
         toolbarHeight: 90,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.only(
-            bottomLeft: Radius.circular(30),
-            bottomRight: Radius.circular(30),
+            bottomLeft: Radius.circular(0),
+            bottomRight: Radius.circular(0),
           ),
         ),
         title: Column(

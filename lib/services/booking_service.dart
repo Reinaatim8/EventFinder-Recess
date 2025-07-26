@@ -139,4 +139,6 @@ class BookingService {
       'paidBookings': paidBookings,
     };
   }
+
+  Future getPaidBookingsForEvent(String id) async {}
 }
