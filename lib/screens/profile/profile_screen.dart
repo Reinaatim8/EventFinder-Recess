@@ -1090,7 +1090,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                             onPressed: () {
                               Navigator.pop(context);
-                              _showToast('Opening email client...', Colors.blue);
+                              _showToast('Email us on eventfindersupport@gmail.com', Colors.blue);
                             },
                           ),
                         ),
