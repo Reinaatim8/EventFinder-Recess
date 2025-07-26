@@ -157,13 +157,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   subtitle: 'Change password and security settings',
                   onTap: () => _showSecuritySettings(context, authProvider),
                 ),
-                _buildProfileOption(
-                  context,
-                  icon: Icons.history,
-                  title: 'Event History',
-                  subtitle: 'View your booked events',
-                  onTap: () => _showEventHistory(context, authProvider.user!.uid),
-                ),
+                // _buildProfileOption(
+                //   context,
+                //   icon: Icons.history,
+                //   title: 'Event History',
+                //   subtitle: 'View your booked events',
+                //   onTap: () => _showEventHistory(context, authProvider.user!.uid),
+                // ),
                 _buildProfileOption(
                   context,
                   icon: Icons.help,
@@ -779,7 +779,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       obscureText: _obscureNewPassword,
                       decoration: InputDecoration(
                         labelText: 'New Password',
-                        border: const OutlineInputBorder(),
+                        border: const OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(12)),
+                        ),
+                        fillColor: Colors.white,
+                        filled: true,
                         suffixIcon: IconButton(
                           icon: Icon(
                             _obscureNewPassword
@@ -801,7 +805,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       obscureText: _obscureConfirmPassword,
                       decoration: InputDecoration(
                         labelText: 'Confirm New Password',
-                        border: const OutlineInputBorder(),
+                        border: const OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(12)),
+                        ),
+                        fillColor: Colors.white,
+                        filled: true,
                         suffixIcon: IconButton(
                           icon: Icon(
                             _obscureConfirmPassword
