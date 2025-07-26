@@ -756,8 +756,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       controller: currentPasswordController,
                       obscureText: _obscureCurrentPassword,
                       decoration: InputDecoration(
+                        
                         labelText: 'Current Password',
-                        border: const OutlineInputBorder(),
+                        border: const OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.white),
+                          borderRadius: BorderRadius.all(Radius.circular(12)),
+                        ),
+                        fillColor: Colors.white,
+                        filled: true,
                         suffixIcon: IconButton(
                           icon: Icon(
                             _obscureCurrentPassword
@@ -778,8 +784,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       controller: newPasswordController,
                       obscureText: _obscureNewPassword,
                       decoration: InputDecoration(
+                        
                         labelText: 'New Password',
                         border: const OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.white),
                           borderRadius: BorderRadius.all(Radius.circular(12)),
                         ),
                         fillColor: Colors.white,
@@ -804,8 +812,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       controller: confirmPasswordController,
                       obscureText: _obscureConfirmPassword,
                       decoration: InputDecoration(
+                        
                         labelText: 'Confirm New Password',
                         border: const OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.white),
                           borderRadius: BorderRadius.all(Radius.circular(12)),
                         ),
                         fillColor: Colors.white,
