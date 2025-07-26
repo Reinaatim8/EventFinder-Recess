@@ -1106,7 +1106,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                             onPressed: () {
                               Navigator.pop(context);
-                              _showToast('Calling support...', Colors.blue);
+                              _showToast('Contact Us on +256123476780', Colors.blue);
                             },
                           ),
                         ),
