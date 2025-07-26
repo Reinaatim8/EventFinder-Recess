@@ -1066,15 +1066,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    const Text(
-                      "Need assistance? Here's how you can get help:\n\n"
-                      "• For booking issues, check your event page\n"
-                      "• For payment concerns, email us at: support@eventfinder.com\n"
-                      "• For general inquiries, visit our website\n"
-                      "• Call our 24/7 helpline: +1-800-EVENT-HELP\n\n"
-                      "We're here to help!",
+                    RichText(
                       textAlign: TextAlign.left,
-                      style: TextStyle(fontSize: 15, color: Colors.black87),
+                      text: TextSpan(
+                        style: TextStyle(fontSize: 15, color: Colors.black87),
+                        children: [
+                          TextSpan(text: "Need assistance? Here's how you can get help:\n\n"),
+                          TextSpan(text: "• For booking issues, check your event page\n"),
+                          TextSpan(text: "• For payment concerns, email us at: eventfindersupport@gmail.com\n"),
+                          TextSpan(text: "• For general inquiries, visit our website on "),
+                          TextSpan(
+                            text: "www.eventfinder.com", // your actual website
+                            style: TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
+                            recognizer: TapGestureRecognizer()
+                              ..onTap = () {
+                                launchUrl(Uri.parse("https://www.eventfinder.com"));
+                              },
+                          ),
+                          TextSpan(text: "\n• Call our 24/7 helpline: +256123476780\n\nWe're here to help!"),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 30),
                     Row(
