@@ -882,8 +882,21 @@ class _EventManagementScreenState extends State<EventManagementScreen> {
                 child: FutureBuilder<Map<String, dynamic>>(
                   future: _getOverallStats(),
                   builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
+                    if (snapshot.connectionState == ConnectionState.waiting){
+                    return Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: const [
+                     
+                      CircularProgressIndicator(),
+                      SizedBox(height: 16),
+                        Text(
+                          "Hold on as we calculate your Total Revenue...",
+                          style: TextStyle(fontSize: 14, color: Colors.black54),
+                          textAlign: TextAlign.center,
+                        ),
+                          ],
+                       );
+
                     }
                     if (snapshot.hasError) {
                       return _buildSummaryCard(
