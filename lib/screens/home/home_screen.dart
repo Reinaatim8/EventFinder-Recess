@@ -1287,7 +1287,7 @@ class EventCard extends StatelessWidget {
                           event.date,
                           style: TextStyle(
                             color: Colors.grey[600],
-                            fontSize: 14,
+                            fontSize: 14 ,
                           ),
                         ),
                       ],
