@@ -1,6 +1,14 @@
 {
   "dart.flutterSdkPath": "/Users/reinamichal/Desktop/FlutterApplication/flutter",
   "files.exclude": {
-    "**/build": false
+    "**/.dart_tool": true,
+    "**/.idea": true,
+    "**/.vscode": false,
+    "**/.packages": true,
+    "**/build": false,
+    "**/ios": false,
+    "**/android": false
   }
 }
+
+
