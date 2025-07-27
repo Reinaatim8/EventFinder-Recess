@@ -1307,7 +1307,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             recognizer: TapGestureRecognizer()
                               ..onTap = () {
                                 launchUrl(
-                                    Uri.parse("https://www.eventfinder.com"));
+                                    Uri.parse("https://lolesterrr.github.io/EventFinder.github.io/"));
                               },
                           ),
                           TextSpan(text: "\n\nWe're here to help!"),
@@ -1411,7 +1411,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const Text(
                   "Event Finder is your go-to app for discovering, booking, and managing events with ease.\n\n"
                   "Built with Flutter & Firebase\nVersion 1.0.0\n\n"
-                  "© 2024 Event Finder. All rights reserved.",
+                  "© 2025 Event Finder. All rights reserved.",
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 15, color: Colors.black87),
                 ),
