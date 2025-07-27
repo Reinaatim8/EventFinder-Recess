@@ -11,11 +11,12 @@ import '../../models/user_model.dart';
 import '../../models/booking.dart';
 import '../../models/event.dart';
 import '../../services/booking_service.dart';
-import '../home/event_management_screen.dart'; // Correct import path
+import '../home/event_management_screen.dart';
 import 'package:flutter/gestures.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-
+// Add import for LoginScreen (adjust path based on your project structure)
+import '../auth/login_screen.dart'; // Replace with correct path to LoginScreen
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -59,6 +60,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
       } catch (e) {
         print('Error loading notification preferences: $e');
+        _showToast('Failed to load notification settings', Colors.red);
       }
     }
   }
@@ -78,6 +80,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
       } catch (e) {
         print('Error loading profile image URL: $e');
+        _showToast('Failed to load profile image', Colors.red);
       }
     }
   }
@@ -157,13 +160,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   subtitle: 'Change password and security settings',
                   onTap: () => _showSecuritySettings(context, authProvider),
                 ),
-                // _buildProfileOption(
-                //   context,
-                //   icon: Icons.history,
-                //   title: 'Event History',
-                //   subtitle: 'View your booked events',
-                //   onTap: () => _showEventHistory(context, authProvider.user!.uid),
-                // ),
                 _buildProfileOption(
                   context,
                   icon: Icons.help,
@@ -276,7 +272,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Icon(Icons.verified, color: Colors.green, size: 16),
                 const SizedBox(width: 4),
                 Text(
-                  user?.emailVerified ?? false ? 'Verified Account' : 'Unverified Account',
+                  user?.emailVerified ?? false
+                      ? 'Verified Account'
+                      : 'Unverified Account',
                   style: TextStyle(
                     color: Colors.green,
                     fontSize: 12,
@@ -347,7 +345,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: ElevatedButton(
         onPressed: authProvider.isLoading
             ? null
-            : () => _showSignOutDialog(authProvider),
+            : () => _handleSignOut(authProvider), // Direct sign-out
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.red.shade400,
           foregroundColor: Colors.white,
@@ -460,7 +458,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           final storageRef = FirebaseStorage.instance
               .ref()
               .child('profile_pictures')
-              .child('${authProvider.user!.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg');
+              .child(
+                  '${authProvider.user!.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg');
 
           await storageRef.putFile(_profileImage!);
           final imageUrl = await storageRef.getDownloadURL();
@@ -486,9 +485,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showEditProfileDialog(BuildContext context, AuthProvider authProvider) {
-    final nameController = TextEditingController(text: authProvider.user?.name ?? '');
-    final emailController = TextEditingController(text: authProvider.user?.email ?? '');
-    final phoneController = TextEditingController(text: authProvider.user?.phoneNumber ?? '');
+    final nameController =
+        TextEditingController(text: authProvider.user?.name ?? '');
+    final emailController =
+        TextEditingController(text: authProvider.user?.email ?? '');
+    final phoneController =
+        TextEditingController(text: authProvider.user?.phoneNumber ?? '');
 
     showDialog(
       context: context,
@@ -548,7 +550,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 if (success) {
                   _showToast('Profile updated successfully!', Colors.green);
                 } else {
-                  _showToast(authProvider.errorMessage ?? 'Failed to update profile', Colors.red);
+                  _showToast(
+                      authProvider.errorMessage ?? 'Failed to update profile',
+                      Colors.red);
                 }
               },
               child: const Text('Save'),
@@ -601,7 +605,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             children: [
                               SwitchListTile(
                                 title: const Text('Push Notifications'),
-                                subtitle: const Text('Receive notifications on your device'),
+                                subtitle:
+                                    const Text('Receive notifications on your device'),
                                 value: _pushNotifications,
                                 onChanged: (value) {
                                   setModalState(() {
@@ -614,7 +619,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                               SwitchListTile(
                                 title: const Text('Email Notifications'),
-                                subtitle: const Text('Receive notifications via email'),
+                                subtitle:
+                                    const Text('Receive notifications via email'),
                                 value: _emailNotifications,
                                 onChanged: (value) {
                                   setModalState(() {
@@ -627,7 +633,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                               SwitchListTile(
                                 title: const Text('Event Reminders'),
-                                subtitle: const Text('Get reminded about Payment/Reservation of events'),
+                                subtitle: const Text(
+                                    'Get reminded about Payment/Reservation of events'),
                                 value: _notificationsEnabled,
                                 onChanged: (value) {
                                   setModalState(() {
@@ -645,12 +652,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   onPressed: () async {
                                     await _saveNotificationPreferences();
                                     Navigator.pop(context);
-                                    _showToast('Notification settings saved!', Colors.green);
+                                    _showToast('Notification settings saved!',
+                                        Colors.green);
                                   },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.orange,
                                     foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    padding:
+                                        const EdgeInsets.symmetric(vertical: 12),
                                   ),
                                   child: const Text('Save Settings'),
                                 ),
@@ -723,7 +732,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 trailing: const Icon(Icons.arrow_forward_ios),
                 onTap: () {
                   Navigator.pop(context);
-                  _showToast('Device management Feature coming soon!', Colors.blue);
+                  _showManageDevices(context, authProvider);
                 },
               ),
             ],
@@ -756,7 +765,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       controller: currentPasswordController,
                       obscureText: _obscureCurrentPassword,
                       decoration: InputDecoration(
-                        
                         labelText: 'Current Password',
                         border: const OutlineInputBorder(
                           borderSide: BorderSide(color: Colors.white),
@@ -784,7 +792,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       controller: newPasswordController,
                       obscureText: _obscureNewPassword,
                       decoration: InputDecoration(
-                        
                         labelText: 'New Password',
                         border: const OutlineInputBorder(
                           borderSide: BorderSide(color: Colors.white),
@@ -812,7 +819,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       controller: confirmPasswordController,
                       obscureText: _obscureConfirmPassword,
                       decoration: InputDecoration(
-                        
                         labelText: 'Confirm New Password',
                         border: const OutlineInputBorder(
                           borderSide: BorderSide(color: Colors.white),
@@ -845,7 +851,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 ElevatedButton(
                   onPressed: () async {
-                    if (newPasswordController.text != confirmPasswordController.text) {
+                    if (newPasswordController.text !=
+                        confirmPasswordController.text) {
                       _showToast('Passwords do not match!', Colors.red);
                       return;
                     }
@@ -857,12 +864,165 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     if (success) {
                       _showToast('Password changed successfully!', Colors.green);
                     } else {
-                      _showToast(authProvider.errorMessage ?? 'Failed to change password', Colors.red);
+                      _showToast(
+                          authProvider.errorMessage ?? 'Failed to change password',
+                          Colors.red);
                     }
                   },
                   child: const Text('Change Password'),
                 ),
               ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showManageDevices(BuildContext context, AuthProvider authProvider) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      isScrollControlled: true,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          minChildSize: 0.5,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (context, scrollController) {
+            return StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(authProvider.user!.uid)
+                  .collection('devices')
+                  .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+                final devices = snapshot.data?.docs ?? [];
+                if (devices.isEmpty) {
+                  return const Center(child: Text('No devices found'));
+                }
+                return Container(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Manage Devices',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 20),
+                      Expanded(
+                        child: ListView.builder(
+                          controller: scrollController,
+                          itemCount: devices.length,
+                          itemBuilder: (context, index) {
+                            final device =
+                                devices[index].data() as Map<String, dynamic>;
+                            final deviceId = device['deviceId'] ?? 'Unknown';
+                            final deviceName =
+                                device['deviceName'] ?? 'Unknown Device';
+                            final lastLogin =
+                                (device['lastLogin'] as Timestamp?)?.toDate();
+                            final formattedLastLogin = lastLogin != null
+                                ? DateFormat('dd/MM/yyyy HH:mm').format(lastLogin)
+                                : 'Unknown';
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              child: ListTile(
+                                leading: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(
+                                    Icons.devices,
+                                    color: Colors.orange,
+                                  ),
+                                ),
+                                title: Text(deviceName),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Device ID: $deviceId'),
+                                    Text('Last Login: $formattedLastLogin'),
+                                  ],
+                                ),
+                                trailing: ElevatedButton(
+                                  onPressed: () async {
+                                    bool? confirm = await showDialog(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: const Text('Sign Out Device'),
+                                        content: Text(
+                                            'Are you sure you want to sign out from $deviceName?'),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(context, false),
+                                            child: const Text('Cancel'),
+                                          ),
+                                          ElevatedButton(
+                                            onPressed: () =>
+                                                Navigator.pop(context, true),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: Colors.red,
+                                              foregroundColor: Colors.white,
+                                            ),
+                                            child: const Text('Sign Out'),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                    if (confirm == true) {
+                                      try {
+                                        await FirebaseFirestore.instance
+                                            .collection('users')
+                                            .doc(authProvider.user!.uid)
+                                            .collection('devices')
+                                            .doc(deviceId)
+                                            .delete();
+                                        _showToast(
+                                            'Device signed out successfully',
+                                            Colors.green);
+                                      } catch (e) {
+                                        _showToast(
+                                            'Failed to sign out device', Colors.red);
+                                      }
+                                    }
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.red.shade400,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                  child: const Text('Sign Out'),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
             );
           },
         );
@@ -939,21 +1099,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     subtitle: Text('${eventSnapshot.error}'),
                                   );
                                 }
-                                if (!eventSnapshot.hasData || !eventSnapshot.data!.exists) {
+                                if (!eventSnapshot.hasData ||
+                                    !eventSnapshot.data!.exists) {
                                   return const ListTile(
                                     title: Text('Event not found'),
-                                    subtitle: Text('This event may have been deleted'),
+                                    subtitle:
+                                        Text('This event may have been deleted'),
                                   );
                                 }
-                                final event = Event.fromFirestore(eventSnapshot.data!);
+                                final event =
+                                    Event.fromFirestore(eventSnapshot.data!);
                                 String formattedDate = 'Unknown';
                                 if (booking.bookingDate != null) {
                                   if (booking.bookingDate is Timestamp) {
                                     formattedDate = DateFormat('dd/MM/yyyy HH:mm')
-                                        .format((booking.bookingDate as Timestamp).toDate());
+                                        .format(
+                                            (booking.bookingDate as Timestamp)
+                                                .toDate());
                                   } else if (booking.bookingDate is DateTime) {
                                     formattedDate = DateFormat('dd/MM/yyyy HH:mm')
-                                        .format(booking.bookingDate as DateTime);
+                                        .format(
+                                            booking.bookingDate as DateTime);
                                   }
                                 }
                                 return Card(
@@ -977,12 +1143,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         Text('Date: ${event.date}'),
                                         Text('Location: ${event.location}'),
                                         Text('Booked: $formattedDate'),
-                                        Text('Paid: ${booking.paid ? "Yes" : "No"}'),
-                                        Text('Amount: UGX ${booking.total.toStringAsFixed(2)}'),
+                                        Text(
+                                            'Paid: ${booking.paid ? "Yes" : "No"}'),
+                                        Text(
+                                            'Amount: UGX ${booking.total.toStringAsFixed(2)}'),
                                       ],
                                     ),
                                     trailing: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 8, vertical: 4),
                                       decoration: BoxDecoration(
                                         color: booking.paid
                                             ? Colors.green.withOpacity(0.1)
@@ -992,7 +1161,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       child: Text(
                                         booking.paid ? 'Paid' : 'Pending',
                                         style: TextStyle(
-                                          color: booking.paid ? Colors.green : Colors.red,
+                                          color: booking.paid
+                                              ? Colors.green
+                                              : Colors.red,
                                           fontSize: 12,
                                         ),
                                       ),
@@ -1001,7 +1172,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (context) => EventDetailsScreen(event: event),
+                                          builder: (context) =>
+                                              EventDetailsScreen(event: event),
                                         ),
                                       );
                                     },
@@ -1077,7 +1249,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    const Icon(Icons.help_outline, size: 50, color: Colors.deepPurple),
+                    const Icon(Icons.help_outline,
+                        size: 50, color: Colors.deepPurple),
                     const SizedBox(height: 12),
                     const Text(
                       "Help & Support",
@@ -1093,19 +1266,51 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       text: TextSpan(
                         style: TextStyle(fontSize: 15, color: Colors.black87),
                         children: [
-                          TextSpan(text: "Need assistance? Here's how you can get help:\n\n"),
-                          TextSpan(text: "• For booking issues, check your event page\n"),
-                          TextSpan(text: "• For payment concerns, email us at: eventfindersupport@gmail.com\n"),
-                          TextSpan(text: "• For general inquiries, visit our website on "),
                           TextSpan(
-                            text: "www.eventfinder.com", // your actual website
-                            style: TextStyle(color: Colors.blue, decoration: TextDecoration.underline),
+                              text:
+                                  "Need assistance? Here's how you can get help:\n\n"),
+                          TextSpan(
+                              text: "• For booking issues, check your event page\n"),
+                          TextSpan(
+                            text: "• For payment concerns, email us at: ",
+                          ),
+                          TextSpan(
+                            text: "kennedymutebi7@gmail.com",
+                            style: TextStyle(
+                                color: Colors.blue,
+                                decoration: TextDecoration.underline),
                             recognizer: TapGestureRecognizer()
                               ..onTap = () {
-                                launchUrl(Uri.parse("https://www.eventfinder.com"));
+                                launchUrl(
+                                    Uri.parse("mailto:kennedymutebi7@gmail.com"));
                               },
                           ),
-                          TextSpan(text: "\n• Call our 24/7 helpline: +256123476780\n\nWe're here to help!"),
+                          TextSpan(
+                              text:
+                                  "\n• For general inquiries, call our 24/7 helpline: "),
+                          TextSpan(
+                            text: "+256752682559",
+                            style: TextStyle(
+                                color: Colors.blue,
+                                decoration: TextDecoration.underline),
+                            recognizer: TapGestureRecognizer()
+                              ..onTap = () {
+                                launchUrl(Uri.parse("tel:+256752682559"));
+                              },
+                          ),
+                          TextSpan(text: "\n• Visit our website at "),
+                          TextSpan(
+                            text: "www.eventfinder.com",
+                            style: TextStyle(
+                                color: Colors.blue,
+                                decoration: TextDecoration.underline),
+                            recognizer: TapGestureRecognizer()
+                              ..onTap = () {
+                                launchUrl(
+                                    Uri.parse("https://www.eventfinder.com"));
+                              },
+                          ),
+                          TextSpan(text: "\n\nWe're here to help!"),
                         ],
                       ),
                     ),
@@ -1123,7 +1328,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                             onPressed: () {
                               Navigator.pop(context);
-                              _showToast('Email us on eventfindersupport@gmail.com', Colors.blue);
+                              launchUrl(Uri.parse("mailto:kennedymutebi7@gmail.com"));
+                              _showToast('Opening email client', Colors.blue);
                             },
                           ),
                         ),
@@ -1139,7 +1345,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                             onPressed: () {
                               Navigator.pop(context);
-                              _showToast('Contact Us on +256123476780', Colors.blue);
+                              launchUrl(Uri.parse("tel:+256752682559"));
+                              _showToast('Opening phone dialer', Colors.blue);
                             },
                           ),
                         ),
@@ -1154,7 +1361,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           backgroundColor: Colors.grey[300],
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
-                        child: const Text("Close", style: TextStyle(color: Colors.black)),
+                        child: const Text("Close",
+                            style: TextStyle(color: Colors.black)),
                       ),
                     ),
                   ],
@@ -1212,11 +1420,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     TextButton(
-                      onPressed: () => _showToast('Privacy Policy opened', Colors.blue),
+                      onPressed: () =>
+                          _showToast('Privacy Policy opened', Colors.blue),
                       child: const Text('Privacy Policy'),
                     ),
                     TextButton(
-                      onPressed: () => _showToast('Terms of Service opened', Colors.blue),
+                      onPressed: () =>
+                          _showToast('Terms of Service opened', Colors.blue),
                       child: const Text('Terms of Service'),
                     ),
                   ],
@@ -1242,35 +1452,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _showSignOutDialog(AuthProvider authProvider) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Sign Out'),
-          content: const Text('Are you sure you want to sign out?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                Navigator.pop(context);
-                await authProvider.signOut();
-                _showToast('Successfully logged out! Sign in again to continue.', Colors.green);
-                Navigator.of(context).pushNamedAndRemoveUntil('_handleLogin', (route) => false);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Sign Out'),
-            ),
-          ],
-        );
-      },
-    );
+  // New method for direct sign-out
+  Future<void> _handleSignOut(AuthProvider authProvider) async {
+    try {
+      await authProvider.signOut();
+      // Navigate to LoginScreen, clearing the navigation stack
+      // Option 1: Using widget navigation
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        (route) => false,
+      );
+      // Option 2: Using named route (uncomment if preferred)
+      // Navigator.of(context).pushNamedAndRemoveUntil('_handleLogin', (route) => false);
+    } catch (e) {
+      print('Error signing out: $e');
+    }
   }
 
   void _showToast(String message, Color backgroundColor) {

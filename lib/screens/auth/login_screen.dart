@@ -7,6 +7,7 @@ import '../../widgets/common/auth/auth_form_container.dart';
 import '../../widgets/common/custom_buttom.dart';
 import 'register_screen.dart';
 import 'forgot_password_screen.dart';
+import '../home/home_screen.dart'; // Add import for HomeScreen (adjust path)
 
 class CustomTextField extends StatelessWidget {
   final String label;
@@ -40,7 +41,7 @@ class CustomTextField extends StatelessWidget {
           style: const TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 17,
-            color: const Color.fromARGB(255, 25, 25, 95),
+            color: Color.fromARGB(255, 25, 25, 95),
           ),
         ),
         const SizedBox(height: 8),
@@ -91,7 +92,24 @@ class _LoginScreenState extends State<LoginScreen> {
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
-      if (!success && mounted) {
+      if (success && mounted) {
+        // Optional: Show welcome toast (uncomment if desired)
+        // Fluttertoast.showToast(
+        //   msg: "Welcome back!",
+        //   toastLength: Toast.LENGTH_SHORT,
+        //   gravity: ToastGravity.TOP,
+        //   backgroundColor: Colors.green,
+        //   textColor: Colors.white,
+        //   fontSize: 18.0,
+        // );
+        // Navigate to HomeScreen, clearing the stack
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+          (route) => false,
+        );
+        // Alternative: Use named route (uncomment if preferred)
+        // Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
+      } else if (!success && mounted) {
         Fluttertoast.showToast(
           msg: "Login failed. Please check your credentials.",
           toastLength: Toast.LENGTH_LONG,
@@ -128,7 +146,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   const SizedBox(height: 60),
                   const Text(
-                    " Welcome Back!",
+                    "Welcome Back!",
                     style: TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
@@ -145,12 +163,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: const Color.fromARGB(
-                        179,
-                        249,
-                        248,
-                        248,
-                      ).withOpacity(0.95),
+                      color: const Color.fromARGB(179, 249, 248, 248).withOpacity(0.95),
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
@@ -171,7 +184,6 @@ class _LoginScreenState extends State<LoginScreen> {
                               CustomTextField(
                                 label: "Email",
                                 hint: "Enter your email",
-
                                 controller: _emailController,
                                 keyboardType: TextInputType.emailAddress,
                                 validator: Validators.validateEmail,
@@ -194,9 +206,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 validator: Validators.validatePassword,
                                 prefixIcon: IconButton(
                                   icon: Icon(
-                                    _obscurePassword
-                                        ? Icons.lock_outline
-                                        : Icons.lock_open,
+                                    _obscurePassword ? Icons.lock_outline : Icons.lock_open,
                                     color: Colors.orange,
                                   ),
                                   onPressed: () {
@@ -214,8 +224,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (context) =>
-                                            const ForgotPasswordScreen(),
+                                        builder: (context) => const ForgotPasswordScreen(),
                                       ),
                                     );
                                   },
@@ -225,12 +234,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                       color: Color.fromARGB(255, 25, 25, 95),
                                       decoration: TextDecoration.underline,
                                       fontSize: 18,
-                                      decorationColor: Color.fromARGB(
-                                        255,
-                                        25,
-                                        25,
-                                        95,
-                                      ),
+                                      decorationColor: Color.fromARGB(255, 25, 25, 95),
                                     ),
                                   ),
                                 ),
@@ -240,12 +244,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 text: "Sign In",
                                 onPressed: () => _handleLogin(context),
                                 isLoading: authProvider.isLoading,
-                                backgroundColor: const Color.fromARGB(
-                                  255,
-                                  25,
-                                  25,
-                                  95,
-                                ),
+                                backgroundColor: const Color.fromARGB(255, 25, 25, 95),
                                 textColor: Colors.orange,
                               ),
                               const SizedBox(height: 24),
@@ -263,8 +262,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (context) =>
-                                              const RegisterScreen(),
+                                          builder: (context) => const RegisterScreen(),
                                         ),
                                       );
                                     },
@@ -275,12 +273,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                         color: Color.fromARGB(255, 25, 25, 95),
                                         fontSize: 20,
                                         decoration: TextDecoration.underline,
-                                        decorationColor: Color.fromARGB(
-                                          255,
-                                          25,
-                                          25,
-                                          95,
-                                        ),
+                                        decorationColor: Color.fromARGB(255, 25, 25, 95),
                                       ),
                                     ),
                                   ),
