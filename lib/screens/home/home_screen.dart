@@ -2060,15 +2060,15 @@ class _BookingsTabState extends State<BookingsTab> {
         fontSize: 16.0,
       );
     } catch (e) {
-      print('Error cancelling booking: $e');
-      Fluttertoast.showToast(
-        msg: 'Error cancelling booking: $e',
-        toastLength: Toast.LENGTH_LONG,
-        gravity: ToastGravity.CENTER,
-        backgroundColor: Colors.red,
-        textColor: Colors.white,
-        fontSize: 16.0,
-      );
+      // print('Error cancelling booking: $e');
+      // Fluttertoast.showToast(
+      //   msg: 'Error cancelling booking: $e',
+      //   toastLength: Toast.LENGTH_LONG,
+      //   gravity: ToastGravity.CENTER,
+      //   backgroundColor: Colors.red,
+      //   textColor: Colors.white,
+      //   fontSize: 16.0,
+      // );
     }
   }
   
@@ -2157,10 +2157,11 @@ class _BookingsTabState extends State<BookingsTab> {
                               ),
                           ],
                         ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () => _cancelBooking(booking['eventId'], booking['event']),
-                        ),
+                      trailing: const Icon(
+                        Icons.history,
+                        color: Colors.red, 
+                      ),
+                                            
                       ),
                     );
                   },

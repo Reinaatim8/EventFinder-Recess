@@ -340,46 +340,81 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildSignOutButton(AuthProvider authProvider) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: authProvider.isLoading
-            ? null
-            : () => _handleSignOut(authProvider), // Direct sign-out
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.red.shade400,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        child: authProvider.isLoading
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              )
-            : Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(Icons.logout, size: 20),
-                  SizedBox(width: 8),
-                  Text(
-                    'Sign Out',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+  return SizedBox(
+    width: double.infinity,
+    child: ElevatedButton(
+      onPressed: authProvider.isLoading
+          ? null
+          : () async {
+              final shouldSignOut = await showDialog<bool>(
+                context: context, 
+                builder: (context) => AlertDialog(
+                  title: const Text('Confirm Your Sign Out', style: TextStyle(
+                    
+                    fontWeight: FontWeight.bold,
+                  )),
+                  content: const Text('Are you sure you want to sign out?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      style: TextButton.styleFrom(
+                          backgroundColor: const Color.fromARGB(255, 25, 25, 95), // Proper background color
+                          foregroundColor: Colors.white, // Text color
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        ),
+                      child: const Text('No'),
                     ),
-                  ),
-                ],
-              ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      style: TextButton.styleFrom(
+                          backgroundColor: Colors.red, // Proper background color
+                          foregroundColor: Colors.white, // Text color
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        ),
+                      child: const Text('Yes',),
+                    ),
+                  ],
+                ),
+              );
+
+              if (shouldSignOut == true) {
+                _handleSignOut(authProvider);
+              }
+            },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.red.shade400,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
       ),
-    );
-  }
+      child: authProvider.isLoading
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            )
+          : Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Icon(Icons.logout, size: 20),
+                SizedBox(width: 8),
+                Text(
+                  'Sign Out',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+    ),
+  );
+}
 
   Future<void> _pickImage() async {
     showModalBottomSheet(
@@ -1456,14 +1491,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _handleSignOut(AuthProvider authProvider) async {
     try {
       await authProvider.signOut();
+      Fluttertoast.showToast(
+          msg: 'Signed out successfully',
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.TOP,
+          backgroundColor: Colors.green,
+          textColor: Colors.white,
+          fontSize: 16.0,
+        );
       // Navigate to LoginScreen, clearing the navigation stack
       // Option 1: Using widget navigation
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => const LoginScreen()),
         (route) => false,
+        
       );
-      // Option 2: Using named route (uncomment if preferred)
-      // Navigator.of(context).pushNamedAndRemoveUntil('_handleLogin', (route) => false);
+      
     } catch (e) {
       print('Error signing out: $e');
     }
