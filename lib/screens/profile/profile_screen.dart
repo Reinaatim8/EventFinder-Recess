@@ -1275,14 +1275,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             text: "• For payment concerns, email us at: ",
                           ),
                           TextSpan(
-                            text: "kennedymutebi7@gmail.com",
+                            text: "makerereaits@gmail.com",
                             style: TextStyle(
                                 color: Colors.blue,
                                 decoration: TextDecoration.underline),
                             recognizer: TapGestureRecognizer()
                               ..onTap = () {
                                 launchUrl(
-                                    Uri.parse("mailto:kennedymutebi7@gmail.com"));
+                                    Uri.parse("mailto:makerereaits@gmail.com"));
                               },
                           ),
                           TextSpan(
@@ -1300,7 +1300,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           TextSpan(text: "\n• Visit our website at "),
                           TextSpan(
-                            text: "www.eventfinder.com",
+                            text: "www.eventfinderapp.com",
                             style: TextStyle(
                                 color: Colors.blue,
                                 decoration: TextDecoration.underline),
@@ -1328,7 +1328,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                             onPressed: () {
                               Navigator.pop(context);
-                              launchUrl(Uri.parse("mailto:kennedymutebi7@gmail.com"));
+                              launchUrl(Uri.parse("mailto:makerereaits@gmail.com"));
                               _showToast('Opening email client', Colors.blue);
                             },
                           ),

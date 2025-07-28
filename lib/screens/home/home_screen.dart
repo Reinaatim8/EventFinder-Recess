@@ -10,11 +10,14 @@ import '../../providers/auth_provider.dart';
 import '../profile/profile_screen.dart';
 import 'checkout_screen.dart';
 import 'addingevent.dart';
+import 'checkout_screen.dart';
 import '../home/event_management_screen.dart';
 import '../../models/event.dart';
 import '../map/map_screen.dart';
 import 'verification_screen.dart';
 import '../../services/booking_service.dart';
+
+
 
 final GlobalKey<_BookingsTabState> bookingsTabKey = GlobalKey<_BookingsTabState>();
 
@@ -71,7 +74,7 @@ class _HomeScreenState extends State<HomeScreen> {
       return DateTime(1900);
     }
   }
-
+// Fetch events from Firestore
   Future<void> fetchEvents() async {
     setState(() {
       isLoading = true;
@@ -2078,6 +2081,10 @@ class _BookingsTabState extends State<BookingsTab> {
         backgroundColor: const Color.fromARGB(255, 25, 25, 95),
         foregroundColor: Colors.white,
         title: const Text('Payments History'),
+        
+       
+
+        
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
