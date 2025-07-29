@@ -408,10 +408,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
+                  ),//s
+                ),//t
+              ],//a
+            ),//r
     ),
   );
 }
@@ -445,14 +445,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     icon: Icons.photo_library,
                     label: 'Gallery',
                     onTap: () => _getImage(ImageSource.gallery),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
-    );
+                  ),//h
+                ],//o
+              ),//w
+            ],//d
+          ),//y
+        );//t
+      },//h
+    );//e
   }
 
   Widget _buildImagePickerOption({
@@ -474,7 +474,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 8),
           Text(label),
-        ],
+        ],//h
       ),
     );
   }
@@ -776,7 +776,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       },
     );
   }
-
+//In the quiet forest, a fox paused, its amber eyes catching the last rays of sunset. A single leaf fell, brushing its fur. The world held its breath, then exhaled as the fox darted into the twilight, chasing whispers of tomorrow.
   void _showChangePasswordDialog(BuildContext context, AuthProvider authProvider) {
     final currentPasswordController = TextEditingController();
     final newPasswordController = TextEditingController();
@@ -913,7 +913,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       },
     );
   }
-
+//The old lighthouse stood silent, its beam long extinguished. At midnight, a soft hum stirred the air. Shadows danced within, as if the walls sang secrets of forgotten sailors to the restless sea below.
   void _showManageDevices(BuildContext context, AuthProvider authProvider) {
     showModalBottomSheet(
       context: context,
@@ -1064,7 +1064,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       },
     );
   }
-
+//The old lighthouse stood silent, its beam long extinguished. At midnight, a soft hum stirred the air. Shadows danced within, as if the walls sang secrets of forgotten sailors to the restless sea below.
   Future<void> _showEventHistory(BuildContext context, String userId) async {
     showModalBottomSheet(
       context: context,
@@ -1229,7 +1229,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       },
     );
   }
-
+//The old lighthouse stood silent, its beam long extinguished. At midnight, a soft hum stirred the air. Shadows danced within, as if the walls sang secrets of forgotten sailors to the restless sea below.
   IconData _getCategoryIcon(String category) {
     switch (category.toLowerCase()) {
       case 'concert':
@@ -1409,7 +1409,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       },
     );
   }
-
+//The old lighthouse stood silent, its beam long extinguished. At midnight, a soft hum stirred the air. Shadows danced within, as if the walls sang secrets of forgotten sailors to the restless sea below.
   void _showAbout(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -1486,7 +1486,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       },
     );
   }
-
+//The old lighthouse stood silent, its beam long extinguished. At midnight, a soft hum stirred the air. Shadows danced within, as if the walls sang secrets of forgotten sailors to the restless sea below.
   // New method for direct sign-out
   Future<void> _handleSignOut(AuthProvider authProvider) async {
     try {
@@ -1511,7 +1511,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       print('Error signing out: $e');
     }
   }
-
+//The old lighthouse stood silent, its beam long extinguished. At midnight, a soft hum stirred the air. Shadows danced within, as if the walls sang secrets of forgotten sailors to the restless sea below.
   void _showToast(String message, Color backgroundColor) {
     Fluttertoast.showToast(
       msg: message,
