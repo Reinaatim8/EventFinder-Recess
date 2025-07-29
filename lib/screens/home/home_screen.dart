@@ -288,7 +288,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
+                        Column(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
@@ -330,7 +330,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ],
                         ),
                         SizedBox(height: 8),
-                        Row(
+                        Column(
                           children: [
                             Icon(Icons.location_on, size: 16, color: Colors.grey),
                             SizedBox(width: 4),
@@ -351,139 +351,199 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                         SizedBox(height: 16),
-                        Row(
+                        Column(
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
-                            if (eventStatus[event.id] != 'Reserved')
-                              ElevatedButton.icon(
-                                icon: Icon(Icons.bookmark_add),
-                                label: Text('Book Event'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.orange,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
+                            Column(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                // Book Event Button
+                                ElevatedButton.icon(
+                                  icon: Icon(Icons.bookmark_add),
+                                  label: Text(eventStatus[event.id] != 'Reserved' ? 'Book Event' : 'Cancel Reservation'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: eventStatus[event.id] != 'Reserved' ? Colors.orange : Colors.red,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
                                   ),
+                                  onPressed: () async {
+                                    if (eventStatus[event.id] != 'Reserved') {
+                                      await bookEvent(event.id);
+                                      bookingsTabKey.currentState?.addBooking({
+                                        'id': DateTime.now().millisecondsSinceEpoch,
+                                        'event': event.title,
+                                        'total': event.price,
+                                        'paid': event.price == '0' || event.price == '0.0' || event.price == '0.00' ? true : false,
+                                        'eventId': event.id,
+                                        'ticketId': const Uuid().v4(),
+                                        'isVerified': event.isVerified,
+                                        'verificationStatus': event.verificationStatus,
+                                      });
+                                      setState(() {
+                                        eventStatus[event.id] = 'Reserved';
+                                      });
+                                      Navigator.pop(context);
+                                      Fluttertoast.showToast(
+                                        msg: "Event Reservation Successful!",
+                                        toastLength: Toast.LENGTH_LONG,
+                                        gravity: ToastGravity.CENTER,
+                                        backgroundColor: Colors.orange,
+                                        textColor: Colors.white,
+                                        fontSize: 19.0,
+                                      );
+                                    } else {
+                                      await bookEvent(event.id);
+                                      bookingsTabKey.currentState?.removeBookingByTitle(event.title);
+                                      setState(() {
+                                        eventStatus[event.id] = 'Cancelled Reservation!';
+                                      });
+                                      Navigator.pop(context);
+                                      Fluttertoast.showToast(
+                                        msg: "Event Reservation Cancelled!",
+                                        toastLength: Toast.LENGTH_LONG,
+                                        gravity: ToastGravity.CENTER,
+                                        backgroundColor: Colors.pink,
+                                        textColor: Colors.white,
+                                        fontSize: 19.0,
+                                      );
+                                    }
+                                  },
                                 ),
-                                onPressed: () async {
-                                  await bookEvent(event.id);
-                                  bookingsTabKey.currentState?.addBooking({
-                                    'id': DateTime.now().millisecondsSinceEpoch,
-                                    'event': event.title,
-                                    'total': event.price,
-                                    'paid': event.price == '0' || event.price == '0.0' || event.price == '0.00' ? true : false,
-                                    'eventId': event.id,
-                                    'ticketId': const Uuid().v4(),
-                                    'isVerified': event.isVerified,
-                                    'verificationStatus': event.verificationStatus,
-                                  });
-                                  setState(() {
-                                    eventStatus[event.id] = 'Reserved';
-                                  });
-                                  Navigator.pop(context);
-                                  Fluttertoast.showToast(
-                                    msg: "Event Reservation Successful!",
-                                    toastLength: Toast.LENGTH_LONG,
-                                    gravity: ToastGravity.CENTER,
-                                    backgroundColor: Colors.orange,
-                                    textColor: Colors.white,
-                                    fontSize: 19.0,
-                                  );
-                                },
-                              )
-                            else
-                              ElevatedButton.icon(
-                                icon: Icon(Icons.cancel),
-                                label: Text('Cancel Reservation'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.red,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
+                                // Pay For Event Button
+                                ElevatedButton.icon(
+                                  icon: Icon(Icons.payment),
+                                  label: Text('Pay For Event'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.green,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
                                   ),
+                                  onPressed: () {
+                                    if (!event.isVerified) {
+                                      showDialog(
+                                        context: context,
+                                        builder: (context) => AlertDialog(
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(15),
+                                          ),
+                                          title: Text('Caution: Unverified Event', style: TextStyle(color: Colors.red)),
+                                          content: Text(
+                                            'This event is not yet verified. Paying for an unverified event may carry risks, as the event details have not been confirmed by an administrator. Do you wish to proceed with payment?',
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(context),
+                                              child: Text('Cancel', style: TextStyle(color: Colors.red)),
+                                            ),
+                                            ElevatedButton(
+                                              onPressed: () {
+                                                Navigator.pop(context);
+                                                Navigator.pop(context);
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (context) => CheckoutScreen(
+                                                      event: event,
+                                                      total: event.price,
+                                                      ticketId: const Uuid().v4(),
+                                                      onPaymentSuccess: () => handlePaymentSuccess(event),
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                              style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+                                              child: Text('Proceed'),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    } else {
+                                      Navigator.pop(context);
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => CheckoutScreen(
+                                            event: event,
+                                            total: event.price,
+                                            ticketId: const Uuid().v4(),
+                                            onPaymentSuccess: () => handlePaymentSuccess(event),
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  },
                                 ),
-                                onPressed: () async {
-                                  await bookEvent(event.id);
-                                  bookingsTabKey.currentState?.removeBookingByTitle(event.title);
-                                  setState(() {
-                                    eventStatus[event.id] = 'Cancelled Reservation!';
-                                  });
-                                  Navigator.pop(context);
-                                  Fluttertoast.showToast(
-                                    msg: "Event Reservation Cancelled!",
-                                    toastLength: Toast.LENGTH_LONG,
-                                    gravity: ToastGravity.CENTER,
-                                    backgroundColor: Colors.pink,
-                                    textColor: Colors.white,
-                                    fontSize: 19.0,
-                                  );
-                                },
-                              ),
+                              ],
+                            ),
                           ],
                         ),
                         SizedBox(height: 16),
-                        ElevatedButton.icon(
-                          icon: Icon(Icons.payment),
-                          label: Text('Pay For Event'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          onPressed: () {
-                            if (!event.isVerified) {
-                              showDialog(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(15),
-                                  ),
-                                  title: Text('Caution: Unverified Event', style: TextStyle(color: Colors.red)),
-                                  content: Text(
-                                    'This event is not yet verified. Paying for an unverified event may carry risks, as the event details have not been confirmed by an administrator. Do you wish to proceed with payment?',
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.pop(context),
-                                      child: Text('Cancel', style: TextStyle(color: Colors.red)),
-                                    ),
-                                    ElevatedButton(
-                                      onPressed: () {
-                                        Navigator.pop(context);
-                                        Navigator.pop(context);
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) => CheckoutScreen(
-                                              event: event,
-                                              total: event.price,
-                                              ticketId: const Uuid().v4(),
-                                              onPaymentSuccess: () => handlePaymentSuccess(event),
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                      style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-                                      child: Text('Proceed'),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            } else {
-                              Navigator.pop(context);
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => CheckoutScreen(
-                                    event: event,
-                                    total: event.price,
-                                    ticketId: const Uuid().v4(),
-                                    onPaymentSuccess: () => handlePaymentSuccess(event),
-                                  ),
-                                ),
-                              );
-                            }
-                          },
-                        ),
+                        // ElevatedButton.icon(
+                        //   icon: Icon(Icons.payment),
+                        //   label: Text('Pay For Event'),
+                        //   style: ElevatedButton.styleFrom(
+                        //     backgroundColor: Colors.green,
+                        //     shape: RoundedRectangleBorder(
+                        //       borderRadius: BorderRadius.circular(12),
+                        //     ),
+                        //   ),
+                        //   onPressed: () {
+                        //     if (!event.isVerified) {
+                        //       showDialog(
+                        //         context: context,
+                        //         builder: (context) => AlertDialog(
+                        //           shape: RoundedRectangleBorder(
+                        //             borderRadius: BorderRadius.circular(15),
+                        //           ),
+                        //           title: Text('Caution: Unverified Event', style: TextStyle(color: Colors.red)),
+                        //           content: Text(
+                        //             'This event is not yet verified. Paying for an unverified event may carry risks, as the event details have not been confirmed by an administrator. Do you wish to proceed with payment?',
+                        //           ),
+                        //           actions: [
+                        //             TextButton(
+                        //               onPressed: () => Navigator.pop(context),
+                        //               child: Text('Cancel', style: TextStyle(color: Colors.red)),
+                        //             ),
+                        //             ElevatedButton(
+                        //               onPressed: () {
+                        //                 Navigator.pop(context);
+                        //                 Navigator.pop(context);
+                        //                 Navigator.push(
+                        //                   context,
+                        //                   MaterialPageRoute(
+                        //                     builder: (context) => CheckoutScreen(
+                        //                       event: event,
+                        //                       total: event.price,
+                        //                       ticketId: const Uuid().v4(),
+                        //                       onPaymentSuccess: () => handlePaymentSuccess(event),
+                        //                     ),
+                        //                   ),
+                        //                 );
+                        //               },
+                        //               style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+                        //               child: Text('Proceed'),
+                        //             ),
+                        //           ],
+                        //         ),
+                        //       );
+                        //     } else {
+                        //       Navigator.pop(context);
+                        //       Navigator.push(
+                        //         context,
+                        //         MaterialPageRoute(
+                        //           builder: (context) => CheckoutScreen(
+                        //             event: event,
+                        //             total: event.price,
+                        //             ticketId: const Uuid().v4(),
+                        //             onPaymentSuccess: () => handlePaymentSuccess(event),
+                        //           ),
+                        //         ),
+                        //       );
+                        //     }
+                        //   },
+                        // ),
                       ],
                     ),
                   ),
