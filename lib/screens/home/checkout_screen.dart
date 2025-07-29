@@ -99,7 +99,7 @@ class BookingStatus {
   );
 }
 
-// Payment Network Enum
+// Payment Network Enumerator
 enum PaymentNetwork { mtn, airtel }
 
 class CheckoutScreen extends StatefulWidget {
