@@ -72,7 +72,6 @@ class _HomeScreenState extends State<HomeScreen> {
       return DateTime(1900);
     }
   }
-
   Future<void> fetchEvents() async {
     setState(() {
       isLoading = true;
@@ -1205,7 +1204,6 @@ class EventCard extends StatelessWidget {
         child: Container(
           margin: const EdgeInsets.only(bottom: 5, right: 0, left: 0),
           padding: const EdgeInsets.all(16),
-
           width: MediaQuery.of(context).size.width - 20,
           decoration: BoxDecoration(
             color: Colors.white,

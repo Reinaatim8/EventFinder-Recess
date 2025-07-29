@@ -67,6 +67,18 @@ class _AddEventDialogState extends State<AddEventDialog> {
     'Other Official Document',
   ];
 
+  final List<String> _documentTypes = [
+    'Business License',
+    'Event Permit',
+    'Insurance Certificate',
+    'Tax Certificate',
+    'Organization Registration',
+    'Venue Agreement',
+    'Professional Certificate',
+    'Government ID',
+    'Other Official Document',
+  ];
+
   Future<void> _pickImage() async {
     try {
       final XFile? image = await _picker.pickImage(
