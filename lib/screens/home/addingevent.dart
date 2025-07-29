@@ -70,6 +70,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
   ];
 
   final List<String> _documentTypes = [
+    //doc
     'Business License',
     'Event Permit',
     'Insurance Certificate',
