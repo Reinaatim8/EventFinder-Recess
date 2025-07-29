@@ -1,4 +1,3 @@
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -12,15 +11,15 @@ class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
   final DatabaseService _databaseService = DatabaseService();
 
-  AuthStatus _status = AuthStatus.uninitialized;
+  AuthStatus _status = AuthStatus.uninitialized; // Start as uninitialized
   UserModel? _user;
   String? _errorMessage;
-  bool _isLoading = false;
+  bool _isLoading = true; // Start with loading true
 
   AuthStatus get status => _status;
   UserModel? get user => _user;
   String? get errorMessage => _errorMessage;
-  bool get isLoading => _isLoading;
+  bool get isLoading => _isLoading || _status == AuthStatus.uninitialized;
   bool get isAuthenticated => _status == AuthStatus.authenticated;
 
   AuthProvider() {
@@ -29,43 +28,70 @@ class AuthProvider with ChangeNotifier {
 
   void _initializeAuth() async {
     print('Initializing AuthProvider');
-    User? firebaseUser = _authService.currentUser;
-    if (firebaseUser != null) {
-      await _updateUserState(firebaseUser);
-    } else {
-      _status = AuthStatus.unauthenticated;
-      _user = null;
-      _isLoading = false;
-      print('No current user, setting unauthenticated');
+    
+    try {
+      // Set loading state
+      _isLoading = true;
+      _status = AuthStatus.loading;
       notifyListeners();
-    }
 
-    _authService.authStateChanges.listen(
-      (User? firebaseUser) async {
-        print('Auth state changed: ${firebaseUser?.uid ?? 'null'}');
+      // Check current user immediately
+      User? firebaseUser = _authService.currentUser;
+      print('Current Firebase user on init: ${firebaseUser?.uid ?? 'null'}');
+      
+      if (firebaseUser != null) {
         await _updateUserState(firebaseUser);
-        notifyListeners();
-      },
-      onError: (error, stackTrace) {
-        print('Stream error in authStateChanges: $error\n$stackTrace');
+      } else {
         _status = AuthStatus.unauthenticated;
         _user = null;
         _isLoading = false;
+        print('No current user, setting unauthenticated');
         notifyListeners();
-      },
-    );
+      }
+
+      // Listen to auth state changes
+      _authService.authStateChanges.listen(
+        (User? firebaseUser) async {
+          print('Auth state changed: ${firebaseUser?.uid ?? 'null'}');
+          
+          // Don't set loading if we're already processing a sign-in/sign-out
+          if (!_isLoading) {
+            _isLoading = true;
+            notifyListeners();
+          }
+          
+          await _updateUserState(firebaseUser);
+        },
+        onError: (error, stackTrace) {
+          print('Stream error in authStateChanges: $error\n$stackTrace');
+          _status = AuthStatus.unauthenticated;
+          _user = null;
+          _isLoading = false;
+          _setError('Authentication error: ${error.toString()}');
+          notifyListeners();
+        },
+      );
+    } catch (e, stackTrace) {
+      print('Error during initialization: $e\n$stackTrace');
+      _status = AuthStatus.unauthenticated;
+      _user = null;
+      _isLoading = false;
+      _setError('Initialization failed: ${e.toString()}');
+      notifyListeners();
+    }
   }
 
   Future<void> _updateUserState(User? firebaseUser) async {
-    if (firebaseUser != null) {
-      try {
-        _status = AuthStatus.authenticated;
-        _user = await _databaseService.getUserData(firebaseUser.uid);
-        if (_user == null) {
-          print(
-            'No user data found, creating default UserModel for UID: ${firebaseUser.uid}',
-          );
-          _user = UserModel(
+    try {
+      if (firebaseUser != null) {
+        print('Updating user state for: ${firebaseUser.uid}');
+        
+        // Get user data from database
+        UserModel? userData = await _databaseService.getUserData(firebaseUser.uid);
+        
+        if (userData == null) {
+          print('No user data found, creating default UserModel for UID: ${firebaseUser.uid}');
+          userData = UserModel(
             uid: firebaseUser.uid,
             email: firebaseUser.email ?? '',
             name: firebaseUser.displayName ?? 'User',
@@ -75,29 +101,36 @@ class AuthProvider with ChangeNotifier {
             phoneNumber: null,
             twoFactorEnabled: false,
           );
-          await _databaseService.updateUserData(
-            firebaseUser.uid,
-            _user!.toMap(),
-          );
+          
+          // Save the user data to database
+          await _databaseService.updateUserData(firebaseUser.uid, userData.toMap());
         }
+        
+        _user = userData;
+        _status = AuthStatus.authenticated;
         print('User authenticated: ${_user?.uid}');
-      } catch (e, stackTrace) {
-        print('Error updating user state: $e\n$stackTrace');
-        _status = AuthStatus.unauthenticated;
+      } else {
         _user = null;
+        _status = AuthStatus.unauthenticated;
+        print('User unauthenticated');
       }
-    } else {
+    } catch (e, stackTrace) {
+      print('Error updating user state: $e\n$stackTrace');
       _status = AuthStatus.unauthenticated;
       _user = null;
-      print('User unauthenticated');
+      _setError('Failed to load user data: ${e.toString()}');
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
-    _isLoading = false;
-    notifyListeners();
   }
 
   void _setLoading(bool loading) {
     print('Setting loading: $loading');
     _isLoading = loading;
+    if (loading) {
+      _status = AuthStatus.loading;
+    }
     notifyListeners();
   }
 
@@ -105,7 +138,12 @@ class AuthProvider with ChangeNotifier {
     print('Setting error: $error');
     _errorMessage = error;
     if (error != null) {
-      Fluttertoast.showToast(msg: error, toastLength: Toast.LENGTH_LONG);
+      Fluttertoast.showToast(
+        msg: error, 
+        toastLength: Toast.LENGTH_LONG,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+      );
     }
     notifyListeners();
   }
@@ -135,6 +173,7 @@ class AuthProvider with ChangeNotifier {
       return 'Password must contain at least one number';
     if (!password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]')))
       return 'Password must contain at least one special character';
+    
     List<String> commonPasswords = [
       'password',
       '12345678',
@@ -202,42 +241,54 @@ class AuthProvider with ChangeNotifier {
     required String name,
   }) async {
     print('Starting signUp for email: $email');
+    
     if (!_isValidEmail(email)) {
       _setError('Please enter a valid email address with @ symbol');
       return false;
     }
+    
     String? passwordError = _validatePassword(password);
     if (passwordError != null) {
       _setError(passwordError);
       return false;
     }
+    
     if (name.trim().isEmpty) {
       _setError('Please enter your full name');
       return false;
     }
+    
     if (name.trim().length < 2) {
       _setError('Name must be at least 2 characters long');
       return false;
     }
+    
     _setLoading(true);
     _setError(null);
+    
     try {
       UserModel? user = await _authService.signUpWithEmailAndPassword(
         email: email.trim(),
         password: password,
         name: name.trim(),
       );
+      
       print('AuthService.signUp returned: ${user != null ? 'UserModel (UID: ${user.uid})' : 'null'}');
+      
       if (user != null) {
         _user = user;
         _status = AuthStatus.authenticated;
+        _setLoading(false);
+        
         Fluttertoast.showToast(
           msg: "Account created successfully! Please verify your email.",
           toastLength: Toast.LENGTH_LONG,
+          backgroundColor: Colors.green,
+          textColor: Colors.white,
         );
-        _setLoading(false);
         return true;
       }
+      
       _setError("Account creation failed. Please try again.");
       _setLoading(false);
       return false;
@@ -251,25 +302,33 @@ class AuthProvider with ChangeNotifier {
 
   Future<bool> signIn({required String email, required String password}) async {
     print('Starting signIn for email: $email');
+    
     if (!_isValidEmail(email)) {
       _setError('Please enter a valid email address with @ symbol');
       return false;
     }
+    
     if (password.isEmpty) {
       _setError('Please enter a password');
       return false;
     }
+    
     _setLoading(true);
     _setError(null);
+    
     try {
       UserModel? user = await _authService.signInWithEmailAndPassword(
         email: email.trim(),
         password: password,
       );
+      
       print('AuthService.signIn returned: ${user != null ? 'UserModel (UID: ${user.uid})' : 'null'}');
+      
       if (user != null && user.uid.isNotEmpty) {
         _user = user;
         _status = AuthStatus.authenticated;
+        
+        // Verify with Firebase user
         User? firebaseUser = _authService.currentUser;
         if (firebaseUser != null && user.uid != firebaseUser.uid) {
           print('Mismatch in UIDs, updating from Firebase: ${firebaseUser.uid}');
@@ -285,13 +344,18 @@ class AuthProvider with ChangeNotifier {
           );
           await _databaseService.updateUserData(firebaseUser.uid, _user!.toMap());
         }
+        
+        _setLoading(false);
+        
         Fluttertoast.showToast(
           msg: "Welcome back!",
           toastLength: Toast.LENGTH_SHORT,
+          backgroundColor: Colors.green,
+          textColor: Colors.white,
         );
-        _setLoading(false);
         return true;
       }
+      
       print('Sign in failed: Invalid UserModel or empty UID');
       _setError("Failed to sign in. Check your credentials.");
       _setLoading(false);
@@ -307,41 +371,52 @@ class AuthProvider with ChangeNotifier {
   Future<void> signOut() async {
     print('Starting sign out');
     _setLoading(true);
+    
     try {
       await _authService.signOut();
       _user = null;
       _status = AuthStatus.unauthenticated;
+      _setLoading(false);
+      
       Fluttertoast.showToast(
-        msg: "Signed out.",
+        msg: "Signed out successfully.",
         toastLength: Toast.LENGTH_SHORT,
+        backgroundColor: Colors.blue,
+        textColor: Colors.white,
       );
       print('Sign out successful');
     } catch (e, stackTrace) {
       print('Error during sign out: $e\n$stackTrace');
       _setError("Failed to sign out: ${e.toString()}");
-    } finally {
       _setLoading(false);
     }
   }
 
   Future<bool> resetPassword({required String email}) async {
     print('Starting password reset for email: $email');
+    
     if (!_isValidEmail(email)) {
       _setError('Please enter a valid email address with @ symbol');
       return false;
     }
+    
     _setLoading(true);
     _setError(null);
+    
     try {
       bool success = await _authService.resetPassword(email: email.trim());
       _setLoading(false);
+      
       if (success) {
         Fluttertoast.showToast(
           msg: "Reset email sent. Check your inbox.",
           toastLength: Toast.LENGTH_LONG,
+          backgroundColor: Colors.blue,
+          textColor: Colors.white,
         );
         return true;
       }
+      
       _setError("Failed to send reset email.");
       return false;
     } catch (e, stackTrace) {
@@ -359,6 +434,8 @@ class AuthProvider with ChangeNotifier {
       Fluttertoast.showToast(
         msg: "Verification email sent.",
         toastLength: Toast.LENGTH_SHORT,
+        backgroundColor: Colors.blue,
+        textColor: Colors.white,
       );
       print('Email verification sent successfully');
     } catch (e, stackTrace) {
@@ -382,6 +459,7 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  // ... (rest of your methods remain the same)
   Future<bool> updateUserProfile({
     String? name,
     Map<String, dynamic>? additionalData,
@@ -556,6 +634,5 @@ class AuthProvider with ChangeNotifier {
   }
 
   bool get isEmailVerified => _authService.currentUser?.emailVerified ?? false;
-
   User? get currentFirebaseUser => _authService.currentUser;
 }
