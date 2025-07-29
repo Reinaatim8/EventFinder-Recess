@@ -1,4 +1,3 @@
-import 'package:event_locator_app/models/event.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -7,14 +6,15 @@ import 'package:provider/provider.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../providers/auth_provider.dart';
 import '../map/location_picker_screen.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:file_picker/file_picker.dart';
+import '../../models/event.dart';
 
 class AddEventDialog extends StatefulWidget {
   final Function(Event) onAddEvent;
-
   const AddEventDialog({Key? key, required this.onAddEvent}) : super(key: key);
 
   @override
@@ -33,19 +33,16 @@ class _AddEventDialogState extends State<AddEventDialog> {
   File? _selectedImage;
   Uint8List? _webImage;
   bool _isUploading = false;
-
   // Document verification fields
   File? _verificationDocument;
   Uint8List? _webVerificationDocument;
   String? _verificationDocumentName;
   String _selectedDocumentType = 'Business License';
   bool _requiresVerification = false;
-
   final ImagePicker _picker = ImagePicker();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   double? _latitude;
   double? _longitude;
-
   final List<String> _categories = [
     'Concert',
     'Conference',
@@ -58,7 +55,6 @@ class _AddEventDialogState extends State<AddEventDialog> {
     'Comedy',
     'Other',
   ];
-
   final List<String> _documentTypes = [
     'Business License',
     'Event Permit',
@@ -79,7 +75,6 @@ class _AddEventDialogState extends State<AddEventDialog> {
         maxHeight: 1080,
         imageQuality: 85,
       );
-
       if (image != null) {
         if (kIsWeb) {
           final bytes = await image.readAsBytes();
@@ -114,7 +109,6 @@ class _AddEventDialogState extends State<AddEventDialog> {
         maxHeight: 1080,
         imageQuality: 85,
       );
-
       if (image != null) {
         if (kIsWeb) {
           final bytes = await image.readAsBytes();
@@ -148,10 +142,8 @@ class _AddEventDialogState extends State<AddEventDialog> {
         allowedExtensions: ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'],
         allowMultiple: false,
       );
-
       if (result != null) {
         PlatformFile file = result.files.first;
-
         if (kIsWeb) {
           setState(() {
             _webVerificationDocument = file.bytes;
@@ -183,11 +175,9 @@ class _AddEventDialogState extends State<AddEventDialog> {
       setState(() {
         _isUploading = true;
       });
-
       String fileName =
           'events/${DateTime.now().millisecondsSinceEpoch}_${_titleController.text.replaceAll(' ', '_').replaceAll(RegExp(r'[^\w\s-]'), '')}.jpg';
       Reference storageRef = FirebaseStorage.instance.ref().child(fileName);
-
       UploadTask uploadTask;
       if (kIsWeb && _webImage != null) {
         uploadTask = storageRef.putData(
@@ -214,10 +204,8 @@ class _AddEventDialogState extends State<AddEventDialog> {
       } else {
         return null;
       }
-
       TaskSnapshot snapshot = await uploadTask;
       String downloadUrl = await snapshot.ref.getDownloadURL();
-
       print('Image uploaded successfully. URL: $downloadUrl');
       return downloadUrl;
     } catch (e) {
@@ -248,13 +236,10 @@ class _AddEventDialogState extends State<AddEventDialog> {
       if (_verificationDocument == null && _webVerificationDocument == null) {
         return null;
       }
-
       String fileName =
           'verification_documents/${DateTime.now().millisecondsSinceEpoch}_${_verificationDocumentName ?? 'document'}';
       Reference storageRef = FirebaseStorage.instance.ref().child(fileName);
-
       String contentType = _getContentType(_verificationDocumentName ?? '');
-
       UploadTask uploadTask;
       if (kIsWeb && _webVerificationDocument != null) {
         uploadTask = storageRef.putData(
@@ -285,10 +270,8 @@ class _AddEventDialogState extends State<AddEventDialog> {
       } else {
         return null;
       }
-
       TaskSnapshot snapshot = await uploadTask;
       String downloadUrl = await snapshot.ref.getDownloadURL();
-
       print('Verification document uploaded successfully. URL: $downloadUrl');
       return downloadUrl;
     } catch (e) {
@@ -356,7 +339,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.photo_library),
+              leading: const Icon(FontAwesomeIcons.images),
               title: const Text('Gallery'),
               onTap: () {
                 Navigator.pop(context);
@@ -365,7 +348,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
             ),
             if (!kIsWeb)
               ListTile(
-                leading: const Icon(Icons.camera_alt),
+                leading: const Icon(FontAwesomeIcons.camera),
                 title: const Text('Camera'),
                 onTap: () {
                   Navigator.pop(context);
@@ -406,7 +389,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
                   color: Colors.red,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.close, color: Colors.white, size: 16),
+                child: const Icon(FontAwesomeIcons.times, color: Colors.white, size: 16),
               ),
             ),
           ),
@@ -439,7 +422,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
                   color: Colors.red,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.close, color: Colors.white, size: 16),
+                child: const Icon(FontAwesomeIcons.times, color: Colors.white, size: 16),
               ),
             ),
           ),
@@ -451,7 +434,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.add_a_photo, size: 50, color: Colors.grey[400]),
+            Icon(FontAwesomeIcons.cameraRetro, size: 50, color: Colors.grey[400]),
             const SizedBox(height: 10),
             Text(
               'Tap to add event image',
@@ -478,7 +461,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
           children: [
             Row(
               children: [
-                Icon(Icons.verified_user, color: Colors.green[600], size: 24),
+                Icon(FontAwesomeIcons.userCheck, color: Colors.green[600], size: 24),
                 const SizedBox(width: 8),
                 Text(
                   'Event Verification',
@@ -521,7 +504,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
                 decoration: const InputDecoration(
                   labelText: 'Document Type',
                   border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.description),
+                  prefixIcon: Icon(FontAwesomeIcons.fileAlt),
                 ),
                 items: _documentTypes.map((type) {
                   return DropdownMenuItem(value: type, child: Text(type));
@@ -580,7 +563,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
                                 _verificationDocumentName = null;
                               });
                             },
-                            icon: const Icon(Icons.close, color: Colors.red),
+                            icon: const Icon(FontAwesomeIcons.times, color: Colors.red),
                           ),
                         ],
                       )
@@ -590,7 +573,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
-                              Icons.upload_file,
+                              FontAwesomeIcons.upload,
                               size: 40,
                               color: Colors.grey[400],
                             ),
@@ -625,7 +608,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.info, color: Colors.blue[600], size: 20),
+                    Icon(FontAwesomeIcons.infoCircle, color: Colors.blue[600], size: 20),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -647,16 +630,16 @@ class _AddEventDialogState extends State<AddEventDialog> {
     String extension = fileName.split('.').last.toLowerCase();
     switch (extension) {
       case 'pdf':
-        return Icons.picture_as_pdf;
+        return FontAwesomeIcons.filePdf;
       case 'doc':
       case 'docx':
-        return Icons.description;
+        return FontAwesomeIcons.fileWord;
       case 'jpg':
       case 'jpeg':
       case 'png':
-        return Icons.image;
+        return FontAwesomeIcons.fileImage;
       default:
-        return Icons.insert_drive_file;
+        return FontAwesomeIcons.fileAlt;
     }
   }
 
@@ -677,8 +660,8 @@ class _AddEventDialogState extends State<AddEventDialog> {
                 Row(
                   children: [
                     Icon(
-                      Icons.add_circle,
-                      color: Color.fromARGB(255, 25, 25, 95),
+                      FontAwesomeIcons.plusCircle,
+                      color: Colors.blue,
                       size: 28,
                     ),
                     const SizedBox(width: 10),
@@ -708,6 +691,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
                   decoration: const InputDecoration(
                     labelText: 'Event Title *',
                     border: OutlineInputBorder(),
+                    prefixIcon: Icon(FontAwesomeIcons.heading),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -722,6 +706,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
                   decoration: const InputDecoration(
                     labelText: 'Description',
                     border: OutlineInputBorder(),
+                    prefixIcon: Icon(FontAwesomeIcons.alignLeft),
                   ),
                   maxLines: 3,
                 ),
@@ -731,7 +716,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
                   keyboardType: TextInputType.numberWithOptions(decimal: true),
                   decoration: const InputDecoration(
                     labelText: 'Price',
-                    prefixIcon: Icon(Icons.attach_money),
+                    prefixIcon: Icon(FontAwesomeIcons.dollarSign),
                     border: OutlineInputBorder(),
                   ),
                   validator: (value) {
@@ -751,6 +736,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
                   decoration: const InputDecoration(
                     labelText: 'Maximum/Capacity Slots',
                     border: OutlineInputBorder(),
+                    prefixIcon: Icon(FontAwesomeIcons.chair),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -762,14 +748,13 @@ class _AddEventDialogState extends State<AddEventDialog> {
                     return null;
                   },
                 ),
-
                 const SizedBox(height: 15),
                 TextFormField(
                   controller: _dateController,
                   decoration: const InputDecoration(
                     labelText: 'Date *',
                     border: OutlineInputBorder(),
-                    suffixIcon: Icon(Icons.calendar_today),
+                    suffixIcon: Icon(FontAwesomeIcons.calendarAlt),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -797,6 +782,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
                   decoration: const InputDecoration(
                     labelText: 'Location *',
                     border: OutlineInputBorder(),
+                    prefixIcon: Icon(FontAwesomeIcons.mapMarkerAlt),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -829,6 +815,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
                   decoration: const InputDecoration(
                     labelText: 'Category',
                     border: OutlineInputBorder(),
+                    prefixIcon: Icon(FontAwesomeIcons.tags),
                   ),
                   items: _categories.map((category) {
                     return DropdownMenuItem(
@@ -864,7 +851,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
                       child: ElevatedButton(
                         onPressed: _isUploading ? null : _addEvent,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Color.fromARGB(255, 25, 25, 95),
+                          backgroundColor: Colors.blue,
                           foregroundColor: Colors.white,
                         ),
                         child: _isUploading
@@ -907,7 +894,6 @@ class _AddEventDialogState extends State<AddEventDialog> {
         );
         return;
       }
-
       try {
         final authProvider = Provider.of<AuthProvider>(context, listen: false);
         final organizerId = authProvider.user?.uid;
@@ -915,7 +901,6 @@ class _AddEventDialogState extends State<AddEventDialog> {
           throw Exception('User not authenticated');
         }
         print('Creating event with organizerId: $organizerId');
-
         String? imageUrl;
         if (_selectedImage != null || _webImage != null) {
           imageUrl = await _uploadImageToFirebase();
@@ -931,7 +916,6 @@ class _AddEventDialogState extends State<AddEventDialog> {
             return;
           }
         }
-
         String? verificationDocumentUrl;
         if (_requiresVerification &&
             (_verificationDocument != null ||
@@ -952,7 +936,6 @@ class _AddEventDialogState extends State<AddEventDialog> {
             return;
           }
         }
-
         final event = Event(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
           title: _titleController.text.trim(),
@@ -964,9 +947,6 @@ class _AddEventDialogState extends State<AddEventDialog> {
           category: _selectedCategory,
           imageUrl: imageUrl,
           organizerId: organizerId,
-          
-          
-          
           price: double.tryParse(_priceController.text) ?? 0.0,
           maxslots: int.tryParse(_maxslotsController.text) ?? 0,
           verificationDocumentUrl: verificationDocumentUrl,
@@ -983,14 +963,12 @@ class _AddEventDialogState extends State<AddEventDialog> {
           status:
               'unverified', // Explicitly set to align with Event model default
         );
-
         print('Event created: ${event.toFirestore()}');
         await _saveEventToFirestore(event);
         print(
           'Calling onAddEvent with event: id=${event.id}, isVerified=${event.isVerified}, verificationStatus=${event.verificationStatus}',
         );
         widget.onAddEvent(event);
-
         if (mounted) {
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(

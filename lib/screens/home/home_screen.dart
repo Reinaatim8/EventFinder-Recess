@@ -17,8 +17,6 @@ import '../map/map_screen.dart';
 import 'verification_screen.dart';
 import '../../services/booking_service.dart';
 
-
-
 final GlobalKey<_BookingsTabState> bookingsTabKey = GlobalKey<_BookingsTabState>();
 
 class HomeScreen extends StatefulWidget {
@@ -74,7 +72,7 @@ class _HomeScreenState extends State<HomeScreen> {
       return DateTime(1900);
     }
   }
-// Fetch events from Firestore
+
   Future<void> fetchEvents() async {
     setState(() {
       isLoading = true;
@@ -121,7 +119,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  
   Future<void> bookEvent(String eventId) async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) {
@@ -131,26 +128,20 @@ class _HomeScreenState extends State<HomeScreen> {
       );
       return;
     }
-
     final bookingRef = FirebaseFirestore.instance
         .collection('bookings')
         .doc('$userId-$eventId');
-
     try {
-      // Validate event existence
       final event = events.firstWhere(
         (e) => e.id == eventId,
         orElse: () => throw Exception('Event not found: $eventId'),
       );
-
       print('Booking attempt: authUid=${FirebaseAuth.instance.currentUser?.uid}, userId=$userId, eventId=$eventId');
-      
-      // Log booking data
+
       final bookingData = {
         'userId': userId,
         'eventId': eventId,
         'event': event.title,
-        
         'price': event.price,
         'paid': event.price == '0' || event.price == '0.0' || event.price == '0.00' ? true : false,
         'ticketId': const Uuid().v4(),
@@ -159,7 +150,6 @@ class _HomeScreenState extends State<HomeScreen> {
         'timestamp': FieldValue.serverTimestamp(),
       };
       print('Booking data: $bookingData');
-
       if (await bookingRef.get().then((doc) => doc.exists)) {
         print('Deleting booking for user: $userId, event: $eventId');
         await bookingRef.delete();
@@ -179,15 +169,9 @@ class _HomeScreenState extends State<HomeScreen> {
           eventStatus[eventId] = 'Reserved';
         });
         bookingsTabKey.currentState?._fetchBookings();
-        // ScaffoldMessenger.of(context).showSnackBar(
-        //   const SnackBar(content: Text('Event Reservation Successful')),
-        // );
       }
     } catch (e) {
       print('Error booking event: $e');
-      // ScaffoldMessenger.of(context).showSnackBar(
-      //   SnackBar(content: Text('Error booking event: $e')),
-      // );
     }
   }
 
@@ -197,7 +181,6 @@ class _HomeScreenState extends State<HomeScreen> {
       print('No user logged in for loading booked events');
       return;
     }
-
     try {
       final snapshot = await FirebaseFirestore.instance
           .collection('bookings')
@@ -214,9 +197,6 @@ class _HomeScreenState extends State<HomeScreen> {
       bookingsTabKey.currentState?._fetchBookings();
     } catch (e) {
       print('Error loading booked events: $e');
-      // ScaffoldMessenger.of(context).showSnackBar(
-      //   SnackBar(content: Text('Error loading booked events: $e')),
-      // );
     }
   }
 
@@ -267,136 +247,253 @@ class _HomeScreenState extends State<HomeScreen> {
   void showEventDetailsModal(Event event) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(event.title),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(event.description),
-            const SizedBox(height: 20),
-            if (eventStatus[event.id] != 'Reserved') ...[
-              ElevatedButton(
-                onPressed: () async {
-                  await bookEvent(event.id);
-                  bookingsTabKey.currentState?.addBooking({
-                    'id': DateTime.now().millisecondsSinceEpoch,
-                    'event': event.title,
-                    'total': event.price,
-                    'paid': event.price == '0' || event.price == '0.0' || event.price == '0.00' ? true : false,
-                    'eventId': event.id,
-                    'ticketId': const Uuid().v4(),
-                    'isVerified': event.isVerified,
-                    'verificationStatus': event.verificationStatus,
-                  });
-                  setState(() {
-                    eventStatus[event.id] = 'Reserved';
-                  });
-                  Navigator.pop(context);
-                  Fluttertoast.showToast(
-                    msg: "Event Reservation Successful!",
-                    toastLength: Toast.LENGTH_LONG,
-                    gravity: ToastGravity.CENTER,
-                    backgroundColor: Colors.orange,
-                    textColor: Colors.white,
-                    fontSize: 19.0,
-                  );
-                },
-                child: const Text('Book/Reserve an Event'),
-              ),
-            ] else ...[
-              ElevatedButton(
-                onPressed: () async {
-                  await bookEvent(event.id);
-                  bookingsTabKey.currentState?.removeBookingByTitle(event.title);
-                  setState(() {
-                    eventStatus[event.id] = 'Cancelled Reservation!';
-                  });
-                  Navigator.pop(context);
-                  Fluttertoast.showToast(
-                    msg: "Event Reservation Cancelled!",
-                    toastLength: Toast.LENGTH_LONG,
-                    gravity: ToastGravity.CENTER,
-                    backgroundColor: Colors.pink,
-                    textColor: Colors.white,
-                    fontSize: 19.0,
-                  );
-                },
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.pink),
-                child: const Text('Cancel Reservation'),
-              ),
-            ],
-            ElevatedButton(
-              onPressed: () {
-                if (!event.isVerified) {
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15),
-                      ),
-                      
-                      title: const
-                          Text('Caution: Unverified Event', style: TextStyle(color: Colors.red)),
-                        
-                      
-                      content: const Text(
-                        'This event is not yet verified. Paying for an unverified event may carry risks, as the event details have not been confirmed by an administrator. Do you wish to proceed with payment?',
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('Cancel', style: TextStyle( color: Colors.red, fontSize: 16)),
-                        ),
-                        ElevatedButton(
-                          onPressed: () {
-                            Navigator.pop(context);
-                            Navigator.pop(context); // Close the event details modal
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => CheckoutScreen(
-                                  event: event,
-                                  total: event.price,
-                                  ticketId: const Uuid().v4(),
-                                  onPaymentSuccess: () => handlePaymentSuccess(event),
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.0),
+          ),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.rectangle,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 10.0,
+                  offset: Offset(0.0, 10.0),
+                ),
+              ],
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  ClipRRect(
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                    child: Image.network(
+                      event.imageUrl ?? 'https://via.placeholder.com/400',
+                      height: 200,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              event.title,
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: event.isVerified ? Colors.green : Colors.red,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                event.isVerified ? 'Verified' : 'Unverified',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
-                            );
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Icon(Icons.calendar_today, size: 16, color: Colors.grey),
+                            SizedBox(width: 4),
+                            Text(
+                              event.date,
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Icon(Icons.location_on, size: 16, color: Colors.grey),
+                            SizedBox(width: 4),
+                            Text(
+                              event.location,
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 16),
+                        Text(
+                          event.description,
+                          style: TextStyle(
+                            fontSize: 16,
+                          ),
+                        ),
+                        SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            if (eventStatus[event.id] != 'Reserved')
+                              ElevatedButton.icon(
+                                icon: Icon(Icons.bookmark_add),
+                                label: Text('Book Event'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.orange,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                onPressed: () async {
+                                  await bookEvent(event.id);
+                                  bookingsTabKey.currentState?.addBooking({
+                                    'id': DateTime.now().millisecondsSinceEpoch,
+                                    'event': event.title,
+                                    'total': event.price,
+                                    'paid': event.price == '0' || event.price == '0.0' || event.price == '0.00' ? true : false,
+                                    'eventId': event.id,
+                                    'ticketId': const Uuid().v4(),
+                                    'isVerified': event.isVerified,
+                                    'verificationStatus': event.verificationStatus,
+                                  });
+                                  setState(() {
+                                    eventStatus[event.id] = 'Reserved';
+                                  });
+                                  Navigator.pop(context);
+                                  Fluttertoast.showToast(
+                                    msg: "Event Reservation Successful!",
+                                    toastLength: Toast.LENGTH_LONG,
+                                    gravity: ToastGravity.CENTER,
+                                    backgroundColor: Colors.orange,
+                                    textColor: Colors.white,
+                                    fontSize: 19.0,
+                                  );
+                                },
+                              )
+                            else
+                              ElevatedButton.icon(
+                                icon: Icon(Icons.cancel),
+                                label: Text('Cancel Reservation'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.red,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                onPressed: () async {
+                                  await bookEvent(event.id);
+                                  bookingsTabKey.currentState?.removeBookingByTitle(event.title);
+                                  setState(() {
+                                    eventStatus[event.id] = 'Cancelled Reservation!';
+                                  });
+                                  Navigator.pop(context);
+                                  Fluttertoast.showToast(
+                                    msg: "Event Reservation Cancelled!",
+                                    toastLength: Toast.LENGTH_LONG,
+                                    gravity: ToastGravity.CENTER,
+                                    backgroundColor: Colors.pink,
+                                    textColor: Colors.white,
+                                    fontSize: 19.0,
+                                  );
+                                },
+                              ),
+                          ],
+                        ),
+                        SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          icon: Icon(Icons.payment),
+                          label: Text('Pay For Event'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          onPressed: () {
+                            if (!event.isVerified) {
+                              showDialog(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(15),
+                                  ),
+                                  title: Text('Caution: Unverified Event', style: TextStyle(color: Colors.red)),
+                                  content: Text(
+                                    'This event is not yet verified. Paying for an unverified event may carry risks, as the event details have not been confirmed by an administrator. Do you wish to proceed with payment?',
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: Text('Cancel', style: TextStyle(color: Colors.red)),
+                                    ),
+                                    ElevatedButton(
+                                      onPressed: () {
+                                        Navigator.pop(context);
+                                        Navigator.pop(context);
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) => CheckoutScreen(
+                                              event: event,
+                                              total: event.price,
+                                              ticketId: const Uuid().v4(),
+                                              onPaymentSuccess: () => handlePaymentSuccess(event),
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+                                      child: Text('Proceed'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            } else {
+                              Navigator.pop(context);
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => CheckoutScreen(
+                                    event: event,
+                                    total: event.price,
+                                    ticketId: const Uuid().v4(),
+                                    onPaymentSuccess: () => handlePaymentSuccess(event),
+                                  ),
+                                ),
+                              );
+                            }
                           },
-                          style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-                          child: const Text('Proceed'),
                         ),
                       ],
                     ),
-                  );
-                } else {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => CheckoutScreen(
-                        event: event,
-                        total: event.price,
-                        ticketId: const Uuid().v4(),
-                        onPaymentSuccess: () => handlePaymentSuccess(event),
-                      ),
-                    ),
-                  );
-                }
-              },
-              child: const Text('Pay For Event'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text(
-                'Cancel',
-                style: TextStyle(color: Colors.red),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -460,25 +557,25 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   List<Widget> getScreens() => [
-        HomeTab(
-          events: events,
-          onAddEvent: addEvent,
-          onEventTap: showEventDetailsModal,
-          eventStatus: eventStatus,
-          bookedEventIds: bookedEventIds,
-          bookEvent: bookEvent,
-        ),
-        SearchTab(
-          events: events,
-          eventStatus: eventStatus,
-          onEventTap: showEventDetailsModal,
-          bookedEventIds: bookedEventIds,
-          bookEvent: bookEvent,
-        ),
-        BookingsTab(key: bookingsTabKey),
-        const ProfileScreen(),
-        const MapScreen(),
-      ];
+    HomeTab(
+      events: events,
+      onAddEvent: addEvent,
+      onEventTap: showEventDetailsModal,
+      eventStatus: eventStatus,
+      bookedEventIds: bookedEventIds,
+      bookEvent: bookEvent,
+    ),
+    SearchTab(
+      events: events,
+      eventStatus: eventStatus,
+      onEventTap: showEventDetailsModal,
+      bookedEventIds: bookedEventIds,
+      bookEvent: bookEvent,
+    ),
+    BookingsTab(key: bookingsTabKey),
+    const ProfileScreen(),
+    const MapScreen(),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -573,7 +670,6 @@ class HomeTab extends StatelessWidget {
           ),
         )
         .toList();
-
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
@@ -670,7 +766,6 @@ class HomeTab extends StatelessWidget {
                                       ),
                                     ),
                                   ),
-                                  //const SizedBox(width:10, ),
                                   IconButton(
                                     onPressed: () {
                                       final authProvider = Provider.of<AuthProvider>(
@@ -1027,22 +1122,20 @@ class EventCard extends StatelessWidget {
     required this.isBooked,
     this.onPaymentSuccess,
   }) : super(key: key);
-  
+
   Future<String> getUserNameFromUid(String uid) async {
-  try {
-    final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-    if (doc.exists && doc.data()!.containsKey('name')) {
-      return doc['name'];
-    } else {
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      if (doc.exists && doc.data()!.containsKey('name')) {
+        return doc['name'];
+      } else {
+        return 'Unknown';
+      }
+    } catch (e) {
+      print('Error fetching user name: $e');
       return 'Unknown';
     }
-  } catch (e) {
-    print('Error fetching user name: $e');
-    return 'Unknown';
   }
-}
-
-
 
   DateTime parseEventDate(String input) {
     try {
@@ -1091,9 +1184,7 @@ class EventCard extends StatelessWidget {
     final eventDate = parseEventDate(event.date);
     final isPast = eventDate.isBefore(DateTime.now());
     final isVerified = event.isVerified;
-
     print('EventCard verification status for ${event.title}: isVerified=$isVerified, verificationStatus=${event.verificationStatus}, displayed as ${isVerified ? "Verified" : "Unverified"}');
-
     return GestureDetector(
       onTap: () {
         if (isPast) {
@@ -1114,7 +1205,7 @@ class EventCard extends StatelessWidget {
         child: Container(
           margin: const EdgeInsets.only(bottom: 5, right: 0, left: 0),
           padding: const EdgeInsets.all(16),
-          
+
           width: MediaQuery.of(context).size.width - 20,
           decoration: BoxDecoration(
             color: Colors.white,
@@ -1296,22 +1387,6 @@ class EventCard extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 8),
-
-                      // FutureBuilder<String>(
-                      //     future: getUserNameFromUid(event.createdByUid),
-                      //     builder: (context, snapshot) {
-                      //       if (snapshot.connectionState == ConnectionState.waiting) {
-                      //         return const Text('Loading organizer...');
-                      //       }
-                      //       // if (snapshot.hasError || !snapshot.hasData || snapshot.data == 'Unknown') {
-                      //       //   return const Text('Organized by Unknown');
-                      //       // }
-                      //       return Text('Organized by ${snapshot.data}',
-                      //           style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500));
-                      //     },
-                      //   ),
-
-                    
                     const SizedBox(height: 4),
                     Row(
                       children: [
@@ -1365,33 +1440,33 @@ class EventCard extends StatelessWidget {
                   Expanded(
                     child: (event.price == '0' || event.price == '0.0' || event.price == '0.00')
                         ? Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.green[50],
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: const Text(
-                              'Free Entry',
-                              style: TextStyle(
-                                color: Colors.green,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          )
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.green[50],
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        'Free Entry',
+                        style: TextStyle(
+                          color: Colors.green,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    )
                         : Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: const Color.fromARGB(255, 250, 186, 137),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              'Entry Fee: UGX ${event.price}',
-                              style: const TextStyle(
-                                color: Colors.black,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color.fromARGB(255, 250, 186, 137),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        'Entry Fee: UGX ${event.price}',
+                        style: const TextStyle(
+                          color: Colors.black,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
                   ),
                   IconButton(
                     icon: Icon(
@@ -1432,18 +1507,17 @@ class EventCard extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(15),
                               ),
                               title:const
-                                  Text('Caution: Unverified Event' ,
-                                    style: TextStyle(fontSize: 13, color: Colors.red),
-                                  ),
-                                
-                              
+                              Text('Caution: Unverified Event' ,
+                                style: TextStyle(fontSize: 13, color: Colors.red),
+                              ),
+
                               content: const Text(
                                 'This event is not yet verified. Paying for an unverified event may carry risks, as the event details have not been confirmed by an administrator. Do you wish to proceed with payment?',
-                              ), 
+                              ),
                               actions: [
                                 TextButton(
                                   onPressed: () => Navigator.pop(context),
-                                  child: const Text('Cancel', style: TextStyle(backgroundColor: Colors.white, fontSize: 19, color: Colors.red)),
+                                  child: const Text('Cancel', style: TextStyle( backgroundColor: Colors.white, fontSize: 19, color: Colors.red)),
                                 ),
                                 ElevatedButton(
                                   onPressed: () {
@@ -1568,8 +1642,8 @@ class _SearchTabState extends State<SearchTab> {
     setState(() {
       filteredEvents = widget.events.where((event) {
         final matchesSearch = event.title
-                .toLowerCase()
-                .contains(searchController.text.toLowerCase()) ||
+            .toLowerCase()
+            .contains(searchController.text.toLowerCase()) ||
             event.description
                 .toLowerCase()
                 .contains(searchController.text.toLowerCase()) ||
@@ -1689,7 +1763,7 @@ class _SearchTabState extends State<SearchTab> {
                         ElevatedButton(
                           onPressed: () {
                             Navigator.pop(context);
-                            Navigator.pop(context); // Close the event details modal
+                            Navigator.pop(context);
                             Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -1847,52 +1921,52 @@ class _SearchTabState extends State<SearchTab> {
               Expanded(
                 child: filteredEvents.isEmpty
                     ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.event_busy,
-                              size: 80,
-                              color: Colors.grey[400],
-                            ),
-                            const SizedBox(height: 20),
-                            Text(
-                              'No events found',
-                              style: TextStyle(
-                                fontSize: 18,
-                                color: Colors.grey[600],
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            Text(
-                              'Try changing your filter or search criteria',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey[500],
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: filteredEvents.length,
-                        itemBuilder: (context, index) {
-                          final event = filteredEvents[index];
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 15),
-                            child: EventCard(
-                              event: event,
-                              onTap: () => showEventDetailsModal(event),
-                              status: widget.eventStatus[event.id],
-                              isBooked: widget.bookedEventIds.contains(event.id),
-                              onBookToggle: () => widget.bookEvent(event.id),
-                              onPaymentSuccess: () => handlePaymentSuccess(event),
-                            ),
-                          );
-                        },
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.event_busy,
+                        size: 80,
+                        color: Colors.grey[400],
                       ),
+                      const SizedBox(height: 20),
+                      Text(
+                        'No events found',
+                        style: TextStyle(
+                          fontSize: 18,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        'Try changing your filter or search criteria',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+                    : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: filteredEvents.length,
+                  itemBuilder: (context, index) {
+                    final event = filteredEvents[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 15),
+                      child: EventCard(
+                        event: event,
+                        onTap: () => showEventDetailsModal(event),
+                        status: widget.eventStatus[event.id],
+                        isBooked: widget.bookedEventIds.contains(event.id),
+                        onBookToggle: () => widget.bookEvent(event.id),
+                        onPaymentSuccess: () => handlePaymentSuccess(event),
+                      ),
+                    );
+                  },
+                ),
               ),
             ],
           ),
@@ -1965,21 +2039,17 @@ class _BookingsTabState extends State<BookingsTab> {
       );
       return;
     }
-
     setState(() {
       isLoading = true;
     });
-
     try {
       QuerySnapshot snapshot = await FirebaseFirestore.instance
           .collection('bookings')
           .where('userId', isEqualTo: userId)
           .get();
-
       List<Map<String, dynamic>> fetchedBookings = [];
       for (var doc in snapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
-        // Validate price field
         if (data['price'] != null && double.tryParse(data['price'].toString()) == null) {
           print('Invalid price format for booking ${doc.id}: ${data['price']}');
           continue;
@@ -1996,10 +2066,7 @@ class _BookingsTabState extends State<BookingsTab> {
           'timestamp': (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
         });
       }
-
-      // Sort bookings by timestamp (most recent first)
       fetchedBookings.sort((a, b) => (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime));
-
       setState(() {
         bookings = fetchedBookings;
         isLoading = false;
@@ -2037,7 +2104,6 @@ class _BookingsTabState extends State<BookingsTab> {
       print('No user logged in for cancelling booking');
       return;
     }
-
     try {
       final bookingRef = FirebaseFirestore.instance
           .collection('bookings')
@@ -2060,18 +2126,9 @@ class _BookingsTabState extends State<BookingsTab> {
         fontSize: 16.0,
       );
     } catch (e) {
-      // print('Error cancelling booking: $e');
-      // Fluttertoast.showToast(
-      //   msg: 'Error cancelling booking: $e',
-      //   toastLength: Toast.LENGTH_LONG,
-      //   gravity: ToastGravity.CENTER,
-      //   backgroundColor: Colors.red,
-      //   textColor: Colors.white,
-      //   fontSize: 16.0,
-      // );
+      print('Error cancelling booking: $e');
     }
   }
-  
 
   @override
   Widget build(BuildContext context) {
@@ -2081,91 +2138,85 @@ class _BookingsTabState extends State<BookingsTab> {
         backgroundColor: const Color.fromARGB(255, 25, 25, 95),
         foregroundColor: Colors.white,
         title: const Text('Payments History'),
-        
-       
-
-        
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : bookings.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.history,
-                        size: 80,
-                        color: Colors.grey[400],
-                      ),
-                      const SizedBox(height: 20),
-                      Text(
-                        'No Payments history found',
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        'Book/Pay events from the Home or Search tab',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[500],
-                        ),
-                      ),
-                    ],
+          ? Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.history,
+              size: 80,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'No Payments history found',
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Book/Pay events from the Home or Search tab',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[500],
+              ),
+            ),
+          ],
+        ),
+      )
+          : ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: bookings.length,
+        itemBuilder: (context, index) {
+          final booking = bookings[index];
+          final isVerified = booking['isVerified'] ?? false;
+          final isPaid = booking['paid'] ?? false;
+          return Card(
+            elevation: 2,
+            margin: const EdgeInsets.only(bottom: 12),
+            child: ListTile(
+              leading: Icon(
+                isVerified ? Icons.verified : Icons.warning,
+                color: isVerified ? Colors.green : Colors.red,
+              ),
+              title: Text(
+                booking['event'],
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Price: ${booking['total'] == '0' || booking['total'] == '0.0' || booking['total'] == '0.00' ? 'Free' : 'UGX ${booking['total']}'}',
                   ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: bookings.length,
-                  itemBuilder: (context, index) {
-                    final booking = bookings[index];
-                    final isVerified = booking['isVerified'] ?? false;
-                    final isPaid = booking['paid'] ?? false;
-
-                    return Card(
-                      elevation: 2,
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: ListTile(
-                        leading: Icon(
-                          isVerified ? Icons.verified : Icons.warning,
-                          color: isVerified ? Colors.green : Colors.red,
-                        ),
-                        title: Text(
-                          booking['event'],
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Price: ${booking['total'] == '0' || booking['total'] == '0.0' || booking['total'] == '0.00' ? 'Free' : 'UGX ${booking['total']}'}',
-                            ),
-                            Text(
-                              'Status: ${isPaid ? 'Paid' : 'Reserved'}',
-                              style: TextStyle(
-                                color: isPaid ? Colors.green : Colors.orange,
-                              ),
-                            ),
-                            if (!isVerified)
-                              const Text(
-                                'Unverified Event',
-                                style: TextStyle(color: Colors.red),
-                              ),
-                          ],
-                        ),
-                      trailing: const Icon(
-                        Icons.history,
-                        color: Colors.red, 
-                      ),
-                                            
-                      ),
-                    );
-                  },
-                ),
+                  Text(
+                    'Status: ${isPaid ? 'Paid' : 'Reserved'}',
+                    style: TextStyle(
+                      color: isPaid ? Colors.green : Colors.orange,
+                    ),
+                  ),
+                  if (!isVerified)
+                    const Text(
+                      'Unverified Event',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                ],
+              ),
+              trailing: const Icon(
+                Icons.history,
+                color: Colors.red,
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }
