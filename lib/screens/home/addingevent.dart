@@ -57,6 +57,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
     'Other',
   ];
   final List<String> _documentTypes = [
+    //document types for verification
     'Business License',
     'Event Permit',
     'Insurance Certificate',
