@@ -44,6 +44,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
   double? _latitude;
   double? _longitude;
   final List<String> _categories = [
+    //categories for events
     'Concert',
     'Conference',
     'Workshop',
