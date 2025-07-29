@@ -124,10 +124,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
+              ),//f
+            ),//t
+          ],//p
+        ),/g
       ),
       body: Consumer<AuthProvider>(
         builder: (context, authProvider, child) {
@@ -279,14 +279,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     color: Colors.green,
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+                  ),//j
+                ),//i
+              ],//t
+            ),//r
+          ),//r
+        ],//e
+      ),//p
+    );//o
   }
 
   Widget _buildProfileOption(
@@ -372,9 +372,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         ),
                       child: const Text('Yes',),
-                    ),
-                  ],
-                ),
+                    ),//g
+                  ],//r
+                ),//t
               );
 
               if (shouldSignOut == true) {
