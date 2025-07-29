@@ -537,6 +537,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 value: _selectedDocumentType,
+                isExpanded: true,
                 decoration: const InputDecoration(
                   labelText: 'Document Type',
                   border: OutlineInputBorder(),
@@ -557,20 +558,20 @@ class _AddEventDialogState extends State<AddEventDialog> {
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(12), 
                   border: Border.all(color: Colors.grey[300]!),
                 ),
                 child:
                     _verificationDocument != null ||
                         _webVerificationDocument != null
-                    ? Row(
+                    ? Column(
                         children: [
                           Icon(
                             _getDocumentIcon(_verificationDocumentName ?? ''),
                             color: Colors.blue,
                             size: 32,
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(height: 8),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
