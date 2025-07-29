@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_storage/firebase_storage.dart'; //importing .....
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/foundation.dart';
@@ -401,7 +401,11 @@ class _AddEventDialogState extends State<AddEventDialog> {
                   color: Colors.red,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(FontAwesomeIcons.times, color: Colors.white, size: 16),
+                child: const Icon(
+                  FontAwesomeIcons.times,
+                  color: Colors.white,
+                  size: 16,
+                ),
               ),
             ),
           ),
@@ -434,7 +438,11 @@ class _AddEventDialogState extends State<AddEventDialog> {
                   color: Colors.red,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(FontAwesomeIcons.times, color: Colors.white, size: 16),
+                child: const Icon(
+                  FontAwesomeIcons.times,
+                  color: Colors.white,
+                  size: 16,
+                ),
               ),
             ),
           ),
@@ -446,7 +454,11 @@ class _AddEventDialogState extends State<AddEventDialog> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(FontAwesomeIcons.cameraRetro, size: 50, color: Colors.grey[400]),
+            Icon(
+              FontAwesomeIcons.cameraRetro,
+              size: 50,
+              color: Colors.grey[400],
+            ),
             const SizedBox(height: 10),
             Text(
               'Tap to add event image',
@@ -473,7 +485,11 @@ class _AddEventDialogState extends State<AddEventDialog> {
           children: [
             Row(
               children: [
-                Icon(FontAwesomeIcons.userCheck, color: Colors.green[600], size: 24),
+                Icon(
+                  FontAwesomeIcons.userCheck,
+                  color: Colors.green[600],
+                  size: 24,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   'Event Verification',
@@ -575,7 +591,10 @@ class _AddEventDialogState extends State<AddEventDialog> {
                                 _verificationDocumentName = null;
                               });
                             },
-                            icon: const Icon(FontAwesomeIcons.times, color: Colors.red),
+                            icon: const Icon(
+                              FontAwesomeIcons.times,
+                              color: Colors.red,
+                            ),
                           ),
                         ],
                       )
@@ -620,7 +639,11 @@ class _AddEventDialogState extends State<AddEventDialog> {
                 ),
                 child: Row(
                   children: [
-                    Icon(FontAwesomeIcons.infoCircle, color: Colors.blue[600], size: 20),
+                    Icon(
+                      FontAwesomeIcons.infoCircle,
+                      color: Colors.blue[600],
+                      size: 20,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
