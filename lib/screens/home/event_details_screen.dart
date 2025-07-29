@@ -9,9 +9,7 @@ class EventDetailsScreen extends StatelessWidget {
     final Event event = ModalRoute.of(context)!.settings.arguments as Event;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(event.title),
-      ),
+      appBar: AppBar(title: Text(event.title)),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -44,6 +42,6 @@ class EventDetailsScreen extends StatelessWidget {
 
 extension on String {
   void operator >(int other) {}
-  
+
   toStringAsFixed(int i) {}
 }

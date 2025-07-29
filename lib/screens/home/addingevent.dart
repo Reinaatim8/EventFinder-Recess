@@ -1,5 +1,5 @@
+import 'package:event_locator_app/models/event.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_blurhash/flutter_blurhash.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -11,8 +11,6 @@ import '../../providers/auth_provider.dart';
 import '../map/location_picker_screen.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:file_picker/file_picker.dart';
-import 'dart:ui';
-import '../../models/event.dart';
 
 class AddEventDialog extends StatefulWidget {
   final Function(Event) onAddEvent;
@@ -35,22 +33,30 @@ class _AddEventDialogState extends State<AddEventDialog> {
   File? _selectedImage;
   Uint8List? _webImage;
   bool _isUploading = false;
+
+  // Document verification fields
   File? _verificationDocument;
   Uint8List? _webVerificationDocument;
   String? _verificationDocumentName;
   String _selectedDocumentType = 'Business License';
   bool _requiresVerification = false;
+
   final ImagePicker _picker = ImagePicker();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   double? _latitude;
   double? _longitude;
 
   final List<String> _categories = [
-    'food',
-    'art',
-    'technology',
+    'Concert',
+    'Conference',
+    'Workshop',
     'Sports',
-    'business',
+    'Festival',
+    'Networking',
+    'Exhibition',
+    'Theater',
+    'Comedy',
+    'Other',
   ];
 
   final List<String> _documentTypes = [
@@ -73,6 +79,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
         maxHeight: 1080,
         imageQuality: 85,
       );
+
       if (image != null) {
         if (kIsWeb) {
           final bytes = await image.readAsBytes();
@@ -107,6 +114,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
         maxHeight: 1080,
         imageQuality: 85,
       );
+
       if (image != null) {
         if (kIsWeb) {
           final bytes = await image.readAsBytes();
@@ -140,8 +148,10 @@ class _AddEventDialogState extends State<AddEventDialog> {
         allowedExtensions: ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'],
         allowMultiple: false,
       );
+
       if (result != null) {
         PlatformFile file = result.files.first;
+
         if (kIsWeb) {
           setState(() {
             _webVerificationDocument = file.bytes;
@@ -173,8 +183,11 @@ class _AddEventDialogState extends State<AddEventDialog> {
       setState(() {
         _isUploading = true;
       });
-      String fileName = 'events/${DateTime.now().millisecondsSinceEpoch}_${_titleController.text.replaceAll(' ', '_').replaceAll(RegExp(r'[^\w\s-]'), '')}.jpg';
+
+      String fileName =
+          'events/${DateTime.now().millisecondsSinceEpoch}_${_titleController.text.replaceAll(' ', '_').replaceAll(RegExp(r'[^\w\s-]'), '')}.jpg';
       Reference storageRef = FirebaseStorage.instance.ref().child(fileName);
+
       UploadTask uploadTask;
       if (kIsWeb && _webImage != null) {
         uploadTask = storageRef.putData(
@@ -201,8 +214,10 @@ class _AddEventDialogState extends State<AddEventDialog> {
       } else {
         return null;
       }
+
       TaskSnapshot snapshot = await uploadTask;
       String downloadUrl = await snapshot.ref.getDownloadURL();
+
       print('Image uploaded successfully. URL: $downloadUrl');
       return downloadUrl;
     } catch (e) {
@@ -233,9 +248,13 @@ class _AddEventDialogState extends State<AddEventDialog> {
       if (_verificationDocument == null && _webVerificationDocument == null) {
         return null;
       }
-      String fileName = 'verification_documents/${DateTime.now().millisecondsSinceEpoch}_${_verificationDocumentName ?? 'document'}';
+
+      String fileName =
+          'verification_documents/${DateTime.now().millisecondsSinceEpoch}_${_verificationDocumentName ?? 'document'}';
       Reference storageRef = FirebaseStorage.instance.ref().child(fileName);
+
       String contentType = _getContentType(_verificationDocumentName ?? '');
+
       UploadTask uploadTask;
       if (kIsWeb && _webVerificationDocument != null) {
         uploadTask = storageRef.putData(
@@ -266,8 +285,10 @@ class _AddEventDialogState extends State<AddEventDialog> {
       } else {
         return null;
       }
+
       TaskSnapshot snapshot = await uploadTask;
       String downloadUrl = await snapshot.ref.getDownloadURL();
+
       print('Verification document uploaded successfully. URL: $downloadUrl');
       return downloadUrl;
     } catch (e) {
@@ -306,9 +327,18 @@ class _AddEventDialogState extends State<AddEventDialog> {
   Future<void> _saveEventToFirestore(Event event) async {
     try {
       print('Saving event to Firestore: ${event.toFirestore()}');
-      await _firestore.collection('events').doc(event.id).set(event.toFirestore());
-      print('Event saved to Firestore successfully: ${event.id}, organizerId: ${event.organizerId}, isVerified: ${event.isVerified}, verificationStatus: ${event.verificationStatus}');
-      final savedDoc = await _firestore.collection('events').doc(event.id).get();
+      await _firestore
+          .collection('events')
+          .doc(event.id)
+          .set(event.toFirestore());
+      print(
+        'Event saved to Firestore successfully: ${event.id}, organizerId: ${event.organizerId}, isVerified: ${event.isVerified}, verificationStatus: ${event.verificationStatus}',
+      );
+      // Verify the saved data
+      final savedDoc = await _firestore
+          .collection('events')
+          .doc(event.id)
+          .get();
       final savedData = savedDoc.data();
       print('Retrieved saved event from Firestore: $savedData');
     } catch (e) {
@@ -376,11 +406,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
                   color: Colors.red,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons.close,
-                  color: Colors.white,
-                  size: 16,
-                ),
+                child: const Icon(Icons.close, color: Colors.white, size: 16),
               ),
             ),
           ),
@@ -413,11 +439,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
                   color: Colors.red,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons.close,
-                  color: Colors.white,
-                  size: 16,
-                ),
+                child: const Icon(Icons.close, color: Colors.white, size: 16),
               ),
             ),
           ),
@@ -429,26 +451,16 @@ class _AddEventDialogState extends State<AddEventDialog> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.add_a_photo,
-              size: 50,
-              color: Colors.grey[400],
-            ),
+            Icon(Icons.add_a_photo, size: 50, color: Colors.grey[400]),
             const SizedBox(height: 10),
             Text(
               'Tap to add event image',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 16,
-              ),
+              style: TextStyle(color: Colors.grey[600], fontSize: 16),
             ),
             const SizedBox(height: 5),
             Text(
               kIsWeb ? 'Gallery' : 'Gallery or Camera',
-              style: TextStyle(
-                color: Colors.grey[500],
-                fontSize: 12,
-              ),
+              style: TextStyle(color: Colors.grey[500], fontSize: 12),
             ),
           ],
         ),
@@ -466,11 +478,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
           children: [
             Row(
               children: [
-                Icon(
-                  Icons.verified_user,
-                  color: Colors.green[600],
-                  size: 24,
-                ),
+                Icon(Icons.verified_user, color: Colors.green[600], size: 24),
                 const SizedBox(width: 8),
                 Text(
                   'Event Verification',
@@ -485,10 +493,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
             const SizedBox(height: 12),
             Text(
               'Upload a verification document to establish credibility for your event. This helps attendees trust your event.',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 14,
-              ),
+              style: TextStyle(color: Colors.grey[600], fontSize: 14),
             ),
             const SizedBox(height: 16),
             Row(
@@ -519,10 +524,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
                   prefixIcon: Icon(Icons.description),
                 ),
                 items: _documentTypes.map((type) {
-                  return DropdownMenuItem(
-                    value: type,
-                    child: Text(type),
-                  );
+                  return DropdownMenuItem(value: type, child: Text(type));
                 }).toList(),
                 onChanged: (value) {
                   setState(() {
@@ -539,7 +541,9 @@ class _AddEventDialogState extends State<AddEventDialog> {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.grey[300]!),
                 ),
-                child: _verificationDocument != null || _webVerificationDocument != null
+                child:
+                    _verificationDocument != null ||
+                        _webVerificationDocument != null
                     ? Row(
                         children: [
                           Icon(
@@ -576,10 +580,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
                                 _verificationDocumentName = null;
                               });
                             },
-                            icon: const Icon(
-                              Icons.close,
-                              color: Colors.red,
-                            ),
+                            icon: const Icon(Icons.close, color: Colors.red),
                           ),
                         ],
                       )
@@ -624,19 +625,12 @@ class _AddEventDialogState extends State<AddEventDialog> {
                 ),
                 child: Row(
                   children: [
-                    Icon(
-                      Icons.info,
-                      color: Colors.blue[600],
-                      size: 20,
-                    ),
+                    Icon(Icons.info, color: Colors.blue[600], size: 20),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'Your document will be reviewed by our team. Verified events get a trust badge.',
-                        style: TextStyle(
-                          color: Colors.blue[700],
-                          fontSize: 12,
-                        ),
+                        style: TextStyle(color: Colors.blue[700], fontSize: 12),
                       ),
                     ),
                   ],
@@ -670,249 +664,250 @@ class _AddEventDialogState extends State<AddEventDialog> {
   Widget build(BuildContext context) {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Stack(
-        children: [
-          BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-            child: Container(
-              color: Colors.black.withOpacity(0.5),
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.all(20),
-            constraints: const BoxConstraints(maxHeight: 700, maxWidth: 600),
-            child: Form(
-              key: _formKey,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        constraints: const BoxConstraints(maxHeight: 700, maxWidth: 600),
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.add_circle,
-                          color: Color.fromARGB(255, 25, 25, 95),
-                          size: 28,
-                        ),
-                        const SizedBox(width: 10),
-                        const Text(
-                          'Add New Event',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
+                    Icon(
+                      Icons.add_circle,
+                      color: Color.fromARGB(255, 25, 25, 95),
+                      size: 28,
                     ),
-                    const SizedBox(height: 20),
-                    Container(
-                      width: double.infinity,
-                      height: 200,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey[300]!),
+                    const SizedBox(width: 10),
+                    const Text(
+                      'Add New Event',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
                       ),
-                      child: _buildImagePreview(),
-                    ),
-                    const SizedBox(height: 20),
-                    TextFormField(
-                      controller: _titleController,
-                      decoration: const InputDecoration(
-                        labelText: 'Event Title *',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter event title';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 15),
-                    TextFormField(
-                      controller: _descriptionController,
-                      decoration: const InputDecoration(
-                        labelText: 'Description',
-                        border: OutlineInputBorder(),
-                      ),
-                      maxLines: 3,
-                    ),
-                    const SizedBox(height: 15),
-                    TextFormField(
-                      controller: _priceController,
-                      keyboardType: TextInputType.numberWithOptions(decimal: true),
-                      decoration: const InputDecoration(
-                        labelText: 'Price',
-                        prefixIcon: Icon(Icons.attach_money),
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter a price';
-                        }
-                        if (double.tryParse(value) == null) {
-                          return 'Please enter a valid number';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 15),
-                    TextFormField(
-                      controller: _maxslotsController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Maximum/Capacity Slots',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter max slots';
-                        }
-                        if (int.tryParse(value) == null) {
-                          return 'Please enter a valid number';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 15),
-                    TextFormField(
-                      controller: _dateController,
-                      decoration: const InputDecoration(
-                        labelText: 'Date *',
-                        border: OutlineInputBorder(),
-                        suffixIcon: Icon(Icons.calendar_today),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter event date';
-                        }
-                        return null;
-                      },
-                      onTap: () async {
-                        FocusScope.of(context).requestFocus(FocusNode());
-                        final date = await showDatePicker(
-                          context: context,
-                          initialDate: DateTime.now(),
-                          firstDate: DateTime.now(),
-                          lastDate: DateTime(2030),
-                        );
-                        if (date != null) {
-                          _dateController.text =
-                              '${date.day}/${date.month}/${date.year}';
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 15),
-                    TextFormField(
-                      controller: _locationController,
-                      decoration: const InputDecoration(
-                        labelText: 'Location *',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter event location';
-                        }
-                        return null;
-                      },
-                      onTap: () async {
-                        final result = await Navigator.push<Map<String, dynamic>?>(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const LocationPickerScreen(),
-                          ),
-                        );
-                        if (result != null) {
-                          final LatLng location = result['location'];
-                          final String locationName = result['locationName'] ?? 'Unknown location';
-                          setState(() {
-                            _latitude = location.latitude;
-                            _longitude = location.longitude;
-                            _locationController.text = locationName;
-                          });
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 15),
-                    DropdownButtonFormField<String>(
-                      value: _selectedCategory,
-                      decoration: const InputDecoration(
-                        labelText: 'Category',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: _categories.map((category) {
-                        return DropdownMenuItem(
-                          value: category,
-                          child: Text(category),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedCategory = value!;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 20),
-                    _buildVerificationSection(),
-                    const SizedBox(height: 20),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextButton(
-                            onPressed: _isUploading ? null : () => Navigator.pop(context),
-                            child: Text('Cancel'),
-                            style: TextButton.styleFrom(
-                              foregroundColor: Colors.white,
-                              backgroundColor: Colors.red,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: _isUploading ? null : _addEvent,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Color.fromARGB(255, 25, 25, 95),
-                              foregroundColor: Colors.white,
-                            ),
-                            child: _isUploading
-                                ? const SizedBox(
-                                    height: 16,
-                                    width: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor:
-                                          AlwaysStoppedAnimation<Color>(Colors.white),
-                                    ),
-                                  )
-                                : const Text('Add Event'),
-                          ),
-                        ),
-                      ],
                     ),
                   ],
                 ),
-              ),
+                const SizedBox(height: 20),
+                Container(
+                  width: double.infinity,
+                  height: 200,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey[300]!),
+                  ),
+                  child: _buildImagePreview(),
+                ),
+                const SizedBox(height: 20),
+                TextFormField(
+                  controller: _titleController,
+                  decoration: const InputDecoration(
+                    labelText: 'Event Title *',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter event title';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 15),
+                TextFormField(
+                  controller: _descriptionController,
+                  decoration: const InputDecoration(
+                    labelText: 'Description',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 15),
+                TextFormField(
+                  controller: _priceController,
+                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(
+                    labelText: 'Price',
+                    prefixIcon: Icon(Icons.attach_money),
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter a price';
+                    }
+                    if (double.tryParse(value) == null) {
+                      return 'Please enter a valid number';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 15),
+                TextFormField(
+                  controller: _maxslotsController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(
+                    labelText: 'Maximum/Capacity Slots',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter max slots';
+                    }
+                    if (int.tryParse(value) == null) {
+                      return 'Please enter a valid number';
+                    }
+                    return null;
+                  },
+                ),
+
+                const SizedBox(height: 15),
+                TextFormField(
+                  controller: _dateController,
+                  decoration: const InputDecoration(
+                    labelText: 'Date *',
+                    border: OutlineInputBorder(),
+                    suffixIcon: Icon(Icons.calendar_today),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter event date';
+                    }
+                    return null;
+                  },
+                  onTap: () async {
+                    FocusScope.of(context).requestFocus(FocusNode());
+                    final date = await showDatePicker(
+                      context: context,
+                      initialDate: DateTime.now(),
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime(2030),
+                    );
+                    if (date != null) {
+                      _dateController.text =
+                          '${date.day}/${date.month}/${date.year}';
+                    }
+                  },
+                ),
+                const SizedBox(height: 15),
+                TextFormField(
+                  controller: _locationController,
+                  decoration: const InputDecoration(
+                    labelText: 'Location *',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter event location';
+                    }
+                    return null;
+                  },
+                  onTap: () async {
+                    final result = await Navigator.push<Map<String, dynamic>?>(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const LocationPickerScreen(),
+                      ),
+                    );
+                    if (result != null) {
+                      final LatLng location = result['location'];
+                      final String locationName =
+                          result['locationName'] ?? 'Unknown location';
+                      setState(() {
+                        _latitude = location.latitude;
+                        _longitude = location.longitude;
+                        _locationController.text = locationName;
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(height: 15),
+                DropdownButtonFormField<String>(
+                  value: _selectedCategory,
+                  decoration: const InputDecoration(
+                    labelText: 'Category',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: _categories.map((category) {
+                    return DropdownMenuItem(
+                      value: category,
+                      child: Text(category),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedCategory = value!;
+                    });
+                  },
+                ),
+                const SizedBox(height: 20),
+                _buildVerificationSection(),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: _isUploading
+                            ? null
+                            : () => Navigator.pop(context),
+                        child: Text('Cancel'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          backgroundColor: Colors.red,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _isUploading ? null : _addEvent,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color.fromARGB(255, 25, 25, 95),
+                          foregroundColor: Colors.white,
+                        ),
+                        child: _isUploading
+                            ? const SizedBox(
+                                height: 16,
+                                width: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              )
+                            : const Text('Add Event'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
 
   Future<void> _addEvent() async {
     if (_formKey.currentState!.validate()) {
-      if (_requiresVerification && _verificationDocument == null && _webVerificationDocument == null) {
+      // Validate verification document if required
+      if (_requiresVerification &&
+          _verificationDocument == null &&
+          _webVerificationDocument == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Please upload a verification document or uncheck the verification option.'),
+            content: Text(
+              'Please upload a verification document or uncheck the verification option.',
+            ),
             backgroundColor: Colors.orange,
           ),
         );
         return;
       }
+
       try {
         final authProvider = Provider.of<AuthProvider>(context, listen: false);
         final organizerId = authProvider.user?.uid;
@@ -920,6 +915,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
           throw Exception('User not authenticated');
         }
         print('Creating event with organizerId: $organizerId');
+
         String? imageUrl;
         if (_selectedImage != null || _webImage != null) {
           imageUrl = await _uploadImageToFirebase();
@@ -935,14 +931,20 @@ class _AddEventDialogState extends State<AddEventDialog> {
             return;
           }
         }
+
         String? verificationDocumentUrl;
-        if (_requiresVerification && (_verificationDocument != null || _webVerificationDocument != null)) {
-          verificationDocumentUrl = await _uploadVerificationDocumentToFirebase();
+        if (_requiresVerification &&
+            (_verificationDocument != null ||
+                _webVerificationDocument != null)) {
+          verificationDocumentUrl =
+              await _uploadVerificationDocumentToFirebase();
           if (verificationDocumentUrl == null) {
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('Failed to upload verification document. Please try again.'),
+                  content: Text(
+                    'Failed to upload verification document. Please try again.',
+                  ),
                   backgroundColor: Colors.red,
                 ),
               );
@@ -950,6 +952,7 @@ class _AddEventDialogState extends State<AddEventDialog> {
             return;
           }
         }
+
         final event = Event(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
           title: _titleController.text.trim(),
@@ -961,32 +964,48 @@ class _AddEventDialogState extends State<AddEventDialog> {
           category: _selectedCategory,
           imageUrl: imageUrl,
           organizerId: organizerId,
+          
+          
+          
           price: double.tryParse(_priceController.text) ?? 0.0,
           maxslots: int.tryParse(_maxslotsController.text) ?? 0,
           verificationDocumentUrl: verificationDocumentUrl,
-          verificationDocumentType: _requiresVerification ? _selectedDocumentType : null,
+          verificationDocumentType: _requiresVerification
+              ? _selectedDocumentType
+              : null,
           verificationStatus: _requiresVerification ? 'pending' : null,
           requiresVerification: _requiresVerification,
-          verificationSubmittedAt: _requiresVerification ? DateTime.now().toIso8601String() : null,
-          isVerified: false,
-          status: 'unverified',
+          verificationSubmittedAt: _requiresVerification
+              ? DateTime.now().toIso8601String()
+              : null,
+          isVerified:
+              false, // Explicitly set to false to ensure initial unverified state
+          status:
+              'unverified', // Explicitly set to align with Event model default
         );
+
         print('Event created: ${event.toFirestore()}');
         await _saveEventToFirestore(event);
-        print('Calling onAddEvent with event: id=${event.id}, isVerified=${event.isVerified}, verificationStatus=${event.verificationStatus}');
+        print(
+          'Calling onAddEvent with event: id=${event.id}, isVerified=${event.isVerified}, verificationStatus=${event.verificationStatus}',
+        );
         widget.onAddEvent(event);
+
         if (mounted) {
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(_requiresVerification
-                  ? 'Event added successfully! Your verification document is being reviewed.'
-                  : 'Event added successfully!'),
+              content: Text(
+                _requiresVerification
+                    ? 'Event added successfully! Your verification document is being reviewed.'
+                    : 'Event added successfully!',
+              ),
               backgroundColor: Colors.green,
             ),
           );
         }
       } catch (e) {
+        //print('Error adding event: $e');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

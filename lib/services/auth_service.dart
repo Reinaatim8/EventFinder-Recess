@@ -35,6 +35,8 @@ class AuthService {
           emailVerified: user.emailVerified,
           createdAt: DateTime.now(),
           lastLoginAt: DateTime.now(),
+          phoneNumber: null,
+          twoFactorEnabled: false,
         );
 
         print('Creating user document with UID: ${userModel.uid}');
@@ -96,6 +98,8 @@ class AuthService {
             emailVerified: user.emailVerified,
             createdAt: DateTime.now(),
             lastLoginAt: DateTime.now(),
+            phoneNumber: null,
+            twoFactorEnabled: false,
           );
           await _databaseService.createUserDocument(userModel);
         }
@@ -201,6 +205,52 @@ class AuthService {
         msg: "Error reloading user: $e",
         toastLength: Toast.LENGTH_SHORT,
       );
+    }
+  }
+
+  Future<bool> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      User? user = _auth.currentUser;
+      if (user == null) {
+        print('No user is signed in');
+        Fluttertoast.showToast(
+          msg: "No user is signed in",
+          toastLength: Toast.LENGTH_SHORT,
+        );
+        return false;
+      }
+
+      // Reauthenticate the user
+      print('Reauthenticating user: ${user.uid}');
+      final credential = EmailAuthProvider.credential(
+        email: user.email ?? '',
+        password: currentPassword,
+      );
+      await user.reauthenticateWithCredential(credential);
+
+      // Update the password
+      print('Updating password for user: ${user.uid}');
+      await user.updatePassword(newPassword);
+      Fluttertoast.showToast(
+        msg: "Password changed successfully",
+        toastLength: Toast.LENGTH_SHORT,
+      );
+      print('Password changed successfully');
+      return true;
+    } on FirebaseAuthException catch (e) {
+      print('FirebaseAuthException during password change: ${e.code} - ${e.message}');
+      _handleAuthException(e);
+      return false;
+    } catch (e, stackTrace) {
+      print('Unexpected error during password change: $e\n$stackTrace');
+      Fluttertoast.showToast(
+        msg: "An unexpected error occurred: $e",
+        toastLength: Toast.LENGTH_SHORT,
+      );
+      return false;
     }
   }
 

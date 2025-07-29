@@ -38,7 +38,7 @@ class _SplashScreenState extends State<SplashScreen>
     _controller.forward();
 
     // Delay before navigating
-    Timer(const Duration(seconds: 18), () {
+    Timer(const Duration(seconds: 10), () {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const AuthWrapper()),

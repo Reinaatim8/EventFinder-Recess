@@ -23,7 +23,10 @@ class Event {
   final bool? requiresVerification;
   final String? verificationSubmittedAt;
   
+  
   final int? maxslots;
+
+  String createdByUid;
 
   Event({
     required this.id,
@@ -48,6 +51,7 @@ class Event {
     this.requiresVerification,
     this.isVerified = false,
     this.verificationSubmittedAt,
+    this.createdByUid = '',
   });
 
   // Deserialize from Firestore
@@ -114,6 +118,7 @@ class Event {
         verificationStatus: data['verificationStatus']?.toString(),
         requiresVerification: data['requiresVerification'] as bool?,
         isVerified: data['isVerified'] as bool? ?? false,
+        createdByUid: data['createdByUid']?.toString() ?? '',
         verificationSubmittedAt: data['verificationSubmittedAt']?.toString(),
       );
     } catch (e) {
@@ -128,6 +133,7 @@ class Event {
         category: '',
         organizerId: '',
         isVerified: false,
+        createdByUid: '',
       );
     }
   }
@@ -150,6 +156,7 @@ class Event {
       'latitude': latitude,
       'longitude': longitude,
       'imageUrl': imageUrl,
+      'createdByUid': createdByUid,
       'verificationDocumentUrl': verificationDocumentUrl,
       'verificationDocumentType': verificationDocumentType,
       'verificationStatus': verificationStatus,

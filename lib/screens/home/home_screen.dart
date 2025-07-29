@@ -10,12 +10,14 @@ import '../../providers/auth_provider.dart';
 import '../profile/profile_screen.dart';
 import 'checkout_screen.dart';
 import 'addingevent.dart';
+import 'checkout_screen.dart';
 import '../home/event_management_screen.dart';
 import '../../models/event.dart';
 import '../map/map_screen.dart';
 import 'verification_screen.dart';
 import '../../services/booking_service.dart';
-import 'dart:ui';
+
+
 
 final GlobalKey<_BookingsTabState> bookingsTabKey = GlobalKey<_BookingsTabState>();
 
@@ -72,7 +74,7 @@ class _HomeScreenState extends State<HomeScreen> {
       return DateTime(1900);
     }
   }
-
+// Fetch events from Firestore
   Future<void> fetchEvents() async {
     setState(() {
       isLoading = true;
@@ -119,6 +121,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  
   Future<void> bookEvent(String eventId) async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
     if (userId == null) {
@@ -128,20 +131,26 @@ class _HomeScreenState extends State<HomeScreen> {
       );
       return;
     }
+
     final bookingRef = FirebaseFirestore.instance
         .collection('bookings')
         .doc('$userId-$eventId');
+
     try {
+      // Validate event existence
       final event = events.firstWhere(
         (e) => e.id == eventId,
         orElse: () => throw Exception('Event not found: $eventId'),
       );
-      print('Booking attempt: authUid=${FirebaseAuth.instance.currentUser?.uid}, userId=$userId, eventId=$eventId');
 
+      print('Booking attempt: authUid=${FirebaseAuth.instance.currentUser?.uid}, userId=$userId, eventId=$eventId');
+      
+      // Log booking data
       final bookingData = {
         'userId': userId,
         'eventId': eventId,
         'event': event.title,
+        
         'price': event.price,
         'paid': event.price == '0' || event.price == '0.0' || event.price == '0.00' ? true : false,
         'ticketId': const Uuid().v4(),
@@ -150,6 +159,7 @@ class _HomeScreenState extends State<HomeScreen> {
         'timestamp': FieldValue.serverTimestamp(),
       };
       print('Booking data: $bookingData');
+
       if (await bookingRef.get().then((doc) => doc.exists)) {
         print('Deleting booking for user: $userId, event: $eventId');
         await bookingRef.delete();
@@ -169,9 +179,15 @@ class _HomeScreenState extends State<HomeScreen> {
           eventStatus[eventId] = 'Reserved';
         });
         bookingsTabKey.currentState?._fetchBookings();
+        // ScaffoldMessenger.of(context).showSnackBar(
+        //   const SnackBar(content: Text('Event Reservation Successful')),
+        // );
       }
     } catch (e) {
       print('Error booking event: $e');
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   SnackBar(content: Text('Error booking event: $e')),
+      // );
     }
   }
 
@@ -181,6 +197,7 @@ class _HomeScreenState extends State<HomeScreen> {
       print('No user logged in for loading booked events');
       return;
     }
+
     try {
       final snapshot = await FirebaseFirestore.instance
           .collection('bookings')
@@ -197,6 +214,9 @@ class _HomeScreenState extends State<HomeScreen> {
       bookingsTabKey.currentState?._fetchBookings();
     } catch (e) {
       print('Error loading booked events: $e');
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   SnackBar(content: Text('Error loading booked events: $e')),
+      // );
     }
   }
 
@@ -247,136 +267,134 @@ class _HomeScreenState extends State<HomeScreen> {
   void showEventDetailsModal(Event event) {
     showDialog(
       context: context,
-      builder: (context) => BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-        child: AlertDialog(
-          title: Text(event.title),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(event.description),
-              const SizedBox(height: 20),
-              if (eventStatus[event.id] != 'Reserved') ...[
-                ElevatedButton(
-                  onPressed: () async {
-                    await bookEvent(event.id);
-                    bookingsTabKey.currentState?.addBooking({
-                      'id': DateTime.now().millisecondsSinceEpoch,
-                      'event': event.title,
-                      'total': event.price,
-                      'paid': event.price == '0' || event.price == '0.0' || event.price == '0.00' ? true : false,
-                      'eventId': event.id,
-                      'ticketId': const Uuid().v4(),
-                      'isVerified': event.isVerified,
-                      'verificationStatus': event.verificationStatus,
-                    });
-                    setState(() {
-                      eventStatus[event.id] = 'Reserved';
-                    });
-                    Navigator.pop(context);
-                    Fluttertoast.showToast(
-                      msg: "Event Reservation Successful!",
-                      toastLength: Toast.LENGTH_LONG,
-                      gravity: ToastGravity.CENTER,
-                      backgroundColor: Colors.orange,
-                      textColor: Colors.white,
-                      fontSize: 19.0,
-                    );
-                  },
-                  child: const Text('Book/Reserve an Event'),
-                ),
-              ] else ...[
-                ElevatedButton(
-                  onPressed: () async {
-                    await bookEvent(event.id);
-                    bookingsTabKey.currentState?.removeBookingByTitle(event.title);
-                    setState(() {
-                      eventStatus[event.id] = 'Cancelled Reservation!';
-                    });
-                    Navigator.pop(context);
-                    Fluttertoast.showToast(
-                      msg: "Event Reservation Cancelled!",
-                      toastLength: Toast.LENGTH_LONG,
-                      gravity: ToastGravity.CENTER,
-                      backgroundColor: Colors.pink,
-                      textColor: Colors.white,
-                      fontSize: 19.0,
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.pink),
-                  child: const Text('Cancel Reservation'),
-                ),
-              ],
+      builder: (context) => AlertDialog(
+        title: Text(event.title),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(event.description),
+            const SizedBox(height: 20),
+            if (eventStatus[event.id] != 'Reserved') ...[
               ElevatedButton(
-                onPressed: () {
-                  if (!event.isVerified) {
-                    showDialog(
-                      context: context,
-                      builder: (context) => BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                        child: AlertDialog(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                          title: const Text('Caution: Unverified Event', style: TextStyle(color: Colors.red)),
-                          content: const Text(
-                            'This event is not yet verified. Paying for an unverified event may carry risks, as the event details have not been confirmed by an administrator. Do you wish to proceed with payment?',
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('Cancel', style: TextStyle(color: Colors.red, fontSize: 16)),
-                            ),
-                            ElevatedButton(
-                              onPressed: () {
-                                Navigator.pop(context);
-                                Navigator.pop(context);
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => CheckoutScreen(
-                                      event: event,
-                                      total: event.price,
-                                      ticketId: const Uuid().v4(),
-                                      onPaymentSuccess: () => handlePaymentSuccess(event),
-                                    ),
-                                  ),
-                                );
-                              },
-                              style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-                              child: const Text('Proceed'),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  } else {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => CheckoutScreen(
-                          event: event,
-                          total: event.price,
-                          ticketId: const Uuid().v4(),
-                          onPaymentSuccess: () => handlePaymentSuccess(event),
-                        ),
-                      ),
-                    );
-                  }
+                onPressed: () async {
+                  await bookEvent(event.id);
+                  bookingsTabKey.currentState?.addBooking({
+                    'id': DateTime.now().millisecondsSinceEpoch,
+                    'event': event.title,
+                    'total': event.price,
+                    'paid': event.price == '0' || event.price == '0.0' || event.price == '0.00' ? true : false,
+                    'eventId': event.id,
+                    'ticketId': const Uuid().v4(),
+                    'isVerified': event.isVerified,
+                    'verificationStatus': event.verificationStatus,
+                  });
+                  setState(() {
+                    eventStatus[event.id] = 'Reserved';
+                  });
+                  Navigator.pop(context);
+                  Fluttertoast.showToast(
+                    msg: "Event Reservation Successful!",
+                    toastLength: Toast.LENGTH_LONG,
+                    gravity: ToastGravity.CENTER,
+                    backgroundColor: Colors.orange,
+                    textColor: Colors.white,
+                    fontSize: 19.0,
+                  );
                 },
-                child: const Text('Pay For Event'),
+                child: const Text('Book/Reserve an Event'),
               ),
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text(
-                  'Cancel',
-                  style: TextStyle(color: Colors.red),
-                ),
+            ] else ...[
+              ElevatedButton(
+                onPressed: () async {
+                  await bookEvent(event.id);
+                  bookingsTabKey.currentState?.removeBookingByTitle(event.title);
+                  setState(() {
+                    eventStatus[event.id] = 'Cancelled Reservation!';
+                  });
+                  Navigator.pop(context);
+                  Fluttertoast.showToast(
+                    msg: "Event Reservation Cancelled!",
+                    toastLength: Toast.LENGTH_LONG,
+                    gravity: ToastGravity.CENTER,
+                    backgroundColor: Colors.pink,
+                    textColor: Colors.white,
+                    fontSize: 19.0,
+                  );
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.pink),
+                child: const Text('Cancel Reservation'),
               ),
             ],
-          ),
+            ElevatedButton(
+              onPressed: () {
+                if (!event.isVerified) {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15),
+                      ),
+                      
+                      title: const
+                          Text('Caution: Unverified Event', style: TextStyle(color: Colors.red)),
+                        
+                      
+                      content: const Text(
+                        'This event is not yet verified. Paying for an unverified event may carry risks, as the event details have not been confirmed by an administrator. Do you wish to proceed with payment?',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cancel', style: TextStyle( color: Colors.red, fontSize: 16)),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            Navigator.pop(context); // Close the event details modal
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => CheckoutScreen(
+                                  event: event,
+                                  total: event.price,
+                                  ticketId: const Uuid().v4(),
+                                  onPaymentSuccess: () => handlePaymentSuccess(event),
+                                ),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+                          child: const Text('Proceed'),
+                        ),
+                      ],
+                    ),
+                  );
+                } else {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => CheckoutScreen(
+                        event: event,
+                        total: event.price,
+                        ticketId: const Uuid().v4(),
+                        onPaymentSuccess: () => handlePaymentSuccess(event),
+                      ),
+                    ),
+                  );
+                }
+              },
+              child: const Text('Pay For Event'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -385,85 +403,82 @@ class _HomeScreenState extends State<HomeScreen> {
   void showEventSelectionDialog() {
     showDialog(
       context: context,
-      builder: (context) => BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-        child: AlertDialog(
-          title: const Text('Select Event to Verify'),
-          content: Container(
-            width: double.maxFinite,
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: events.length,
-              itemBuilder: (context, index) {
-                final event = events[index];
-                return ListTile(
-                  title: Text(event.title),
-                  subtitle: Text(
-                    event.isVerified ? 'Verified' : 'Unverified',
-                    style: TextStyle(
-                      color: event.isVerified ? Colors.green : Colors.red,
-                    ),
+      builder: (context) => AlertDialog(
+        title: const Text('Select Event to Verify'),
+        content: Container(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: events.length,
+            itemBuilder: (context, index) {
+              final event = events[index];
+              return ListTile(
+                title: Text(event.title),
+                subtitle: Text(
+                  event.isVerified ? 'Verified' : 'Unverified',
+                  style: TextStyle(
+                    color: event.isVerified ? Colors.green : Colors.red,
                   ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => VerificationScreen(
-                          event: event,
-                          isVerified: event.isVerified,
-                          verificationDocumentUrl: event.verificationDocumentUrl,
-                          verificationStatus: event.verificationStatus,
-                          rejectionReason: event.rejectionReason,
-                          onBookingAdded: (booking) {
-                            bookingsTabKey.currentState?.addBooking(booking);
-                          },
-                          onStatusUpdate: (status) {
-                            print('Status updated for event ${event.id}: $status');
-                            setState(() {
-                              eventStatus[event.id] = status;
-                            });
-                            fetchEvents();
-                          },
-                        ),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => VerificationScreen(
+                        event: event,
+                        isVerified: event.isVerified,
+                        verificationDocumentUrl: event.verificationDocumentUrl,
+                        verificationStatus: event.verificationStatus,
+                        rejectionReason: event.rejectionReason,
+                        onBookingAdded: (booking) {
+                          bookingsTabKey.currentState?.addBooking(booking);
+                        },
+                        onStatusUpdate: (status) {
+                          print('Status updated for event ${event.id}: $status');
+                          setState(() {
+                            eventStatus[event.id] = status;
+                          });
+                          fetchEvents();
+                        },
                       ),
-                    );
-                  },
-                );
-              },
-            ),
+                    ),
+                  );
+                },
+              );
+            },
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel', style: TextStyle(color: Colors.red)),
-            ),
-          ],
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(color: Colors.red)),
+          ),
+        ],
       ),
     );
   }
 
   List<Widget> getScreens() => [
-    HomeTab(
-      events: events,
-      onAddEvent: addEvent,
-      onEventTap: showEventDetailsModal,
-      eventStatus: eventStatus,
-      bookedEventIds: bookedEventIds,
-      bookEvent: bookEvent,
-    ),
-    SearchTab(
-      events: events,
-      eventStatus: eventStatus,
-      onEventTap: showEventDetailsModal,
-      bookedEventIds: bookedEventIds,
-      bookEvent: bookEvent,
-    ),
-    BookingsTab(key: bookingsTabKey),
-    const ProfileScreen(),
-    const MapScreen(),
-  ];
+        HomeTab(
+          events: events,
+          onAddEvent: addEvent,
+          onEventTap: showEventDetailsModal,
+          eventStatus: eventStatus,
+          bookedEventIds: bookedEventIds,
+          bookEvent: bookEvent,
+        ),
+        SearchTab(
+          events: events,
+          eventStatus: eventStatus,
+          onEventTap: showEventDetailsModal,
+          bookedEventIds: bookedEventIds,
+          bookEvent: bookEvent,
+        ),
+        BookingsTab(key: bookingsTabKey),
+        const ProfileScreen(),
+        const MapScreen(),
+      ];
 
   @override
   Widget build(BuildContext context) {
@@ -558,6 +573,7 @@ class HomeTab extends StatelessWidget {
           ),
         )
         .toList();
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
@@ -654,6 +670,7 @@ class HomeTab extends StatelessWidget {
                                       ),
                                     ),
                                   ),
+                                  //const SizedBox(width:10, ),
                                   IconButton(
                                     onPressed: () {
                                       final authProvider = Provider.of<AuthProvider>(
@@ -931,10 +948,7 @@ class HomeTab extends StatelessWidget {
   void _showAddEventDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-        child: AddEventDialog(onAddEvent: onAddEvent),
-      ),
+      builder: (context) => AddEventDialog(onAddEvent: onAddEvent),
     );
   }
 }
@@ -1013,6 +1027,22 @@ class EventCard extends StatelessWidget {
     required this.isBooked,
     this.onPaymentSuccess,
   }) : super(key: key);
+  
+  Future<String> getUserNameFromUid(String uid) async {
+  try {
+    final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    if (doc.exists && doc.data()!.containsKey('name')) {
+      return doc['name'];
+    } else {
+      return 'Unknown';
+    }
+  } catch (e) {
+    print('Error fetching user name: $e');
+    return 'Unknown';
+  }
+}
+
+
 
   DateTime parseEventDate(String input) {
     try {
@@ -1061,7 +1091,9 @@ class EventCard extends StatelessWidget {
     final eventDate = parseEventDate(event.date);
     final isPast = eventDate.isBefore(DateTime.now());
     final isVerified = event.isVerified;
+
     print('EventCard verification status for ${event.title}: isVerified=$isVerified, verificationStatus=${event.verificationStatus}, displayed as ${isVerified ? "Verified" : "Unverified"}');
+
     return GestureDetector(
       onTap: () {
         if (isPast) {
@@ -1082,6 +1114,7 @@ class EventCard extends StatelessWidget {
         child: Container(
           margin: const EdgeInsets.only(bottom: 5, right: 0, left: 0),
           padding: const EdgeInsets.all(16),
+          
           width: MediaQuery.of(context).size.width - 20,
           decoration: BoxDecoration(
             color: Colors.white,
@@ -1257,11 +1290,28 @@ class EventCard extends StatelessWidget {
                           event.date,
                           style: TextStyle(
                             color: Colors.grey[600],
-                            fontSize: 14,
+                            fontSize: 14 ,
                           ),
                         ),
                       ],
                     ),
+                    const SizedBox(height: 8),
+
+                      // FutureBuilder<String>(
+                      //     future: getUserNameFromUid(event.createdByUid),
+                      //     builder: (context, snapshot) {
+                      //       if (snapshot.connectionState == ConnectionState.waiting) {
+                      //         return const Text('Loading organizer...');
+                      //       }
+                      //       // if (snapshot.hasError || !snapshot.hasData || snapshot.data == 'Unknown') {
+                      //       //   return const Text('Organized by Unknown');
+                      //       // }
+                      //       return Text('Organized by ${snapshot.data}',
+                      //           style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500));
+                      //     },
+                      //   ),
+
+                    
                     const SizedBox(height: 4),
                     Row(
                       children: [
@@ -1377,41 +1427,43 @@ class EventCard extends StatelessWidget {
                         if (!event.isVerified) {
                           showDialog(
                             context: context,
-                            builder: (context) => BackdropFilter(
-                              filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                              child: AlertDialog(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(15),
-                                ),
-                                title: const Text('Caution: Unverified Event', style: TextStyle(fontSize: 13, color: Colors.red)),
-                                content: const Text(
-                                  'This event is not yet verified. Paying for an unverified event may carry risks, as the event details have not been confirmed by an administrator. Do you wish to proceed with payment?',
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.pop(context),
-                                    child: const Text('Cancel', style: TextStyle(backgroundColor: Colors.white, fontSize: 19, color: Colors.red)),
-                                  ),
-                                  ElevatedButton(
-                                    onPressed: () {
-                                      Navigator.pop(context);
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => CheckoutScreen(
-                                            event: event,
-                                            total: event.price,
-                                            ticketId: const Uuid().v4(),
-                                            onPaymentSuccess: onPaymentSuccess,
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                    style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-                                    child: const Text('Proceed'),
-                                  ),
-                                ],
+                            builder: (context) => AlertDialog(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(15),
                               ),
+                              title:const
+                                  Text('Caution: Unverified Event' ,
+                                    style: TextStyle(fontSize: 13, color: Colors.red),
+                                  ),
+                                
+                              
+                              content: const Text(
+                                'This event is not yet verified. Paying for an unverified event may carry risks, as the event details have not been confirmed by an administrator. Do you wish to proceed with payment?',
+                              ), 
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: const Text('Cancel', style: TextStyle(backgroundColor: Colors.white, fontSize: 19, color: Colors.red)),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    Navigator.pop(context);
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => CheckoutScreen(
+                                          event: event,
+                                          total: event.price,
+                                          ticketId: const Uuid().v4(),
+                                          onPaymentSuccess: onPaymentSuccess,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+                                  child: const Text('Proceed'),
+                                ),
+                              ],
                             ),
                           );
                         } else {
@@ -1560,133 +1612,127 @@ class _SearchTabState extends State<SearchTab> {
   void showEventDetailsModal(Event event) {
     showDialog(
       context: context,
-      builder: (context) => BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-        child: AlertDialog(
-          title: Text(event.title),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(event.description),
-              const SizedBox(height: 20),
-              if (widget.eventStatus[event.id] != 'Reserved') ...[
-                ElevatedButton(
-                  onPressed: () async {
-                    await widget.bookEvent(event.id);
-                    bookingsTabKey.currentState?.addBooking({
-                      'id': DateTime.now().millisecondsSinceEpoch,
-                      'event': event.title,
-                      'total': event.price,
-                      'paid': event.price == '0' || event.price == '0.0' || event.price == '0.00' ? true : false,
-                      'eventId': event.id,
-                      'ticketId': const Uuid().v4(),
-                      'isVerified': event.isVerified,
-                      'verificationStatus': event.verificationStatus,
-                    });
-                    setState(() {
-                      widget.eventStatus[event.id] = 'Reserved';
-                    });
-                    Navigator.pop(context);
-                    Fluttertoast.showToast(
-                      msg: "Event Reservation Successful!",
-                      toastLength: Toast.LENGTH_LONG,
-                      gravity: ToastGravity.CENTER,
-                      backgroundColor: Colors.orange,
-                      textColor: Colors.white,
-                      fontSize: 19.0,
-                    );
-                  },
-                  child: const Text('Book/Reserve an Event'),
-                ),
-              ] else ...[
-                ElevatedButton(
-                  onPressed: () async {
-                    await widget.bookEvent(event.id);
-                    bookingsTabKey.currentState?.removeBookingByTitle(event.title);
-                    setState(() {
-                      widget.eventStatus[event.id] = 'Cancelled Reservation!';
-                    });
-                    Navigator.pop(context);
-                    Fluttertoast.showToast(
-                      msg: "Event Reservation Cancelled!",
-                      toastLength: Toast.LENGTH_LONG,
-                      gravity: ToastGravity.CENTER,
-                      backgroundColor: Colors.pink,
-                      textColor: Colors.white,
-                      fontSize: 19.0,
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.pink),
-                  child: const Text('Cancel Reservation'),
-                ),
-              ],
+      builder: (context) => AlertDialog(
+        title: Text(event.title),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(event.description),
+            const SizedBox(height: 20),
+            if (widget.eventStatus[event.id] != 'Reserved') ...[
               ElevatedButton(
-                onPressed: () {
-                  if (!event.isVerified) {
-                    showDialog(
-                      context: context,
-                      builder: (context) => BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                        child: AlertDialog(
-                          title: const Text('Caution: Unverified Event', style: TextStyle(fontSize: 13, color: Colors.red)),
-                          content: const Text(
-                            'This event is not yet verified. Paying for an unverified event may carry risks, as the event details have not been confirmed by an administrator. Do you wish to proceed with payment?',
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('Cancel', style: TextStyle(color: Colors.red)),
-                            ),
-                            ElevatedButton(
-                              onPressed: () {
-                                Navigator.pop(context);
-                                Navigator.pop(context);
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => CheckoutScreen(
-                                      event: event,
-                                      total: event.price,
-                                      ticketId: const Uuid().v4(),
-                                      onPaymentSuccess: () => handlePaymentSuccess(event),
-                                    ),
-                                  ),
-                                );
-                              },
-                              style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-                              child: const Text('Proceed'),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  } else {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => CheckoutScreen(
-                          event: event,
-                          total: event.price,
-                          ticketId: const Uuid().v4(),
-                          onPaymentSuccess: () => handlePaymentSuccess(event),
-                        ),
-                      ),
-                    );
-                  }
+                onPressed: () async {
+                  await widget.bookEvent(event.id);
+                  bookingsTabKey.currentState?.addBooking({
+                    'id': DateTime.now().millisecondsSinceEpoch,
+                    'event': event.title,
+                    'total': event.price,
+                    'paid': event.price == '0' || event.price == '0.0' || event.price == '0.00' ? true : false,
+                    'eventId': event.id,
+                    'ticketId': const Uuid().v4(),
+                    'isVerified': event.isVerified,
+                    'verificationStatus': event.verificationStatus,
+                  });
+                  setState(() {
+                    widget.eventStatus[event.id] = 'Reserved';
+                  });
+                  Navigator.pop(context);
+                  Fluttertoast.showToast(
+                    msg: "Event Reservation Successful!",
+                    toastLength: Toast.LENGTH_LONG,
+                    gravity: ToastGravity.CENTER,
+                    backgroundColor: Colors.orange,
+                    textColor: Colors.white,
+                    fontSize: 19.0,
+                  );
                 },
-                child: const Text('Pay For Event'),
+                child: const Text('Book/Reserve an Event'),
               ),
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text(
-                  'Cancel',
-                  style: TextStyle(color: Colors.red),
-                ),
+            ] else ...[
+              ElevatedButton(
+                onPressed: () async {
+                  await widget.bookEvent(event.id);
+                  bookingsTabKey.currentState?.removeBookingByTitle(event.title);
+                  setState(() {
+                    widget.eventStatus[event.id] = 'Cancelled Reservation!';
+                  });
+                  Navigator.pop(context);
+                  Fluttertoast.showToast(
+                    msg: "Event Reservation Cancelled!",
+                    toastLength: Toast.LENGTH_LONG,
+                    gravity: ToastGravity.CENTER,
+                    backgroundColor: Colors.pink,
+                    textColor: Colors.white,
+                    fontSize: 19.0,
+                  );
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.pink),
+                child: const Text('Cancel Reservation'),
               ),
             ],
-          ),
+            ElevatedButton(
+              onPressed: () {
+                if (!event.isVerified) {
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Caution: Unverified Event', style: TextStyle(fontSize: 13, color: Colors.red)),
+                      content: const Text(
+                        'This event is not yet verified. Paying for an unverified event may carry risks, as the event details have not been confirmed by an administrator. Do you wish to proceed with payment?',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cancel', style: TextStyle(color: Colors.red)),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            Navigator.pop(context); // Close the event details modal
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => CheckoutScreen(
+                                  event: event,
+                                  total: event.price,
+                                  ticketId: const Uuid().v4(),
+                                  onPaymentSuccess: () => handlePaymentSuccess(event),
+                                ),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+                          child: const Text('Proceed'),
+                        ),
+                      ],
+                    ),
+                  );
+                } else {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => CheckoutScreen(
+                        event: event,
+                        total: event.price,
+                        ticketId: const Uuid().v4(),
+                        onPaymentSuccess: () => handlePaymentSuccess(event),
+                      ),
+                    ),
+                  );
+                }
+              },
+              child: const Text('Pay For Event'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -1702,8 +1748,8 @@ class _SearchTabState extends State<SearchTab> {
         toolbarHeight: 90,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.only(
-            bottomLeft: Radius.circular(30),
-            bottomRight: Radius.circular(30),
+            bottomLeft: Radius.circular(0),
+            bottomRight: Radius.circular(0),
           ),
         ),
         title: Column(
@@ -1919,17 +1965,21 @@ class _BookingsTabState extends State<BookingsTab> {
       );
       return;
     }
+
     setState(() {
       isLoading = true;
     });
+
     try {
       QuerySnapshot snapshot = await FirebaseFirestore.instance
           .collection('bookings')
           .where('userId', isEqualTo: userId)
           .get();
+
       List<Map<String, dynamic>> fetchedBookings = [];
       for (var doc in snapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
+        // Validate price field
         if (data['price'] != null && double.tryParse(data['price'].toString()) == null) {
           print('Invalid price format for booking ${doc.id}: ${data['price']}');
           continue;
@@ -1946,7 +1996,10 @@ class _BookingsTabState extends State<BookingsTab> {
           'timestamp': (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
         });
       }
+
+      // Sort bookings by timestamp (most recent first)
       fetchedBookings.sort((a, b) => (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime));
+
       setState(() {
         bookings = fetchedBookings;
         isLoading = false;
@@ -1984,6 +2037,7 @@ class _BookingsTabState extends State<BookingsTab> {
       print('No user logged in for cancelling booking');
       return;
     }
+
     try {
       final bookingRef = FirebaseFirestore.instance
           .collection('bookings')
@@ -2006,17 +2060,18 @@ class _BookingsTabState extends State<BookingsTab> {
         fontSize: 16.0,
       );
     } catch (e) {
-      print('Error cancelling booking: $e');
-      Fluttertoast.showToast(
-        msg: 'Error cancelling booking: $e',
-        toastLength: Toast.LENGTH_LONG,
-        gravity: ToastGravity.CENTER,
-        backgroundColor: Colors.red,
-        textColor: Colors.white,
-        fontSize: 16.0,
-      );
+      // print('Error cancelling booking: $e');
+      // Fluttertoast.showToast(
+      //   msg: 'Error cancelling booking: $e',
+      //   toastLength: Toast.LENGTH_LONG,
+      //   gravity: ToastGravity.CENTER,
+      //   backgroundColor: Colors.red,
+      //   textColor: Colors.white,
+      //   fontSize: 16.0,
+      // );
     }
   }
+  
 
   @override
   Widget build(BuildContext context) {
@@ -2026,6 +2081,10 @@ class _BookingsTabState extends State<BookingsTab> {
         backgroundColor: const Color.fromARGB(255, 25, 25, 95),
         foregroundColor: Colors.white,
         title: const Text('Payments History'),
+        
+       
+
+        
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -2066,6 +2125,7 @@ class _BookingsTabState extends State<BookingsTab> {
                     final booking = bookings[index];
                     final isVerified = booking['isVerified'] ?? false;
                     final isPaid = booking['paid'] ?? false;
+
                     return Card(
                       elevation: 2,
                       margin: const EdgeInsets.only(bottom: 12),
@@ -2097,10 +2157,11 @@ class _BookingsTabState extends State<BookingsTab> {
                               ),
                           ],
                         ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () => _cancelBooking(booking['eventId'], booking['event']),
-                        ),
+                      trailing: const Icon(
+                        Icons.history,
+                        color: Colors.red, 
+                      ),
+                                            
                       ),
                     );
                   },

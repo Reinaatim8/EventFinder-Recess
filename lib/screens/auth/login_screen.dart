@@ -7,6 +7,7 @@ import '../../widgets/common/auth/auth_form_container.dart';
 import '../../widgets/common/custom_buttom.dart';
 import 'register_screen.dart';
 import 'forgot_password_screen.dart';
+import '../home/home_screen.dart'; // Add import for HomeScreen (adjust path)
 
 class CustomTextField extends StatelessWidget {
   final String label;
@@ -40,7 +41,7 @@ class CustomTextField extends StatelessWidget {
           style: const TextStyle(
             fontWeight: FontWeight.w600,
             fontSize: 17,
-            color:  const Color.fromARGB(255, 25, 25, 95),
+            color: Color.fromARGB(255, 25, 25, 95),
           ),
         ),
         const SizedBox(height: 8),
@@ -75,8 +76,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
 
-  
-
   @override
   void dispose() {
     _emailController.dispose();
@@ -93,17 +92,32 @@ class _LoginScreenState extends State<LoginScreen> {
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
-      if (!success && mounted) {
-        
-          Fluttertoast.showToast(
-            msg: "Login failed. Please check your credentials.",
-            toastLength: Toast.LENGTH_LONG,
-            gravity: ToastGravity.TOP,
-            backgroundColor: Colors.red,
-            textColor: Colors.white,
-            fontSize: 18.0,
-          );
-        
+      if (success && mounted) {
+        // Optional: Show welcome toast (uncomment if desired)
+        // Fluttertoast.showToast(
+        //   msg: "Welcome back!",
+        //   toastLength: Toast.LENGTH_SHORT,
+        //   gravity: ToastGravity.TOP,
+        //   backgroundColor: Colors.green,
+        //   textColor: Colors.white,
+        //   fontSize: 18.0,
+        // );
+        // Navigate to HomeScreen, clearing the stack
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+          (route) => false,
+        );
+        // Alternative: Use named route (uncomment if preferred)
+        // Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
+      } else if (!success && mounted) {
+        Fluttertoast.showToast(
+          msg: "Login failed. Please check your credentials.",
+          toastLength: Toast.LENGTH_LONG,
+          gravity: ToastGravity.TOP,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+          fontSize: 18.0,
+        );
       }
     }
   }
@@ -132,7 +146,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   const SizedBox(height: 60),
                   const Text(
-                    " Welcome Back!",
+                    "Welcome Back!",
                     style: TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
@@ -142,10 +156,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 8),
                   const Text(
                     "Sign in to continue discovering amazing events near you",
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white,
-                    ),
+                    style: TextStyle(fontSize: 16, color: Colors.white),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 40),
@@ -173,13 +184,14 @@ class _LoginScreenState extends State<LoginScreen> {
                               CustomTextField(
                                 label: "Email",
                                 hint: "Enter your email",
-                                
-                                
                                 controller: _emailController,
                                 keyboardType: TextInputType.emailAddress,
                                 validator: Validators.validateEmail,
                                 prefixIcon: IconButton(
-                                  icon: const Icon(Icons.email_outlined, color: Colors.orange),
+                                  icon: const Icon(
+                                    Icons.email_outlined,
+                                    color: Colors.orange,
+                                  ),
                                   onPressed: () {
                                     _emailController.clear();
                                   },
@@ -202,7 +214,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                       _obscurePassword = !_obscurePassword;
                                     });
                                   },
-                                  
                                 ),
                               ),
                               const SizedBox(height: 12),
@@ -219,9 +230,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                   },
                                   child: const Text(
                                     "Forgot Password?",
-                                    style: TextStyle(color: Color.fromARGB(255, 25, 25, 95), decoration: TextDecoration.underline, fontSize: 18,decorationColor: Color.fromARGB(255, 25, 25, 95),),
+                                    style: TextStyle(
+                                      color: Color.fromARGB(255, 25, 25, 95),
+                                      decoration: TextDecoration.underline,
+                                      fontSize: 18,
+                                      decorationColor: Color.fromARGB(255, 25, 25, 95),
+                                    ),
                                   ),
-                                  
                                 ),
                               ),
                               const SizedBox(height: 24),
@@ -238,7 +253,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                 children: [
                                   const Text(
                                     "Don't have an account? ",
-                                    style: TextStyle(color: Color.fromARGB(255, 25, 25, 95)),
+                                    style: TextStyle(
+                                      color: Color.fromARGB(255, 25, 25, 95),
+                                    ),
                                   ),
                                   TextButton(
                                     onPressed: () {
@@ -256,8 +273,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                         color: Color.fromARGB(255, 25, 25, 95),
                                         fontSize: 20,
                                         decoration: TextDecoration.underline,
-                                        decorationColor:Color.fromARGB(255, 25, 25, 95),
-                                         
+                                        decorationColor: Color.fromARGB(255, 25, 25, 95),
                                       ),
                                     ),
                                   ),

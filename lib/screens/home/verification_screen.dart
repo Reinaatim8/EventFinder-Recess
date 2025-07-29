@@ -57,13 +57,22 @@ class _VerificationScreenState extends State<VerificationScreen> {
   }
 
   bool _isAdmin(BuildContext context) {
-    final authProvider = Provider.of<custom_auth.AuthProvider>(context, listen: false);
-    final isAdmin = authProvider.user?.email == 'kennedymutebi7@gmail.com' ?? false;
-    print('Checking admin status: user=${authProvider.user?.email}, isAdmin=$isAdmin');
+    final authProvider = Provider.of<custom_auth.AuthProvider>(
+      context,
+      listen: false,
+    );
+    final isAdmin =
+        authProvider.user?.email == 'kennedymutebi7@gmail.com' ?? false;
+    print(
+      'Checking admin status: user=${authProvider.user?.email}, isAdmin=$isAdmin',
+    );
     return isAdmin;
   }
 
-  Future<void> _handleVerification(bool approve, [String? rejectionReason]) async {
+  Future<void> _handleVerification(
+    bool approve, [
+    String? rejectionReason,
+  ]) async {
     if (!_isAdmin(context)) {
       Fluttertoast.showToast(
         msg: 'Only admins can verify events',
@@ -81,18 +90,23 @@ class _VerificationScreenState extends State<VerificationScreen> {
     });
 
     try {
-      await FirebaseFirestore.instance.collection('events').doc(widget.event.id).update({
-        'isVerified': approve,
-        'verificationStatus': approve ? 'approved' : 'rejected',
-        'approvedAt': approve ? FieldValue.serverTimestamp() : null,
-        'rejectionReason': approve ? null : rejectionReason,
-        'status': null,
-      });
+      await FirebaseFirestore.instance
+          .collection('events')
+          .doc(widget.event.id)
+          .update({
+            'isVerified': approve,
+            'verificationStatus': approve ? 'approved' : 'rejected',
+            'approvedAt': approve ? FieldValue.serverTimestamp() : null,
+            'rejectionReason': approve ? null : rejectionReason,
+            'status': null,
+          });
       setState(() {
         currentVerificationStatus = approve;
       });
       widget.onStatusUpdate(approve ? 'Approved' : 'Rejected');
-      print('Event ${widget.event.title} ${approve ? 'approved' : 'rejected'} in Firestore${approve ? '' : ' with reason: $rejectionReason'}');
+      print(
+        'Event ${widget.event.title} ${approve ? 'approved' : 'rejected'} in Firestore${approve ? '' : ' with reason: $rejectionReason'}',
+      );
       Fluttertoast.showToast(
         msg: approve ? 'Event Approved!' : 'Event Rejected!',
         toastLength: Toast.LENGTH_LONG,
@@ -218,9 +232,13 @@ class _VerificationScreenState extends State<VerificationScreen> {
 
   Widget _buildDocumentPreview() {
     if (widget.verificationDocumentUrl != null) {
-      final isImage = widget.verificationDocumentType?.toLowerCase().contains('jpg') == true ||
-          widget.verificationDocumentType?.toLowerCase().contains('jpeg') == true ||
-          widget.verificationDocumentType?.toLowerCase().contains('png') == true;
+      final isImage =
+          widget.verificationDocumentType?.toLowerCase().contains('jpg') ==
+              true ||
+          widget.verificationDocumentType?.toLowerCase().contains('jpeg') ==
+              true ||
+          widget.verificationDocumentType?.toLowerCase().contains('png') ==
+              true;
 
       return Card(
         elevation: 2,
@@ -288,8 +306,12 @@ class _VerificationScreenState extends State<VerificationScreen> {
   IconData _getDocumentIcon(String documentType) {
     final extension = documentType.toLowerCase();
     if (extension.contains('pdf')) return Icons.picture_as_pdf;
-    if (extension.contains('doc') || extension.contains('docx')) return Icons.description;
-    if (extension.contains('jpg') || extension.contains('jpeg') || extension.contains('png')) return Icons.image;
+    if (extension.contains('doc') || extension.contains('docx'))
+      return Icons.description;
+    if (extension.contains('jpg') ||
+        extension.contains('jpeg') ||
+        extension.contains('png'))
+      return Icons.image;
     return Icons.insert_drive_file;
   }
 
@@ -318,7 +340,9 @@ class _VerificationScreenState extends State<VerificationScreen> {
       );
 
       if (proceed != true) {
-        print('User cancelled payment for unverified event: ${widget.event.title}');
+        print(
+          'User cancelled payment for unverified event: ${widget.event.title}',
+        );
         return;
       }
     }
@@ -377,7 +401,12 @@ class _VerificationScreenState extends State<VerificationScreen> {
         'id': DateTime.now().millisecondsSinceEpoch,
         'event': widget.event.title,
         'total': widget.event.price,
-        'paid': widget.event.price == '0' || widget.event.price == '0.0' || widget.event.price == '0.00' ? true : false,
+        'paid':
+            widget.event.price == '0' ||
+                widget.event.price == '0.0' ||
+                widget.event.price == '0.00'
+            ? true
+            : false,
         'ticketId': ticketId,
         'isVerified': currentVerificationStatus,
         'verificationStatus': widget.verificationStatus,
@@ -385,7 +414,9 @@ class _VerificationScreenState extends State<VerificationScreen> {
       };
       widget.onBookingAdded(booking);
       widget.onStatusUpdate('Reserved');
-      print('Booking successful for event: ${widget.event.title}, isVerified: ${currentVerificationStatus}');
+      print(
+        'Booking successful for event: ${widget.event.title}, isVerified: ${currentVerificationStatus}',
+      );
       Navigator.pop(context);
       Fluttertoast.showToast(
         msg: "Event Reservation Successful!",
@@ -415,20 +446,20 @@ class _VerificationScreenState extends State<VerificationScreen> {
     //     ? DateTime.parse(widget.event.date).isBefore(DateTime.now())
     //     : false;
     final isPast = widget.event.date.isNotEmpty
-      ? () {
-          try {
-            final parts = widget.event.date.split('/');
-            final parsedDate = DateTime(
-              int.parse(parts[2]), // year
-              int.parse(parts[1]), // month
-              int.parse(parts[0])  // day
-            );
-            return parsedDate.isBefore(DateTime.now());
-          } catch (e) {
-            return false; // fallback in case of format error
-          }
-        }()
-      : false;
+        ? () {
+            try {
+              final parts = widget.event.date.split('/');
+              final parsedDate = DateTime(
+                int.parse(parts[2]), // year
+                int.parse(parts[1]), // month
+                int.parse(parts[0]), // day
+              );
+              return parsedDate.isBefore(DateTime.now());
+            } catch (e) {
+              return false; // fallback in case of format error
+            }
+          }()
+        : false;
 
     return AlertDialog(
       title: Row(
@@ -488,7 +519,9 @@ class _VerificationScreenState extends State<VerificationScreen> {
                 'Verification Status: ${widget.verificationStatus}',
                 style: TextStyle(
                   fontSize: 14,
-                  color: widget.verificationStatus == 'approved' ? Colors.green : Colors.red,
+                  color: widget.verificationStatus == 'approved'
+                      ? Colors.green
+                      : Colors.red,
                 ),
               ),
             if (widget.rejectionReason != null) ...[
@@ -506,7 +539,10 @@ class _VerificationScreenState extends State<VerificationScreen> {
             else if (isPast)
               const Text(
                 'This event has already passed.',
-                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.bold,
+                ),
               )
             else ...[
               if (isAdmin)
@@ -528,7 +564,9 @@ class _VerificationScreenState extends State<VerificationScreen> {
                 child: const Text('Book Event'),
               ),
               const SizedBox(height: 8),
-              if (widget.event.price != '0' && widget.event.price != '0.0' && widget.event.price != '0.00')
+              if (widget.event.price != '0' &&
+                  widget.event.price != '0.0' &&
+                  widget.event.price != '0.00')
                 ElevatedButton(
                   onPressed: _handlePayment,
                   style: ElevatedButton.styleFrom(
@@ -561,10 +599,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text(
-            'Close',
-            style: TextStyle(color: Colors.red),
-          ),
+          child: const Text('Close', style: TextStyle(color: Colors.red)),
         ),
       ],
     );
